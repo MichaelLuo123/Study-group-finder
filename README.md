@@ -94,4 +94,5 @@ If you have run out of energy or time for your project, put a note at the top of
 
 If I can stop one heart from breaking, I shall not live in vain;
 If I can ease one life the aching,
+Or cool one pain,
 
