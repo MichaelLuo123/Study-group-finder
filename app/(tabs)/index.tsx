@@ -56,6 +56,7 @@ export default function HomeScreen() {
        <ThemedView style={{ marginVertical: 20, gap: 10 }}>
         <Button title="Go to Signup Fail" onPress={() => router.push('/signupfail')} />
         <Button title="Go to Signup Success" onPress={() => router.push('/signupsuccess')} />
+        <Button title="Go to View Event Page" onPress={() => router.push('/viewevent')} />
       </ThemedView>
     </ParallaxScrollView>
   );
