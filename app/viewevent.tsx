@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
 import {
+  Dimensions,
   Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -11,7 +13,8 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-// used to manage dark mode, rsvp status, comment input, selects theme colors based on dark mode status
+const { width } = Dimensions.get('window');
+
 const EventViewScreen = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [comment, setComment] = useState('');
@@ -28,17 +31,17 @@ const EventViewScreen = () => {
 
   const handlePostComment = () => {
     if (comment.trim()) {
-      // use to send to backend later on
       console.log('Posting comment:', comment);
       setComment('');
     }
   };
 
   const theme = isDarkMode ? darkTheme : lightTheme;
-  // header box 
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      
       <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
         enableOnAndroid={true}
@@ -50,167 +53,227 @@ const EventViewScreen = () => {
         keyboardOpeningTime={100}
         extraHeight={Platform.OS === 'android' ? 100 : 30}
         keyboardDismissMode="interactive"
+        scrollEnabled={true} // Enable scrolling while typing
       >
-        <View style={styles.contentWrapper}>
+        <View style={styles.content}>
           {/* Header */}
-          <View style={[styles.header, { backgroundColor: theme.headerBackground }]}>
-            <TouchableOpacity style={styles.closeButton}>
-              <Text style={[styles.closeButtonText, { color: theme.textColor }]}>×</Text>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton}>
+              <Text style={[styles.backText, { color: theme.textColor }]}>←</Text>
             </TouchableOpacity>
-            <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.settingsButton}>
-                <Text style={[styles.settingsIcon, { color: theme.textColor }]}>⚙</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
-                <View style={[styles.avatar, { backgroundColor: theme.avatarBackground }]}>
-                  <Text style={styles.avatarText}>👤</Text>
+            <View />
+          </View>
+
+          {/* Main Event Card */}
+          <View style={[styles.eventCard, { backgroundColor: theme.cardBackground }]}>
+            {/* Event Header */}
+            <View style={[styles.eventHeader, { backgroundColor: theme.eventHeaderBackground }]}>
+              <Text style={[styles.eventTitle, { color: theme.textColor }]}>
+                Event Title
+              </Text>
+              <TouchableOpacity onPress={toggleTheme} style={styles.profileButton}>
+                <View style={[styles.profileIcon, { backgroundColor: theme.profileBackground }]}>
+                  <Text style={styles.profileEmoji}>👤</Text>
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Event Info */}
-          <View style={styles.eventInfo}>
-            <Text style={[styles.eventTitle, { color: theme.textColor }]}>View Event Title</Text>
-            <View style={styles.locationContainer}>
-              <Text style={[styles.locationIcon, { color: theme.textColor }]}>📍</Text>
-              <Text style={[styles.locationText, { color: theme.textColor }]}>
-                Event Location
-              </Text>
-            </View>
-          </View>
-
-          {/* Labels */}
-          <View style={styles.labelsContainer}>
-            {['Label', 'Label', 'Label', 'Label', 'Label', 'Label'].map((label, index) => (
-              <View
-                key={index}
-                style={[styles.labelChip, { backgroundColor: theme.labelBackground }]}
-              >
-                <Text style={[styles.labelIcon, { color: theme.textColor }]}>⭐</Text>
-                <Text style={[styles.labelText, { color: theme.textColor }]}>{label}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* RSVP Section */}
-          <View style={styles.rsvpSection}>
-            <View style={styles.rsvpLeft}>
-              <View style={[styles.avatar, { backgroundColor: theme.avatarBackground }]}>
-                <Text style={styles.avatarText}>👤</Text>
-              </View>
-              <Text style={[styles.username, { color: theme.textColor }]}>Username</Text>
-            </View>
-            <View style={styles.rsvpRight}>
-              <View style={styles.rsvpRightContent}>
-                <Text style={[styles.attendeeCount, { color: theme.textColor }]}>
-                  7 people are going
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.rsvpButton,
-                    {
-                      backgroundColor: isRSVPed
-                        ? theme.rsvpActiveBackground
-                        : theme.rsvpBackground,
-                    },
-                  ]}
-                  onPress={handleRSVP}
-                >
-                  <Text
-                    style={{
-                      color: isRSVPed ? theme.rsvpActiveText : theme.rsvpText,
-                      fontWeight: '600',
-                    }}
-                  >
-                    {isRSVPed ? 'Going' : 'RSVP'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          {/* Attendees */}
-          <View style={styles.attendeesContainer}>
-            <View style={styles.attendeeAvatars}>
-              {[1, 2, 3].map((_, index) => (
+            {/* Event Labels */}
+            <View style={styles.labelsContainer}>
+              {['Label', 'Label', 'Label'].map((label, index) => (
                 <View
                   key={index}
-                  style={[styles.attendeeAvatar, { backgroundColor: theme.avatarBackground }]}
+                  style={[styles.label, { backgroundColor: theme.labelBackground }]}
                 >
-                  <Text style={styles.avatarText}>👤</Text>
+                  <Text style={[styles.labelText, { color: theme.labelTextColor }]}>
+                    {label}
+                  </Text>
                 </View>
               ))}
-              <View style={[styles.moreAttendees, { backgroundColor: theme.labelBackground }]}>
-                <Text style={[styles.moreAttendeesText, { color: theme.textColor }]}>+4</Text>
+            </View>
+
+            {/* Event Details */}
+            <View style={styles.eventDetails}>
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailIcon, { color: theme.textColor }]}>📚</Text>
+                <Text style={[styles.detailText, { color: theme.textColor }]}>Course Code</Text>
               </View>
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailIcon, { color: theme.textColor }]}>📍</Text>
+                <Text style={[styles.detailText, { color: theme.textColor }]}>Event Location</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailIcon, { color: theme.textColor }]}>📅</Text>
+                <Text style={[styles.detailText, { color: theme.textColor }]}>Event Date</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailIcon, { color: theme.textColor }]}>🕐</Text>
+                <Text style={[styles.detailText, { color: theme.textColor }]}>Event Time</Text>
+              </View>
+            </View>
+
+            {/* Attendees Info */}
+            <View style={styles.attendeesSection}>
+              <View style={styles.attendeesRow}>
+                <Text style={[styles.attendeesIcon, { color: theme.textColor }]}>👥</Text>
+                <Text style={[styles.attendeesCount, { color: theme.textColor }]}>7/8</Text>
+                <View style={styles.avatarsContainer}>
+                  {[1, 2, 3, 4, 5, 6, 7].map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.avatar,
+                        { 
+                          backgroundColor: theme.avatarBackground,
+                          marginLeft: index > 0 ? -8 : 0
+                        }
+                      ]}
+                    >
+                      <Text style={styles.avatarText}>👤</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Description */}
+            <View style={styles.descriptionSection}>
+              <Text style={[styles.descriptionText, { color: theme.textColor }]}>
+                Event description goes here. This is a placeholder for the event details.
+              </Text>
+            </View>
+
+            {/* RSVP Section */}
+            <View style={styles.rsvpSection}>
+              <TouchableOpacity
+                onPress={handleRSVP}
+                style={[
+                  styles.rsvpButton,
+                  {
+                    backgroundColor: isRSVPed ? theme.rsvpActiveBackground : theme.rsvpBackground,
+                  }
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.rsvpButtonText,
+                    {
+                      color: isRSVPed ? theme.rsvpActiveText : theme.rsvpText,
+                    }
+                  ]}
+                >
+                  {isRSVPed ? 'GOING' : 'RSVP'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Comments */}
+          {/* Comments Section */}
           <View style={styles.commentsSection}>
-            {[1, 2].map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.commentCard,
-                  {
-                    backgroundColor: theme.commentBackground,
-                    borderColor: theme.commentBorder,
-                    borderWidth: isDarkMode ? 0 : 1,
-                  },
-                ]}
-              >
+            <Text style={[styles.commentsTitle, { color: theme.textColor }]}>
+              2 Comments
+            </Text>
+            
+            <ScrollView 
+              style={styles.commentsScrollView}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+              scrollEnabled={true}
+              contentContainerStyle={styles.commentsContentContainer}
+            >
+              {/* Comment 1 */}
+              <View style={[styles.comment, { backgroundColor: theme.commentBackground }]}>
                 <View style={styles.commentHeader}>
-                  <View style={[styles.avatar, { backgroundColor: theme.avatarBackground }]}>
-                    <Text style={styles.avatarText}>👤</Text>
+                  <View style={[styles.commentAvatar, { backgroundColor: theme.avatarBackground }]}>
+                    <Text style={styles.commentAvatarText}>👤</Text>
                   </View>
                   <Text style={[styles.commentUsername, { color: theme.textColor }]}>
-                    Username{index + 1}
+                    Username
                   </Text>
                 </View>
-                <Text style={[styles.commentText, { color: theme.textColor }]}>[comment]</Text>
+                <Text style={[styles.commentText, { color: theme.textColor }]}>
+                  Sample comment text here!
+                </Text>
               </View>
-            ))}
+
+              {/* Comment 2 */}
+              <View style={[styles.comment, { backgroundColor: theme.commentBackground }]}>
+                <View style={styles.commentHeader}>
+                  <View style={[styles.commentAvatar, { backgroundColor: theme.avatarBackground }]}>
+                    <Text style={styles.commentAvatarText}>👤</Text>
+                  </View>
+                  <Text style={[styles.commentUsername, { color: theme.textColor }]}>
+                    Username
+                  </Text>
+                </View>
+                <Text style={[styles.commentText, { color: theme.textColor }]}>
+                  Another sample comment.
+                </Text>
+              </View>
+
+              {/* Add more sample comments to demonstrate scrolling */}
+              {[3, 4, 5, 6, 7, 8].map((index) => (
+                <View key={index} style={[styles.comment, { backgroundColor: theme.commentBackground }]}>
+                  <View style={styles.commentHeader}>
+                    <View style={[styles.commentAvatar, { backgroundColor: theme.avatarBackground }]}>
+                      <Text style={styles.commentAvatarText}>👤</Text>
+                    </View>
+                    <Text style={[styles.commentUsername, { color: theme.textColor }]}>
+                      User {index}
+                    </Text>
+                  </View>
+                  <Text style={[styles.commentText, { color: theme.textColor }]}>
+                    This is comment number {index}. Adding more comments to demonstrate the scrolling functionality.
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
           </View>
 
-          {/* Post Comment */}
-          <View style={styles.postCommentSection}>
-            <TextInput
-              style={[
-                styles.postCommentInput,
-                {
-                  backgroundColor: theme.commentBackground,
-                  borderColor: theme.commentBorder,
-                  borderWidth: isDarkMode ? 0 : 1,
-                  color: theme.textColor,
-                },
-              ]}
-              value={comment}
-              onChangeText={setComment}
-              placeholder="Add a comment..."
-              placeholderTextColor={isDarkMode ? '#888' : '#999'}
-              multiline
-              returnKeyType="default"
-              onSubmitEditing={handlePostComment}
-              blurOnSubmit={false}
-              ref={commentInputRef}
-              textAlignVertical="top"
-              scrollEnabled={false}
-            />
-            
-            {/* Post Button */}
-            <TouchableOpacity
-              style={[styles.postButton, { backgroundColor: theme.rsvpActiveBackground }]}
-              onPress={handlePostComment}
-            >
-              <Text style={[styles.postButtonText, { color: theme.rsvpActiveText }]}>
-                Post
-              </Text>
-            </TouchableOpacity>
+          {/* Add Comment Section */}
+          <View style={styles.addCommentSection}>
+            <View style={[styles.commentInputContainer, { backgroundColor: theme.inputBackground }]}>
+              <TextInput
+                value={comment}
+                onChangeText={setComment}
+                placeholder="Add a comment..."
+                placeholderTextColor={theme.placeholderColor}
+                style={[styles.commentInput, { color: theme.textColor }]}
+                multiline
+                returnKeyType="default"
+                onSubmitEditing={handlePostComment}
+                ref={commentInputRef}
+                textAlignVertical="top"
+                scrollEnabled={false}
+              />
+              <TouchableOpacity
+                onPress={handlePostComment}
+                style={[styles.sendButton, { backgroundColor: theme.sendButtonBackground }]}
+              >
+                <Text style={[styles.sendButtonText, { color: theme.sendButtonText }]}>
+                  →
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      {/* Bottom Navigation Icons - Fixed at bottom */}
+      <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.navBorder }]}>
+        <TouchableOpacity style={styles.navButton}>
+          <Text style={styles.navIcon}>📚</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton}>
+          <Text style={styles.navIcon}>🌍</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton}>
+          <Text style={styles.navIcon}>📊</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton}>
+          <Text style={styles.navIcon}>👤</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -221,229 +284,291 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 16,
-    alignItems: 'center',
-    paddingBottom: 120, // Increased bottom padding for keyboard space
+    paddingBottom: 80, // Space for navbar
   },
-  contentWrapper: {
-    width: '100%',
-    maxWidth: 420,
+  content: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
+    marginBottom: 4,
   },
-  closeButton: {
+  backButton: {
     padding: 8,
   },
-  closeButtonText: {
-    fontSize: 24,
+  backText: {
+    fontSize: 20,
     fontWeight: 'bold',
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  settingsButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  settingsIcon: {
-    fontSize: 20,
-  },
-  themeToggle: {
-    padding: 4,
-  },
-  eventInfo: {
-    marginTop: 20,
+  eventCard: {
+    borderRadius: 12,
     marginBottom: 20,
-    alignItems: 'stretch', 
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   eventTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
   },
-  locationContainer: {
-    flexDirection: 'row',
+  profileButton: {
+    padding: 4,
+  },
+  profileIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 4,
-    marginLeft: 16
+    justifyContent: 'center',
   },
-  locationIcon: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  locationText: {
-    fontSize: 16,
+  profileEmoji: {
+    fontSize: 14,
   },
   labelsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
   },
-  labelChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  labelIcon: {
-    fontSize: 12,
-    marginRight: 4,
+  label: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 4,
   },
   labelText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
   },
-  rsvpSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  eventDetails: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
-  rsvpLeft: {
+  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
-  username: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  rsvpRight: {
-    alignItems: 'flex-end',
-  },
-  rsvpRightContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  attendeeCount: {
+  detailIcon: {
     fontSize: 14,
     marginRight: 8,
+    width: 20,
   },
-  rsvpButton: {
+  detailText: {
+    fontSize: 14,
+  },
+  attendeesSection: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingBottom: 12,
   },
-  attendeesContainer: {
-    marginBottom: 20,
-  },
-  attendeeAvatars: {
+  attendeesRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     alignItems: 'center',
   },
-  attendeeAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginLeft: -8,
-    justifyContent: 'center',
-    alignItems: 'center',
+  attendeesIcon: {
+    fontSize: 16,
+    marginRight: 8,
   },
-  moreAttendees: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginLeft: -8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreAttendeesText: {
-    fontSize: 12,
+  attendeesCount: {
+    fontSize: 14,
     fontWeight: '600',
+    marginRight: 12,
+  },
+  avatarsContainer: {
+    flexDirection: 'row',
+    flex: 1,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   avatarText: {
-    fontSize: 16,
+    fontSize: 10,
+  },
+  descriptionSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  descriptionText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  rsvpSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  rsvpButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  rsvpButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   commentsSection: {
+    marginBottom: 16,
+  },
+  commentsScrollView: {
+    maxHeight: 200,
+  },
+  commentsContentContainer: {
+    paddingBottom: 8,
+  },
+  commentsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: 12,
   },
-  commentCard: {
+  comment: {
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 8,
   },
   commentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  commentAvatarText: {
+    fontSize: 14,
+  },
   commentUsername: {
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 8,
   },
   commentText: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 16,
   },
-  postCommentSection: {
-    marginBottom: 20, // Reduced bottom margin
+  addCommentSection: {
+    marginBottom: 16,
   },
-  postCommentInput: {
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 12,
+  commentInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 25,
+    backgroundColor: '#f0f0f0',
+  },
+  commentInput: {
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     fontSize: 14,
+    backgroundColor: 'transparent',
     minHeight: 44,
-    textAlignVertical: 'top',
   },
-  postButton: {
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    alignSelf: 'flex-start',
+  sendButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
-  postButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  sendButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, // Account for home indicator on iOS
+  },
+  navButton: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  navIcon: {
+    fontSize: 24,
   },
 });
 
 const lightTheme = {
-  backgroundColor: '#f5f5f5',
-  headerBackground: '#e8d7f0',
+  backgroundColor: '#f8f9fa',
+  cardBackground: '#ffffff',
+  eventHeaderBackground: '#e8d5d5',
   textColor: '#000000',
   labelBackground: '#ffffff',
-  rsvpBackground: '#ffffff',
-  rsvpText: '#000000',
+  labelTextColor: '#666666',
+  rsvpBackground: '#007AFF',
+  rsvpText: '#ffffff',
   rsvpActiveBackground: '#007AFF',
   rsvpActiveText: '#ffffff',
-  commentBackground: '#ffffff',
+  commentBackground: '#f0f0f0',
   avatarBackground: '#cccccc',
-  commentBorder: '#e0e0e0',
+  profileBackground: '#e8d5d5',
+  inputBackground: '#ffffff',
+  placeholderColor: '#999999',
+  sendButtonBackground: '#007AFF',
+  sendButtonText: '#ffffff',
+  navBackground: '#ffffff',
+  navBorder: '#e0e0e0',
 };
 
 const darkTheme = {
   backgroundColor: '#1a1a1a',
-  headerBackground: '#1e3a8a',
+  cardBackground: '#2d2d2d',
+  eventHeaderBackground: '#374151',
   textColor: '#ffffff',
-  labelBackground: '#2d3748',
-  rsvpBackground: '#2d3748',
+  labelBackground: '#374151',
+  labelTextColor: '#d1d5db',
+  rsvpBackground: '#007AFF',
   rsvpText: '#ffffff',
   rsvpActiveBackground: '#007AFF',
   rsvpActiveText: '#ffffff',
-  commentBackground: '#2d3748',
+  commentBackground: '#374151',
   avatarBackground: '#4a5568',
-  commentBorder: 'transparent',
+  profileBackground: '#374151',
+  inputBackground: '#374151',
+  placeholderColor: '#9ca3af',
+  sendButtonBackground: '#007AFF',
+  sendButtonText: '#ffffff',
+  navBackground: '#2d2d2d',
+  navBorder: '#4a5568',
 };
+
 
 export default EventViewScreen;
