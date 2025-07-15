@@ -32,11 +32,26 @@ client.connect()
 
 // client.query(insertEventQuery)
 //   .then(() => console.log('Test user inserted!\n'))
-//   .catch((err) => console.error('Error inserting test Event\n', err.stack));
+//   .catch((err) => console.error('Error inserting test event\n', err.stack));
+
+// const insertEventAttendeesQuery = `
+//   INSERT INTO event_attendees (event_id, user_id, status, rsvp_date)
+//   VALUES 
+//     ('6dcba350-62b0-4e08-b54f-19331dbc79eb'::UUID,
+//     '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2'::UUID,
+//     'Invited',
+//     CURRENT_TIMESTAMP)
+//   ON CONFLICT (event_id, user_id) DO NOTHING;  -- Prevent duplicate entries
+// `;
+
+// client.query(insertEventAttendeesQuery)
+// .then(() => console.log('Event attendee inserted!\n'))
+// .catch((err) => console.error('Error inserting test event attendee\n', err.stack));
 
 //test querying
 const selectUsersQuery = 'SELECT * FROM users';
 const selectEventsQuery = 'SELECT * FROM events';
+const selectEventAttendeesQuery = 'SELECT * FROM event_attendees';
 
 client.query(selectUsersQuery)
   .then(res => {
@@ -45,6 +60,10 @@ client.query(selectUsersQuery)
   })
   .then(res => {
     console.log('Events:\n', res.rows);
+    return client.query(selectEventAttendeesQuery);
+  })
+  .then(res => {
+    console.log('Event Attendees:\n', res.rows);
   })
   .catch(err => {
     console.error('Error querying data\n', err.stack);
