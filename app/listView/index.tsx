@@ -1,7 +1,7 @@
-import React, { useLayoutEffect } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
-import { TextInput, Button, IconButton, useTheme } from 'react-native-paper';
 import { useNavigation } from 'expo-router';
+import React, { useLayoutEffect } from 'react';
+import { Image, StyleSheet, View } from 'react-native';
+import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -11,7 +11,7 @@ export default function HomeScreen() {
     navigation.setOptions({
       headerLeft: () => (
         <Image
-          source={require('../assets/images/biggerCramrLogo.png')}
+          source={require('../../assets/images/biggerCramrLogo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

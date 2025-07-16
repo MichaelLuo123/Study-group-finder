@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   Platform,
   SafeAreaView,
@@ -15,11 +16,71 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 const { width } = Dimensions.get('window');
 
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  date_and_time: string;
+  creator_id: string;
+  created_at: string;
+  event_type: string;
+  status: string;
+  capacity: number;
+  tags: string[];
+  invited_ids: string[]; // all invited
+  rsvping_ids: string[];  // those who RSVP'd
+  invited_count: number; // total invited (for reference)
+}
+
 const EventViewScreen = () => {
+  
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+  const eventId = '6dcba350-62b0-4e08-b54f-19331dbc79eb'; // Hardcoded for now, or get from route.params
   const commentInputRef = useRef<TextInput>(null);
+
+//mock event for testing purposes
+  const mockEvent = {
+    id: '6dcba350-62b0-4e08-b54f-19331dbc79eb',
+    title: 'CS101 Study Group',
+    description: 'Study group for CS101: Introduction to Computer Science',
+    location: 'Sun God Lounge, Price Center East',
+    date_and_time: '2025-09-15T10:00:00Z',
+    creator_id: '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2',
+    created_at: '2025-08-01T12:00:00Z',
+    event_type: 'In-person',
+    status: 'active',
+    capacity: 30,
+    tags: ['CS101', 'Computer Science', 'Quiet'],
+    invited_ids: [
+      'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7', 'id8', 'id9', 'id10'
+    ], // all invited
+    rsvping_ids: [
+      'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7'
+    ], // those who RSVP'd
+    invited_count: 10,
+  };
+
+  useEffect(() => {
+  //   fetch(`http://<YOUR_BACKEND_URL>/events/${eventId}`)
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setEvent(data);
+  //       setLoading(false);
+  //     })
+  //     .catch(() => setLoading(false));
+  // }, [eventId]);
+
+  //Mock event input, comment out later
+    setTimeout(() => {
+      setEvent(mockEvent);
+      setLoading(false);
+    }, 1000);
+  }, []);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -37,6 +98,9 @@ const EventViewScreen = () => {
   };
 
   const theme = isDarkMode ? darkTheme : lightTheme;
+
+  if (loading) return <ActivityIndicator />;
+  if (!event) return <Text>Event not found</Text>;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
@@ -69,7 +133,7 @@ const EventViewScreen = () => {
             {/* Event Header */}
             <View style={[styles.eventHeader, { backgroundColor: theme.eventHeaderBackground }]}>
               <Text style={[styles.eventTitle, { color: theme.textColor }]}>
-                Event Title
+                {event?.title || "No Title"}
               </Text>
               <TouchableOpacity onPress={toggleTheme} style={styles.profileButton}>
                 <View style={[styles.profileIcon, { backgroundColor: theme.profileBackground }]}>
@@ -80,14 +144,12 @@ const EventViewScreen = () => {
 
             {/* Event Labels */}
             <View style={styles.labelsContainer}>
-              {['Label', 'Label', 'Label'].map((label, index) => (
+              {(event?.tags || []).map((tag, index) => (
                 <View
                   key={index}
                   style={[styles.label, { backgroundColor: theme.labelBackground }]}
                 >
-                  <Text style={[styles.labelText, { color: theme.labelTextColor }]}>
-                    {label}
-                  </Text>
+                  <Text style={[styles.labelText, { color: theme.labelTextColor }]}> {tag} </Text>
                 </View>
               ))}
             </View>
@@ -96,19 +158,19 @@ const EventViewScreen = () => {
             <View style={styles.eventDetails}>
               <View style={styles.detailRow}>
                 <Text style={[styles.detailIcon, { color: theme.textColor }]}>📚</Text>
-                <Text style={[styles.detailText, { color: theme.textColor }]}>Course Code</Text>
+                <Text style={[styles.detailText, { color: theme.textColor }]}> {event?.tags?.[0] || "No Course"} </Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={[styles.detailIcon, { color: theme.textColor }]}>📍</Text>
-                <Text style={[styles.detailText, { color: theme.textColor }]}>Event Location</Text>
+                <Text style={[styles.detailText, { color: theme.textColor }]}> {event?.location || "No Location"} </Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={[styles.detailIcon, { color: theme.textColor }]}>📅</Text>
-                <Text style={[styles.detailText, { color: theme.textColor }]}>Event Date</Text>
+                <Text style={[styles.detailText, { color: theme.textColor }]}> {event?.date_and_time ? new Date(event.date_and_time).toLocaleDateString() : "No Date"} </Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={[styles.detailIcon, { color: theme.textColor }]}>🕐</Text>
-                <Text style={[styles.detailText, { color: theme.textColor }]}>Event Time</Text>
+                <Text style={[styles.detailText, { color: theme.textColor }]}> {event?.date_and_time ? new Date(event.date_and_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Los_Angeles' }) : "No Time"} </Text>
               </View>
             </View>
 
@@ -116,7 +178,7 @@ const EventViewScreen = () => {
             <View style={styles.attendeesSection}>
               <View style={styles.attendeesRow}>
                 <Text style={[styles.attendeesIcon, { color: theme.textColor }]}>👥</Text>
-                <Text style={[styles.attendeesCount, { color: theme.textColor }]}>7/8</Text>
+                <Text style={[styles.attendeesCount, { color: theme.textColor }]}>{event?.rsvping_ids?.length ?? 0}/{event?.capacity ?? 0}</Text>
                 <View style={styles.avatarsContainer}>
                   {[1, 2, 3, 4, 5, 6, 7].map((_, index) => (
                     <View
@@ -139,7 +201,7 @@ const EventViewScreen = () => {
             {/* Description */}
             <View style={styles.descriptionSection}>
               <Text style={[styles.descriptionText, { color: theme.textColor }]}>
-                Event description goes here. This is a placeholder for the event details.
+                {event?.description || "No Description"}
               </Text>
             </View>
 
@@ -346,17 +408,22 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 16,
     paddingBottom: 4,
+    marginTop: 10, // add space below the banner/header
   },
   label: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 6,
-    marginBottom: 4,
+    paddingHorizontal: 14, // more horizontal padding
+    paddingVertical: 6,    // more vertical padding
+    borderRadius: 20,      // more rounded
+    marginRight: 8,
+    marginBottom: 6,
+    backgroundColor: '#e0e7ff', // subtle color, adjust as needed
+    borderWidth: 1,
+    borderColor: '#a5b4fc',     // subtle border, adjust as needed
   },
   labelText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
+    color: '#3730a3', // deeper color for contrast
   },
   eventDetails: {
     paddingHorizontal: 16,
