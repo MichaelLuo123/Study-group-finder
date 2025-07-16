@@ -9,10 +9,65 @@ const client = new Client({
     port: 5432,
 });
 
-//connecting to postgresql database
-client.connect()
-  .then(() => console.log('PostgreSQL Connected!'))
-  .catch((err) => console.error('Connection error', err.stack));
+
+//test creating tables
+
+// const createTablesQuery = `
+// CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+// CREATE TABLE IF NOT EXISTS users (
+//     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+//     username VARCHAR(32) NOT NULL UNIQUE,
+//     password_hash VARCHAR(128) NOT NULL,
+//     email VARCHAR(254) NOT NULL UNIQUE,
+//     full_name VARCHAR(40),
+//     major VARCHAR(100),
+//     year VARCHAR(20),
+//     bio TEXT,
+//     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+// );
+
+// CREATE TABLE IF NOT EXISTS events (
+//     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+//     title VARCHAR(100) NOT NULL,
+//     description VARCHAR(1000),
+//     location VARCHAR(200),
+//     date_and_time TIMESTAMP NOT NULL,
+//     creator_id uuid NOT NULL REFERENCES users(id),
+//     created_at TIMESTAMP DEFAULT now(),
+//     event_type VARCHAR(50),
+//     status VARCHAR(50) DEFAULT 'active',
+//     capacity INTEGER,
+//     tags TEXT[]
+// );
+
+// CREATE TABLE IF NOT EXISTS event_attendees (
+//     event_id uuid NOT NULL REFERENCES events(id),
+//     user_id uuid NOT NULL REFERENCES users(id),
+//     status VARCHAR(50),
+//     rsvp_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//     PRIMARY KEY (event_id, user_id)
+// );
+// `;
+
+// client.connect()
+//   .then(() => {
+//     console.log('Connected to PostgreSQL');
+//     return client.query(createTablesQuery);
+//   })
+//   .then(() => {
+//     console.log('Tables "users", "events", and "event_attendees" created or already exist.');
+//   })
+//   .catch(err => {
+//     console.error('Error creating tables:', err.stack);
+//   })
+//   .finally(() => {
+//     client.end();
+//   });
+
+
+
 
 // //test inserting
 // const insertUserQuery = `
