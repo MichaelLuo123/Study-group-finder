@@ -32,8 +32,8 @@ const SignUpScreen = () => {
     //logo image path
     const logoImagePath = require('../../assets/images/logo.png'); 
     //validates password
-    const validatePassword = (pwd) => {
-        const errors = [];
+    const validatePassword = (pwd: string) => {
+        const errors: string[] = [];
         if (pwd.length < 8) errors.push('At least 8 characters');
         if (!/[A-Z]/.test(pwd)) errors.push('At least 1 capital letter');
         if (!/[^A-Za-z0-9]/.test(pwd)) errors.push('At least 1 special character');
@@ -254,7 +254,7 @@ const SignUpScreen = () => {
     );
 };
 
-const getStyles = (isDarkMode) => StyleSheet.create({
+const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: isDarkMode ? '#1F2937' : '#F3F4F6',
