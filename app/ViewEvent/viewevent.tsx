@@ -28,9 +28,12 @@ interface Event {
   status: string;
   capacity: number;
   tags: string[];
-  invited_ids: string[]; // all invited
-  rsvping_ids: string[];  // those who RSVP'd
-  invited_count: number; // total invited (for reference)
+  invited_ids: string[];
+  invited_count: number;
+  accepted_ids: string[];
+  accepted_count: number;
+  declined_ids: string[];
+  declined_count: number;
 }
 
 const EventViewScreen = () => {
@@ -43,44 +46,49 @@ const EventViewScreen = () => {
   const eventId = '6dcba350-62b0-4e08-b54f-19331dbc79eb'; // Hardcoded for now, or get from route.params
   const commentInputRef = useRef<TextInput>(null);
 
-//mock event for testing purposes
-  const mockEvent = {
-    id: '6dcba350-62b0-4e08-b54f-19331dbc79eb',
-    title: 'CS101 Study Group',
-    description: 'Study group for CS101: Introduction to Computer Science',
-    location: 'Sun God Lounge, Price Center East',
-    date_and_time: '2025-09-15T10:00:00Z',
-    creator_id: '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2',
-    created_at: '2025-08-01T12:00:00Z',
-    event_type: 'In-person',
-    status: 'active',
-    capacity: 30,
-    tags: ['CS101', 'Computer Science', 'Quiet'],
-    invited_ids: [
-      'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7', 'id8', 'id9', 'id10'
-    ], // all invited
-    rsvping_ids: [
-      'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7'
-    ], // those who RSVP'd
-    invited_count: 10,
-  };
+// //mock event for testing purposes
+//   const mockEvent = {
+//     id: '6dcba350-62b0-4e08-b54f-19331dbc79eb',
+//     title: 'CS101 Study Group',
+//     description: 'Study group for CS101: Introduction to Computer Science',
+//     location: 'Sun God Lounge, Price Center East',
+//     date_and_time: '2025-09-15T10:00:00Z',
+//     creator_id: '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2',
+//     created_at: '2025-08-01T12:00:00Z',
+//     event_type: 'In-person',
+//     status: 'active',
+//     capacity: 30,
+//     tags: ['CS101', 'Computer Science', 'Quiet'],
+//     invited_ids: [
+//       'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7', 'id8', 'id9', 'id10'
+//     ], // all invited
+//     rsvping_ids: [
+//       'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7'
+//     ], // those who RSVP'd
+//     invited_count: 10,
+//   };
 
   useEffect(() => {
-  //   fetch(`http://<YOUR_BACKEND_URL>/events/${eventId}`)
-  //     .then(res => res.json())
-  //     .then(data => {
-  //       setEvent(data);
-  //       setLoading(false);
-  //     })
-  //     .catch(() => setLoading(false));
-  // }, [eventId]);
+    console.log('Fetching event data...');
+    fetch(`http://192.168.0.130:3000/events/${eventId}`) //REPLACE IP WITH YOUR IP
+      .then(res => res.json())
+      .then(data => {
+        console.log('Received data:', data);
+        setEvent(data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.log('Error:', error);
+        setLoading(false);
+      });
+  }, [eventId]);
 
-  //Mock event input, comment out later
-    setTimeout(() => {
-      setEvent(mockEvent);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  // //Mock event input, comment out later
+  //   setTimeout(() => {
+  //     setEvent(mockEvent);
+  //     setLoading(false);
+  //   }, 1000);
+  // }, []);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -178,9 +186,11 @@ const EventViewScreen = () => {
             <View style={styles.attendeesSection}>
               <View style={styles.attendeesRow}>
                 <Text style={[styles.attendeesIcon, { color: theme.textColor }]}>👥</Text>
-                <Text style={[styles.attendeesCount, { color: theme.textColor }]}>{event?.rsvping_ids?.length ?? 0}/{event?.capacity ?? 0}</Text>
+                <Text style={[styles.attendeesCount, { color: theme.textColor }]}>
+                  {event?.accepted_count ?? 0}/{event?.capacity ?? 0} people going
+                </Text>
                 <View style={styles.avatarsContainer}>
-                  {[1, 2, 3, 4, 5, 6, 7].map((_, index) => (
+                  {Array.from({ length: Math.min(event?.accepted_count ?? 0, 7) }, (_, index) => (
                     <View
                       key={index}
                       style={[
