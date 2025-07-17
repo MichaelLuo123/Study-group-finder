@@ -2,6 +2,8 @@ import { useNavigation } from 'expo-router';
 import React, { useLayoutEffect } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
+import EventList from './eventList';
+
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -11,7 +13,7 @@ export default function HomeScreen() {
     navigation.setOptions({
       headerLeft: () => (
         <Image
-          source={require('../../assets/images/biggerCramrLogo.png')}
+          source={require('../app/listView/assets/images/finalCramrLogo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -56,7 +58,7 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* You can add event list / content here */}
+      {<EventList />}
 
       {/* Placeholder Footer */}
       <View style={styles.footerPlaceholder} />
