@@ -1,8 +1,9 @@
-import React, { useLayoutEffect, useState} from 'react';
-import { View, StyleSheet, Image, ScrollView, Text, Pressable } from 'react-native';
-import { TextInput, Button, IconButton, useTheme } from 'react-native-paper';
 import { useNavigation } from 'expo-router';
+import React, { useLayoutEffect } from 'react';
+import { Image, StyleSheet, View } from 'react-native';
+import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
 import EventList from './eventList';
+
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -12,7 +13,7 @@ export default function HomeScreen() {
     navigation.setOptions({
       headerLeft: () => (
         <Image
-          source={require('../app/listView/assets/images/finalCramrLogo.png')}
+          source={require('./assets/images/finalCramrLogo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
