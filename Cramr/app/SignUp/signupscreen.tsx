@@ -13,6 +13,8 @@ import {
     View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { showAllUsers, signUpUser } from '../../services/databaseService';
+
 //manages the state for input fields, password validation, error messages, and dark mode
 const SignUpScreen = () => {
     const [username, setUsername] = useState('');
@@ -22,6 +24,7 @@ const SignUpScreen = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({
         username: '',
         email: '',
@@ -32,15 +35,15 @@ const SignUpScreen = () => {
     //logo image path
     const logoImagePath = require('../../assets/images/logo.png'); 
     //validates password
-    const validatePassword = (pwd) => {
-        const errors = [];
+    const validatePassword = (pwd: string) => {
+        const errors: string[] = [];
         if (pwd.length < 8) errors.push('At least 8 characters');
         if (!/[A-Z]/.test(pwd)) errors.push('At least 1 capital letter');
         if (!/[^A-Za-z0-9]/.test(pwd)) errors.push('At least 1 special character');
         return errors;
     };
     //handles sign up process
-    const handleSignUp = () => {
+    const handleSignUp = async () => {
         let newErrors = { username: '', email: '', password: '', confirmPassword: '' };
         let hasError = false;
         if (!username.trim()) {
@@ -70,8 +73,30 @@ const SignUpScreen = () => {
             hasError = true;
         }
         setErrors(newErrors);
+        
         if (!hasError) {
-            router.push('/SignUp/signupsuccess');
+            setIsLoading(true);
+            try {
+                const result = await signUpUser({
+                    fullName: username,
+                    email: email,
+                    password: password
+                });
+                
+                if (result.success) {
+                    console.log('✅ User registered successfully:', result.userId);
+                    // Show all users in console for testing
+                    await showAllUsers();
+                    router.push('/SignUp/signupsuccess');
+                } else {
+                    setErrors({ ...newErrors, email: result.message });
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                setErrors({ ...newErrors, email: 'Something went wrong. Please try again.' });
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
     //styles for the sign up screen
@@ -237,8 +262,14 @@ const SignUpScreen = () => {
                     </View>
 
                     {/* Sign Up Button */}
-                    <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-                        <Text style={styles.signUpButtonText}>Sign Up</Text>
+                    <TouchableOpacity 
+                        style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]} 
+                        onPress={handleSignUp}
+                        disabled={isLoading}
+                    >
+                        <Text style={styles.signUpButtonText}>
+                            {isLoading ? 'Creating Account...' : 'Sign Up'}
+                        </Text>
                     </TouchableOpacity>
 
                     {/* Login Link */}
@@ -254,7 +285,7 @@ const SignUpScreen = () => {
     );
 };
 
-const getStyles = (isDarkMode) => StyleSheet.create({
+const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: isDarkMode ? '#1F2937' : '#F3F4F6',
@@ -384,6 +415,10 @@ const getStyles = (isDarkMode) => StyleSheet.create({
         fontSize: 12,
         marginTop: 4,
         marginLeft: 4,
+    },
+    signUpButtonDisabled: {
+        backgroundColor: '#9CA3AF', // gray-400
+        opacity: 0.7,
     },
 });
 
