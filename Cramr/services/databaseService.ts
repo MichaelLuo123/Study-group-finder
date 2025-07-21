@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { Client } = require('pg');
+const bcrypt = require('bcryptjs');
 
 //setup for postgres connection
 const client = new Client({
@@ -33,18 +34,29 @@ app.post('/signup', async (req: any, res: any) => {
         return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
     try {
-        // Check if user already exists by email or username
-        const userExists = await client.query(
-            'SELECT 1 FROM users WHERE email = $1 OR username = $2',
-            [email, username]
+        // Check if email is already taken
+        const emailExists = await client.query(
+            'SELECT 1 FROM users WHERE email = $1',
+            [email]
         );
-        if (userExists.rows.length > 0) {
-            return res.status(409).json({ success: false, message: 'User with this email or username already exists' });
+        if (emailExists.rows.length > 0) {
+            return res.status(409).json({ success: false, message: 'User with this email already exists' });
         }
+        // Check if username is already taken
+        const usernameExists = await client.query(
+            'SELECT 1 FROM users WHERE username = $1',
+            [username]
+        );
+        if (usernameExists.rows.length > 0) {
+            return res.status(409).json({ success: false, message: 'Username is already taken' });
+        }
+        // Hash the password
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
         // Insert new user
         await client.query(
             'INSERT INTO users (username, password_hash, email, full_name, created_at) VALUES ($1, $2, $3, $4, $5)',
-            [username, password, email, full_name, created_at]
+            [username, passwordHash, email, full_name, created_at]
         );
         return res.json({ success: true, message: 'User registered successfully' });
     } catch (err) {
