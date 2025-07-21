@@ -13,7 +13,6 @@ import {
     View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { showAllUsers, signUpUser } from '../../services/databaseService';
 
 //manages the state for input fields, password validation, error messages, and dark mode
 const SignUpScreen = () => {
@@ -25,8 +24,10 @@ const SignUpScreen = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [userUsername, setUserUsername] = useState('');
     const [errors, setErrors] = useState({
         username: '',
+        userUsername: '',
         email: '',
         password: '',
         confirmPassword: ''
@@ -44,10 +45,14 @@ const SignUpScreen = () => {
     };
     //handles sign up process
     const handleSignUp = async () => {
-        let newErrors = { username: '', email: '', password: '', confirmPassword: '' };
+        let newErrors = { username: '', userUsername: '', email: '', password: '', confirmPassword: '' };
         let hasError = false;
         if (!username.trim()) {
             newErrors.username = 'Please enter your name!';
+            hasError = true;
+        }
+        if (!userUsername.trim()) {
+            newErrors.userUsername = 'Please enter a username!';
             hasError = true;
         }
         if (!email.trim()) {
@@ -77,16 +82,21 @@ const SignUpScreen = () => {
         if (!hasError) {
             setIsLoading(true);
             try {
-                const result = await signUpUser({
-                    fullName: username,
-                    email: email,
-                    password: password
+                // Send signup data to backend
+                const response = await fetch('http://192.168.1.5:3001/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: userUsername,
+                        password: password,
+                        email: email,
+                        full_name: username,
+                        created_at: new Date().toISOString()
+                    })
                 });
-                
+                const result = await response.json();
                 if (result.success) {
-                    console.log('✅ User registered successfully:', result.userId);
-                    // Show all users in console for testing
-                    await showAllUsers();
+                    console.log('User registered successfully');
                     router.push('/SignUp/signupsuccess');
                 } else {
                     setErrors({ ...newErrors, email: result.message });
@@ -165,6 +175,31 @@ const SignUpScreen = () => {
                                 />
                             </View>
                             {errors.username ? <Text style={styles.errorText}>{errors.username}</Text> : null}
+                        </View>
+
+                        {/* Username Field */}
+                        <View style={styles.fieldContainer}>
+                            <Text style={styles.label}>Username</Text>
+                            <View style={[styles.inputContainer, errors.userUsername ? styles.inputError : null]}>
+                                <Ionicons 
+                                    name="at-outline" 
+                                    size={16} 
+                                    color="#9CA3AF" 
+                                    style={styles.inputIcon} 
+                                />
+                                <TextInput
+                                    style={styles.input}
+                                    value={userUsername}
+                                    onChangeText={text => {
+                                        setUserUsername(text);
+                                        if (errors.userUsername) setErrors({ ...errors, userUsername: '' });
+                                    }}
+                                    placeholder=""
+                                    autoCapitalize="none"
+                                    placeholderTextColor="#9CA3AF"
+                                />
+                            </View>
+                            {errors.userUsername ? <Text style={styles.errorText}>{errors.userUsername}</Text> : null}
                         </View>
 
                         {/* Email Field */}
@@ -294,12 +329,12 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'flex-start',
         padding: 16,
-        paddingTop: 40,
+        paddingTop: 8,
     },
     card: {
         backgroundColor: isDarkMode ? '#374151' : '#FFFFFF',
         borderRadius: 24,
-        padding: 32,
+        padding: 16,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
@@ -322,28 +357,31 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     },
     logoSection: {
         alignItems: 'center',
-        marginBottom: 20,
+        marginTop: 0,
     },
     logoContainer: {
-        width: 220,
-        height: 120,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 2,
+        backgroundColor: '#fff',
+        borderRadius: 50,
+        padding: 0,
+        marginBottom: 0,
+        marginTop: 0,
     },
     logo: {
         width: 280,
         height: 160,
         resizeMode: 'contain',
+        marginBottom: 0,
+        marginTop: -16,
     },
     title: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: 'bold',
-        color: isDarkMode ? '#FFFFFF' : '#111827',
-        marginBottom: 16,
+        color: isDarkMode ? '#fff' : '#222',
+        marginBottom: 0,
+        marginTop: -30,
     },
     formContainer: {
-        marginBottom: 24,
+        marginTop: 8,
     },
     fieldContainer: {
         marginBottom: 20,
