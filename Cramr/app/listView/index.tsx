@@ -1,9 +1,8 @@
 import { useNavigation } from 'expo-router';
-import React, { useLayoutEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
 import EventList from './eventList';
-
 
 export default function HomeScreen() {
   const theme = useTheme();
