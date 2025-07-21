@@ -15,10 +15,13 @@
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
+<<<<<<< HEAD
     "@types/body-parser": "^1.19.6",
     "@types/express": "^5.0.3",
     "@types/pg": "^8.15.4",
     "body-parser": "^2.2.0",
+=======
+>>>>>>> origin/dev
     "cors": "^2.8.5",
     "expo": "~53.0.17",
     "expo-blur": "~14.1.5",
@@ -36,9 +39,14 @@
     "express": "^5.1.0",
     "lucide-react-native": "^0.525.0",
     "pg": "^8.16.3",
+<<<<<<< HEAD
     "react": "19.0.0",
+=======
+    "react": "^19.0.0",
+>>>>>>> origin/dev
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
+    "react-native-dotenv": "^3.4.11",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-paper": "^5.14.5",
