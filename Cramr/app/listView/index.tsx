@@ -12,7 +12,7 @@ export default function HomeScreen() {
     navigation.setOptions({
       headerLeft: () => (
         <Image
-          source={require('../../assets/images/biggerCramrLogo.png')}
+          source={require('./assets/images/finalCramrLogo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
