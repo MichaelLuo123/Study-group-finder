@@ -1,4 +1,6 @@
-class Customer extends User {
+import { User } from './User';
+
+export class Customer extends User {
     static #instance: Customer;
 
     //maybe set a default class with no arguments here

@@ -1,4 +1,7 @@
-class PrivateStudySession extends StudySession{
+import { StudySession } from "./StudySession";
+import { User } from "./User";
+
+export class PrivateStudySession extends StudySession{
     private attendance: Array<User>;
 
     constructor(location: string, time: Date, subject: string){

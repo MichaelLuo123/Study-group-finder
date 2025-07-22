@@ -1,4 +1,4 @@
-abstract class StudySession {
+export abstract class StudySession {
     private location: string;
     private time: Date;
     private subject: string

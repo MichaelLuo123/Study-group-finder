@@ -1,6 +1,8 @@
 import { Client } from "@googlemaps/google-maps-services-js";
+import { StudySession } from "./StudySession";
+import { User } from "./User";
 
-class PublicStudySession extends StudySession{
+export class PublicStudySession extends StudySession{
     private attendance: Array<User>;
     private client;
 
@@ -19,12 +21,13 @@ class PublicStudySession extends StudySession{
         try {
             const response = await this.client.geocode({
                 params : {
+                    key: "AIzaSyBxoV_Ap9575C4SuJY2TaIftwlgSSSF6gw", //we're gonna use environment variables for the API Key in final production code
                     address: location,
-                    key: process.env.MAPS_API_KEY, //we're gonna use environment variables for the API Key. I will provide it once I'm ready to deploy.
+                    
                 },
                 timeout: 1000 //might be shorter given the constraints of the project.
             });
-            return response.data;
+            return response.data.results[0];
         } catch (error) {
             console.error("Error decoding address:" , error);
             throw new Error("Failed to decode address");
