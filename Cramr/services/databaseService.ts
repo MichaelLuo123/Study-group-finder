@@ -64,6 +64,33 @@ app.post('/signup', async (req: any, res: any) => {
     }
 });
 
+// POST /login endpoint
+app.post('/login', async (req: any, res: any) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'Missing email or password' });
+    }
+    try {
+        // Look up user by email
+        const userResult = await client.query(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
+        );
+        if (userResult.rows.length === 0) {
+            return res.status(401).json({ success: false, message: 'Invalid email' });
+        }
+        const user = userResult.rows[0];
+        // Compare password with hash
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid password' });
+        }
+        return res.json({ success: true, message: 'Login successful' });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to log in. Please try again.' });
+    }
+});
+
 // Start the server
 const PORT = 3001;
 app.listen(PORT, () => {
