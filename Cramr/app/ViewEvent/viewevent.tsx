@@ -43,7 +43,7 @@ const EventViewScreen = () => {
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const eventId = '82099fdc-e826-47bb-a4da-eef82680787d'; // Hardcoded for now, or get from route.params
+  const eventId = '72ccc433-dbcf-48ad-84b8-5c4d53d0c6c6'; // Hardcoded for now, or get from route.params
   const commentInputRef = useRef<TextInput>(null);
 
 // //mock event for testing purposes
@@ -69,15 +69,13 @@ const EventViewScreen = () => {
 //   };
 
   useEffect(() => {
-    console.log('Fetching event data...');
-    fetch(`http://10.1.1.97:3000/events/${eventId}`) //REPLACE IP WITH YOUR IP
+    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL || `http://${process.env.CRAMR_DB_IP_ADDR || '132.249.242.182'}:8080`}/events/${eventId}`)
       .then(res => res.json())
       .then(data => {
         setEvent(data);
         setLoading(false);
       })
       .catch((error) => {
-        console.log('Error:', error);
         setLoading(false);
       });
   }, [eventId]);

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres
+    container_name: cramr_postgres_container
+    environment:
+      - POSTGRES_PASSWORD=${CRAMR_DB_POSTGRES_PASSWORD}
+      - POSTGRES_DB=cramr_db
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - cramr-network
+
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - CRAMR_DB_IP_ADDR=${CRAMR_DB_IP_ADDR}
+      - CRAMR_DB_POSTGRES_PASSWORD=${CRAMR_DB_POSTGRES_PASSWORD}
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - cramr-network
+
+networks:
+  cramr-network:
+    driver: bridge 
