@@ -8,13 +8,19 @@ app.use(express.json());
 
 // Set up PostgreSQL client
 const client = new Client({
-  user: 'postgres',
-  host: '132.249.242.182',
-  database: 'cramr_db',
-  password: 'innoutmilkshake',
+  user: 'postgres',      // postgresql user
+  host: process.env.CRAMR_DB_IP_ADDR,     //IP address from environment variable
+  database: 'cramr_db',  // database name
+  password: process.env.CRAMR_DB_POSTGRES_PASSWORD, // postgresql password from environment variable
   port: 5432,
+  connectionTimeoutMillis: 10000, // 10 second timeout
+  query_timeout: 10000, // 10 second query timeout
 });
 client.connect();
+
+app.get('/test', (req, res) => {
+  res.json({ message: 'Backend is working!' });
+});
 
 app.get('/events/:id', async (req, res) => {
   const { id } = req.params;
@@ -55,4 +61,4 @@ app.get('/events/:id', async (req, res) => {
 });
 
 const PORT = 3000;
-app.listen(PORT, () => console.log(`Backend API running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Backend API running on port ${PORT}`));

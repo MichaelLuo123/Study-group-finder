@@ -43,7 +43,7 @@ const EventViewScreen = () => {
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const eventId = '6dcba350-62b0-4e08-b54f-19331dbc79eb'; // Hardcoded for now, or get from route.params
+  const eventId = '82099fdc-e826-47bb-a4da-eef82680787d'; // Hardcoded for now, or get from route.params
   const commentInputRef = useRef<TextInput>(null);
 
 // //mock event for testing purposes
@@ -70,10 +70,9 @@ const EventViewScreen = () => {
 
   useEffect(() => {
     console.log('Fetching event data...');
-    fetch(`http://192.168.0.130:3000/events/${eventId}`) //REPLACE IP WITH YOUR IP
+    fetch(`http://10.1.1.97:3000/events/${eventId}`) //REPLACE IP WITH YOUR IP
       .then(res => res.json())
       .then(data => {
-        console.log('Received data:', data);
         setEvent(data);
         setLoading(false);
       })
