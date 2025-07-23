@@ -10,5 +10,7 @@ export abstract class StudySession {
         this.subject = subject;
     }
 
-    
+    public get getLocation():string{
+        return this.location
+    }
 }
