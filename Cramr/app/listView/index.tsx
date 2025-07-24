@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     justifyContent: 'flex-start',
-    paddingBottom: 80, // Space for navbar
+    paddingBottom: 80, 
   },
   logo: {
     height: 100,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12, // Account for home indicator on iOS
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
   },
   navButton: {
     alignItems: 'center',
@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#5caef1', // Your desired dot color
+    backgroundColor: '#5caef1',
     position: 'absolute',
-    bottom: -5, // Adjust as needed
+    bottom: -5,
   },
 });

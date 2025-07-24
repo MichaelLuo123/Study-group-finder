@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 80, // Space for navbar
+    paddingBottom: 80, 
   },
   content: {
     paddingHorizontal: 16,
@@ -464,22 +464,22 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 16,
     paddingBottom: 4,
-    marginTop: 10, // add space below the banner/header
+    marginTop: 10, 
   },
   label: {
-    paddingHorizontal: 14, // more horizontal padding
-    paddingVertical: 6,    // more vertical padding
-    borderRadius: 20,      // more rounded
+    paddingHorizontal: 14, 
+    paddingVertical: 6,   
+    borderRadius: 20,      
     marginRight: 8,
     marginBottom: 6,
-    backgroundColor: '#e0e7ff', // subtle color, adjust as needed
+    backgroundColor: '#e0e7ff',
     borderWidth: 1,
-    borderColor: '#a5b4fc',     // subtle border, adjust as needed
+    borderColor: '#a5b4fc',   
   },
   labelText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#3730a3', // deeper color for contrast
+    color: '#3730a3',
   },
   eventDetails: {
     paddingHorizontal: 16,
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12, // Account for home indicator on iOS
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
   },
   navButton: {
     alignItems: 'center',
@@ -651,9 +651,9 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#5caef1', // Your desired dot color
+    backgroundColor: '#5caef1', 
     position: 'absolute',
-    bottom: -5, // Adjust as needed
+    bottom: -5, 
   },
 });
 
