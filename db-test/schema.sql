@@ -40,21 +40,34 @@ CREATE TABLE event_attendees (
     PRIMARY KEY (event_id, user_id)
 );
 
+-- Create friends table to manage user friendships
+CREATE TABLE friends (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,   -- Foreign key referencing the user
+    friend_id UUID REFERENCES users(id) ON DELETE CASCADE, -- Foreign key referencing the friend
+    status VARCHAR(20) DEFAULT 'pending',                   -- Friendship status (e.g., 'pending', 'accepted')
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,         -- Timestamp for when the friendship was created
+    PRIMARY KEY (user_id, friend_id)                        -- Composite primary key to ensure no duplicate friendships
+);
+
 -- -- Insert sample data into users
 -- INSERT INTO users (username, password_hash, email, full_name, major, year, bio)
 -- VALUES 
 -- ('kevinyang123', 'hashedpassword', 'alice@ucsd.edu', 'Kevin Yang', 'Computer Science', 'Senior', 'I love In-N-Out');
 
 -- -- Insert sample data into events
--- INSERT INTO events (title, description, location, date_and_time, creator_id, event_type, status, capacity, tags)
+-- INSERT INTO events (title, description, location, date_and_time, creator_id, event_type, status, capacity, tags, invited_ids, rsvping_ids, invited_count)
 -- VALUES 
 -- ('CS101 Study Group', 'Study group for CS101: Introduction to Computer Science', 'Room 101, UCSD', '2025-09-15 10:00:00', 
---  '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2', 'In-person', 'Upcoming', 30, ARRAY['CS101', 'Computer Science', 'Quiet']);
+--  '447f3ea2-b016-4c2a-ab1d-58ab876f4a37', 'In-person', 'Upcoming', 30, ARRAY['CS101', 'Computer Science', 'Quiet'], ARRAY['447f3ea2-b016-4c2a-ab1d-58ab876f4a37'], ARRAY[], 1);
 
 -- -- Insert sample data into event_attendees
 -- INSERT INTO event_attendees (event_id, user_id, status)
 -- VALUES 
 -- ('6dcba350-62b0-4e08-b54f-19331dbc79eb', '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2', 'Invited');
+
+-- -- Insert sample data into friends
+-- INSERT INTO friends (user_id, friend_id, status)
+-- VALUES ('user_uuid_1', 'user_uuid_2', 'accepted');
 
 -- Query to see the data in the tables
 SELECT * FROM users;
