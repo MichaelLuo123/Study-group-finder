@@ -1,22 +1,22 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
-import EventList from './eventList';
+import EventList from '../listView/eventList';
 
-export default function HomeScreen() {
+export default function MapScreen() {
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [currentPage, setCurrentPage] = useState('listView');
+  const [currentPage, setCurrentPage] = useState('map');
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
         <Image
-          source={require('./assets/images/finalCramrLogo.png')}
+          source={require('../listView/assets/images/finalCramrLogo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -33,7 +33,7 @@ export default function HomeScreen() {
           Add Event
         </Button>
       ),
-      headerTitle: '', // Hide "index"
+      headerTitle: '', 
     });
   }, [navigation]);
 
@@ -42,16 +42,25 @@ export default function HomeScreen() {
       setCurrentPage(page);
       if (page === 'listView') {
         router.push('/listView');
-      }
-      if (page === 'map') {
+      } else if (page === 'map') {
         router.push('/Map/map');
+      } else if (page === 'addEvent') {
+        // router.push('/addEvent');
+      } else if (page === 'bookmarks') {
+        // router.push('/bookmarks');
+      } else if (page === 'profile') {
+        // router.push('/profile');
       }
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>  
+      {/* Map Placeholder */}
+      <View style={styles.mapContainer}>
+        <Text style={{textAlign: 'center', color: '#888', marginTop: 10}}>Map Placeholder</Text>
+      </View>
+
       {/* Search Bar + Filter */}
       <View style={styles.searchRow}>
         <View style={styles.searchInputContainer}>
@@ -73,10 +82,11 @@ export default function HomeScreen() {
         />
       </View>
 
-      {<EventList />}
+      {/* Event List */}
+      <EventList />
 
       {/* Bottom Navigation Icons - Fixed at bottom */}
-      <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}>
+      <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}> 
         <TouchableOpacity 
           style={styles.navButton}
           onPress={() => handleNavigation('listView')}
@@ -154,10 +164,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderRadius: 10,
   },
+  mapContainer: {
+    height: 300,
+    width: '100%',
+    backgroundColor: '#e5e5e5',
+    borderRadius: 20,
+    marginBottom: 10,
+    marginTop: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 10,
   },
   searchInputContainer: {
     flex: 1,
