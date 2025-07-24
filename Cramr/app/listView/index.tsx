@@ -1,12 +1,16 @@
-import { useNavigation } from 'expo-router';
-import { useLayoutEffect } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation, useRouter } from 'expo-router';
+import { useLayoutEffect, useState } from 'react';
+import { Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
 import EventList from './eventList';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const navigation = useNavigation();
+  const router = useRouter();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [currentPage, setCurrentPage] = useState('listView');
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -32,6 +36,16 @@ export default function HomeScreen() {
       headerTitle: '', // Hide "index"
     });
   }, [navigation]);
+
+  const handleNavigation = (page: string) => {
+    if (currentPage !== page) {
+      setCurrentPage(page);
+      if (page === 'listView') {
+        router.push('/listView');
+      }
+      // Add other navigation routes as they are created
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -59,8 +73,64 @@ export default function HomeScreen() {
 
       {<EventList />}
 
-      {/* Placeholder Footer */}
-      <View style={styles.footerPlaceholder} />
+      {/* Bottom Navigation Icons - Fixed at bottom */}
+      <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('listView')}
+        >
+          <MaterialCommunityIcons 
+            name="clipboard-list-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'listView' && <View style={styles.activeDot} />}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('map')}
+        >
+          <Ionicons 
+            name="map-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'map' && <View style={styles.activeDot} />}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('addEvent')}
+        >
+          <Feather 
+            name="plus-square" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'addEvent' && <View style={styles.activeDot} />}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('bookmarks')}
+        >
+          <Feather 
+            name="bookmark" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('profile')}
+        >
+          <Ionicons 
+            name="person-circle-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'profile' && <View style={styles.activeDot} />}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -71,6 +141,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     justifyContent: 'flex-start',
+    paddingBottom: 80, 
   },
   logo: {
     height: 100,
@@ -107,14 +178,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  footerPlaceholder: {
+  bottomNav: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 70,
-    backgroundColor: '#FBE6FA',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
+  },
+  navButton: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#5caef1',
+    position: 'absolute',
+    bottom: -5,
   },
 });
