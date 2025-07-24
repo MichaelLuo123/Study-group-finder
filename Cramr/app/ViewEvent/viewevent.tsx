@@ -85,7 +85,18 @@ const EventViewScreen = () => {
     declined_ids: [],
     declined_count: 0,
   };
-
+  // useEffect(() => {
+  //   console.log('Fetching event data...');
+  //   fetch(`http://10.1.1.97:3000/events/${eventId}`) //REPLACE IP WITH YOUR IP
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setEvent(data);
+  //       setLoading(false);
+  //     })
+  //     .catch((error) => {
+  //       console.log('Error:', error);
+  //       setLoading(false);
+  //   });
   useEffect(() => {
     setTimeout(() => {
       setEvent(mockEvent);
