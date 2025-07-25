@@ -1,4 +1,4 @@
-abstract class User{
+export abstract class User{
     private realName: string;
     private password: string;
     private userName: string;

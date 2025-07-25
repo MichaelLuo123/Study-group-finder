@@ -1,20 +1,26 @@
 const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Set up PostgreSQL client
 const client = new Client({
   user: 'postgres',
-  host: '132.249.242.182',
+  host: process.env.NODE_ENV === 'production' ? '172.18.0.2' : process.env.CRAMR_DB_IP_ADDR,
   database: 'cramr_db',
-  password: 'innoutmilkshake',
+  password: process.env.CRAMR_DB_POSTGRES_PASSWORD,
   port: 5432,
+  connectionTimeoutMillis: 10000,
+  query_timeout: 10000,
 });
 client.connect();
+
+app.get('/test', (req, res) => {
+  res.json({ message: 'Backend is working!' });
+});
 
 app.get('/events/:id', async (req, res) => {
   const { id } = req.params;
@@ -23,7 +29,7 @@ app.get('/events/:id', async (req, res) => {
     if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     const event = eventResult.rows[0];
 
-    // Get invited and RSVP'd users
+
     const invitedResult = await client.query('SELECT user_id FROM event_attendees WHERE event_id = $1', [id]);
     const invited_ids = invitedResult.rows.map(row => row.user_id);
 
@@ -39,7 +45,7 @@ app.get('/events/:id', async (req, res) => {
     );
     const declined_ids = declinedResult.rows.map(row => row.user_id);
 
-    // Build response object
+
     res.json({
       ...event,
       invited_ids,
@@ -54,5 +60,5 @@ app.get('/events/:id', async (req, res) => {
   }
 });
 
-const PORT = 3000;
-app.listen(PORT, () => console.log(`Backend API running on port ${PORT}`));
+const PORT = 8080;
+app.listen(PORT, '0.0.0.0', () => {});

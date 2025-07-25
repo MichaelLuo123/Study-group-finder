@@ -9,9 +9,9 @@ if (!process.env.MYDB_IP_ADDR) {
 
 const client = new Client({
     user: 'postgres',      // postgresql user
-    host: process.env.MYDB_IP_ADDR,     //IP address from environment variable
+    host: process.env.CRAMR_DB_IP_ADDR,     //IP address from environment variable
     database: 'cramr_db',  // database name
-    password: 'innoutmilkshake', // postgresql password
+    password: process.env.CRAMR_DB_POSTGRES_PASSWORD, // postgresql password
     port: 5432,
     connectionTimeoutMillis: 10000, // 10 second timeout
     query_timeout: 10000, // 10 second query timeout

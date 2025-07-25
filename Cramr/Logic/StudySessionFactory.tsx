@@ -1,4 +1,6 @@
-abstract class StudySessionFactory{
+import { StudySession } from "./StudySession";
+
+export abstract class StudySessionFactory{
     private madeStudySession: StudySession;
     
     //default
