@@ -69,16 +69,23 @@ const EventViewScreen = () => {
 //   };
 
   useEffect(() => {
-    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL || `http://${process.env.CRAMR_DB_IP_ADDR || '132.249.242.182'}:8080`}/events/${eventId}`)
+    if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
+      console.error('Backend URL not configured');
+      setLoading(false);
+      return;
+    }
+
+    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`)
       .then(res => res.json())
       .then(data => {
         setEvent(data);
         setLoading(false);
       })
       .catch((error) => {
+        console.error('Failed to fetch event:', error);
         setLoading(false);
       });
-  }, [eventId]);
+  }, [eventId]); 
 
   // //Mock event input, comment out later
   //   setTimeout(() => {

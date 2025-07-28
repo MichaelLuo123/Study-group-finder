@@ -58,6 +58,7 @@ export default function HomeScreen() {
         <Button title="Go to Signup Success" onPress={() => router.push('/SignUp/signupsuccess')} />
         <Button title="Go to View Event Page" onPress={() => router.push('/ViewEvent/viewevent')} />
         <Button title="Go to Signup Page" onPress={() => router.push('/SignUp/signupscreen')} />
+        <Button title="Go to Create Event" onPress={() => router.push('/CreateEvent/createevent')} />
       </ThemedView>
     </ParallaxScrollView>
   );
