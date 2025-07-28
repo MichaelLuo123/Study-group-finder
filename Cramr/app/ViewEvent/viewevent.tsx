@@ -46,7 +46,7 @@ const EventViewScreen = () => {
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const eventId = '72ccc433-dbcf-48ad-84b8-5c4d53d0c6c6'; // Hardcoded for now, or get from route.params
+  const eventId = '3272c557-e2c8-451b-8114-e9b2d5269d0a'; // Hardcoded for now, or get from route.params
   const commentInputRef = useRef<TextInput>(null);
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState('eventView');

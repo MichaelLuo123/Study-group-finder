@@ -22,6 +22,117 @@ app.get('/test', (req, res) => {
   res.json({ message: 'Backend is working!' });
 });
 
+// Get all events
+app.get('/events', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM events ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Create new event
+app.post('/events', async (req, res) => {
+  const { title, description, location, class: classField, date, tags, capacity } = req.body;
+  
+  try {
+    const result = await client.query(
+      'INSERT INTO events (title, description, location, class, date, tags, capacity, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *',
+      [title, description, location, classField, date, tags, capacity]
+    );
+    
+    res.status(201).json({
+      success: true,
+      message: 'Event created successfully',
+      event: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// User signup
+app.post('/signup', async (req, res) => {
+  const { username, password, email, full_name } = req.body;
+  
+  try {
+    // Check if user already exists
+    const existingUser = await client.query(
+      'SELECT * FROM users WHERE username = $1 OR email = $2',
+      [username, email]
+    );
+    
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'Username or email already exists' });
+    }
+    
+    // Create new user
+    const result = await client.query(
+      'INSERT INTO users (username, password, email, full_name, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, username, email, full_name',
+      [username, password, email, full_name]
+    );
+    
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      user: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// User login
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  try {
+    const result = await client.query(
+      'SELECT * FROM users WHERE username = $1 AND password = $2',
+      [username, password]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+    
+    const user = result.rows[0];
+    res.json({
+      success: true,
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        full_name: user.full_name
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get user by ID
+app.get('/users/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await client.query(
+      'SELECT id, username, email, full_name, created_at FROM users WHERE id = $1',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 app.get('/events/:id', async (req, res) => {
   const { id } = req.params;
   try {
