@@ -1,15 +1,15 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Modal,
+  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Modal,
-  Pressable,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 
 const SettingsFrontPage = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -22,7 +22,7 @@ const SettingsFrontPage = () => {
 
         <TouchableOpacity
         style={styles.item}
-        onPress={() => router.push('../')}
+        onPress={() => router.push('../Settings/Profile')}
         >
         <Text style={styles.itemText}>Profile</Text>
         </TouchableOpacity>
