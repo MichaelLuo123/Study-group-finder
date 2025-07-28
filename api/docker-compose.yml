@@ -10,6 +10,8 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persistent storage
     networks:
       - cramr-network
 
@@ -29,4 +31,7 @@ services:
 
 networks:
   cramr-network:
-    driver: bridge 
+    driver: bridge
+
+volumes:
+  postgres_data:  # Named volume that persists data 
