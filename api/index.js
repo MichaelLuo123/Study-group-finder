@@ -60,5 +60,29 @@ app.get('/events/:id', async (req, res) => {
   }
 });
 
+app.put('/events/:id/location', async (req, res) => {
+  const { id } = req.params;
+  const { location } = req.body;
+  
+  try {
+    const result = await client.query(
+      'UPDATE events SET location = $1 WHERE id = $2 RETURNING *',
+      [location, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Location updated successfully',
+      event: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 const PORT = 8080;
 app.listen(PORT, '0.0.0.0', () => {});
