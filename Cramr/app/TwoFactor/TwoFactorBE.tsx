@@ -1,4 +1,4 @@
-// //authenticate myself for Mailjet. Put this in the .env folders once everything is set
+// authenticate myself for Mailjet. Put this in the .env folders once everything is set
 // export MJ_APIKEY_PUBLIC='5c0d15bd4bd31ce23181131a4714e8e1';
 // export MJ_APIKEY_PRIVATE='dcc70eeccd3807c5f055808b8e3261ad';
 
@@ -28,12 +28,11 @@ export class TwoFactorBE {
         //send the email with the code. We'll need to find out if SDSC cloud servers can send emails.
         //implement Mailjet API if we have to use outside API to send email
         
-
         const data: SendEmailV3_1.Body = {
             Messages: [
                 {
                     From: {
-                        Email: "tylervo.2002@gmail.com", //replace with mailjet provided domain
+                        Email: "tylervo.2002@gmail.com", //replace with our own created domain or something other than my email account if we have one.
                         Name: "Cramr Team" 
                     },
                     To: [
@@ -43,12 +42,7 @@ export class TwoFactorBE {
                         },
                     ],
                     Subject: "Your One Time Passcode",
-                    TextPart: `Hello ${rn},
-
-            You have tried to log in and your One Time Passcode is ${this.secretCode}. If you did not request a One Time Password, please change your password as soon as possible.
-                            
-            Thank you,
-            The Cramr Team`
+                    TextPart: `Hello ${rn},\n\nYou have tried to log in and your One Time Passcode is ${this.secretCode}. If you did not request a One Time Password, please change your password as soon as possible.\n\nThank you,\nThe Cramr Team`
                 }
             ]
         }
