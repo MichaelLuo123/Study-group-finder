@@ -1,4 +1,4 @@
-abstract class StudySession {
+export abstract class StudySession {
     private location: string;
     private time: Date;
     private subject: string
@@ -10,5 +10,7 @@ abstract class StudySession {
         this.subject = subject;
     }
 
-    
+    public get getLocation():string{
+        return this.location
+    }
 }

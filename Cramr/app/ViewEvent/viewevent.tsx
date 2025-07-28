@@ -1,3 +1,5 @@
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -34,6 +36,7 @@ interface Event {
   accepted_count: number;
   declined_ids: string[];
   declined_count: number;
+  rsvping_ids: string[];
 }
 
 const EventViewScreen = () => {
@@ -45,29 +48,55 @@ const EventViewScreen = () => {
   const [loading, setLoading] = useState(true);
   const eventId = '72ccc433-dbcf-48ad-84b8-5c4d53d0c6c6'; // Hardcoded for now, or get from route.params
   const commentInputRef = useRef<TextInput>(null);
+  const router = useRouter();
+  const [currentPage, setCurrentPage] = useState('eventView');
 
-// //mock event for testing purposes
-//   const mockEvent = {
-//     id: '6dcba350-62b0-4e08-b54f-19331dbc79eb',
-//     title: 'CS101 Study Group',
-//     description: 'Study group for CS101: Introduction to Computer Science',
-//     location: 'Sun God Lounge, Price Center East',
-//     date_and_time: '2025-09-15T10:00:00Z',
-//     creator_id: '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2',
-//     created_at: '2025-08-01T12:00:00Z',
-//     event_type: 'In-person',
-//     status: 'active',
-//     capacity: 30,
-//     tags: ['CS101', 'Computer Science', 'Quiet'],
-//     invited_ids: [
-//       'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7', 'id8', 'id9', 'id10'
-//     ], // all invited
-//     rsvping_ids: [
-//       'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7'
-//     ], // those who RSVP'd
-//     invited_count: 10,
-//   };
+  const handleNavigation = (page: string) => {
+    if (currentPage !== page) {
+      setCurrentPage(page);
+      if (page === 'listView') {
+        router.push('/listView');
+      }
+    }
+  };
 
+//mock event for testing purposes
+  const mockEvent: Event = {
+    id: '6dcba350-62b0-4e08-b54f-19331dbc79eb',
+    title: 'CS101 Study Group',
+    description: 'Study group for CS101: Introduction to Computer Science',
+    location: 'Sun God Lounge, Price Center East',
+    date_and_time: '2025-09-15T10:00:00Z',
+    creator_id: '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2',
+    created_at: '2025-08-01T12:00:00Z',
+    event_type: 'In-person',
+    status: 'active',
+    capacity: 30,
+    tags: ['CS101', 'Computer Science', 'Quiet'],
+    invited_ids: [
+      'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7', 'id8', 'id9', 'id10'
+    ], // all invited
+    rsvping_ids: [
+      'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7'
+    ], // those who RSVP'd
+    invited_count: 10,
+    accepted_ids: [],
+    accepted_count: 0,
+    declined_ids: [],
+    declined_count: 0,
+  };
+  // useEffect(() => {
+  //   console.log('Fetching event data...');
+  //   fetch(`http://10.1.1.97:3000/events/${eventId}`) //REPLACE IP WITH YOUR IP
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setEvent(data);
+  //       setLoading(false);
+  //     })
+  //     .catch((error) => {
+  //       console.log('Error:', error);
+  //       setLoading(false);
+  //   });
   useEffect(() => {
     if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
       console.error('Backend URL not configured');
@@ -86,13 +115,6 @@ const EventViewScreen = () => {
         setLoading(false);
       });
   }, [eventId]); 
-
-  // //Mock event input, comment out later
-  //   setTimeout(() => {
-  //     setEvent(mockEvent);
-  //     setLoading(false);
-  //   }, 1000);
-  // }, []);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -337,17 +359,60 @@ const EventViewScreen = () => {
 
       {/* Bottom Navigation Icons - Fixed at bottom */}
       <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.navBorder }]}>
-        <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>📚</Text>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('listView')}
+        >
+          <MaterialCommunityIcons 
+            name="clipboard-list-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'listView' && <View style={styles.activeDot} />}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>🌍</Text>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('map')}
+        >
+          <Ionicons 
+            name="map-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'map' && <View style={styles.activeDot} />}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>📊</Text>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('addEvent')}
+        >
+          <Feather 
+            name="plus-square" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'addEvent' && <View style={styles.activeDot} />}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>👤</Text>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('bookmarks')}
+        >
+          <Feather 
+            name="bookmark" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('profile')}
+        >
+          <Ionicons 
+            name="person-circle-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'profile' && <View style={styles.activeDot} />}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -360,7 +425,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 80, // Space for navbar
+    paddingBottom: 80, 
   },
   content: {
     paddingHorizontal: 16,
@@ -422,22 +487,22 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 16,
     paddingBottom: 4,
-    marginTop: 10, // add space below the banner/header
+    marginTop: 10, 
   },
   label: {
-    paddingHorizontal: 14, // more horizontal padding
-    paddingVertical: 6,    // more vertical padding
-    borderRadius: 20,      // more rounded
+    paddingHorizontal: 14, 
+    paddingVertical: 6,   
+    borderRadius: 20,      
     marginRight: 8,
     marginBottom: 6,
-    backgroundColor: '#e0e7ff', // subtle color, adjust as needed
+    backgroundColor: '#e0e7ff',
     borderWidth: 1,
-    borderColor: '#a5b4fc',     // subtle border, adjust as needed
+    borderColor: '#a5b4fc',   
   },
   labelText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#3730a3', // deeper color for contrast
+    color: '#3730a3',
   },
   eventDetails: {
     paddingHorizontal: 16,
@@ -596,7 +661,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12, // Account for home indicator on iOS
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
   },
   navButton: {
     alignItems: 'center',
@@ -604,6 +669,14 @@ const styles = StyleSheet.create({
   },
   navIcon: {
     fontSize: 24,
+  },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#5caef1', 
+    position: 'absolute',
+    bottom: -5, 
   },
 });
 

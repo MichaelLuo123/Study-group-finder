@@ -83,7 +83,7 @@ const SignUpScreen = () => {
             setIsLoading(true);
             try {
                 // Send signup data to backend
-                const response = await fetch('http://192.168.1.5:3001/signup', {
+                const response = await fetch('http://192.168.1.3:3001/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -310,8 +310,8 @@ const SignUpScreen = () => {
                     {/* Login Link */}
                     <View style={styles.loginLinkContainer}>
                         <Text style={styles.loginText}>Already have an account? </Text>
-                        <TouchableOpacity>
-                            <Text style={styles.signInText}>Sign in</Text>
+                        <TouchableOpacity onPress={() => router.push('/Login/Loginscreen')}>
+                            <Text style={styles.signInText}>Log in</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -360,8 +360,8 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         marginTop: 0,
     },
     logoContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 50,
+        backgroundColor: 'transparent',
+        // borderRadius: 50, // Remove or comment out if not needed
         padding: 0,
         marginBottom: 0,
         marginTop: 0,
