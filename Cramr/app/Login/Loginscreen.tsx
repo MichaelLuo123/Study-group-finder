@@ -16,64 +16,90 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 
 const LoginScreen = () => {
-   const [email, setEmail] = useState('');
-   const [password, setPassword] = useState('');
-   const [showPassword, setShowPassword] = useState(false);
-   const [isDarkMode, setIsDarkMode] = useState(false);
-   const [errors, setErrors] = useState({ email: '', password: '' });
-   const [loginStatus, setLoginStatus] = useState<'idle' | 'success' | 'error'>('idle');
-   const [loginMessage, setLoginMessage] = useState('');
-   const router = useRouter();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [errors, setErrors] = useState({ email: '', password: '' });
+    const [loginStatus, setLoginStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [loginMessage, setLoginMessage] = useState('');
+    const router = useRouter();
 
+    //refactored to make it look cleaner
+    const handleLogin = async () => {
+        let newErrors = { email: '', password: '' };
 
-   const handleLogin = async () => {
-       let newErrors = { email: '', password: '' };
-       let hasError = false;
-
-
-       if (!email.trim()) {
-           newErrors.email = 'Please enter your email!';
-           hasError = true;
-       } else if (!email.endsWith('.edu')) {
-           newErrors.email = 'Please use a valid .edu email address.';
-           hasError = true;
+        if(email.trim() && email.endsWith('.edu') && password.trim()) { //might replace the last part with regex but this works for now
+            try {
+                const response = await fetch('http://192.168.1.3:3001/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    setLoginStatus('success');
+                    setLoginMessage('Login successful!');
+                } else {
+                    setLoginStatus('error');
+                    setLoginMessage(result.message || 'Login failed.');
+                }
+            } catch (error) {
+                setLoginStatus('error');
+                setLoginMessage('Network error. Please try again.');
+            }
        }
+        else { //don't know how you can do this efficiently and cleanly
+            if (!email.trim()) {
+                newErrors.email = 'Please enter your email!';
+            } else if (!email.endsWith('.edu')) {
+                newErrors.email = 'Please use a valid .edu email address.';
+            }
+
+            if (!password.trim()) {
+                newErrors.password = 'Please enter your password!';
+            }
+            
+            
+            setErrors(newErrors);
+        }
+
+    };
+
+    //    if (!password.trim()) {
+    //        newErrors.password = 'Please enter your password!';
+    //        hasError = true;
+    //    }
 
 
-       if (!password.trim()) {
-           newErrors.password = 'Please enter your password!';
-           hasError = true;
-       }
+       
 
 
-       setErrors(newErrors);
+    //    if (!hasError) {
+    //        try {
+    //            const response = await fetch('http://192.168.1.3:3001/login', {
+    //                method: 'POST',
+    //                headers: { 'Content-Type': 'application/json' },
+    //                body: JSON.stringify({ email, password })
+    //            });
+    //            const result = await response.json();
+    //            if (result.success) {
+    //                setLoginStatus('success');
+    //                setLoginMessage('Login successful!');
+    //            } else {
+    //                setLoginStatus('error');
+    //                setLoginMessage(result.message || 'Login failed.');
+    //            }
+    //        } catch (error) {
+    //            setLoginStatus('error');
+    //            setLoginMessage('Network error. Please try again.');
+    //        }
+    //    } else {
+    //        setLoginStatus('idle');
+    //        setLoginMessage('');
+    //    }
 
-
-       if (!hasError) {
-           try {
-               const response = await fetch('http://192.168.1.3:3001/login', {
-                   method: 'POST',
-                   headers: { 'Content-Type': 'application/json' },
-                   body: JSON.stringify({ email, password })
-               });
-               const result = await response.json();
-               if (result.success) {
-                   setLoginStatus('success');
-                   setLoginMessage('Login successful!');
-               } else {
-                   setLoginStatus('error');
-                   setLoginMessage(result.message || 'Login failed.');
-               }
-           } catch (error) {
-               setLoginStatus('error');
-               setLoginMessage('Network error. Please try again.');
-           }
-       } else {
-           setLoginStatus('idle');
-           setLoginMessage('');
-       }
-   };
-
+   
 
    const styles = getStyles(isDarkMode);
 
