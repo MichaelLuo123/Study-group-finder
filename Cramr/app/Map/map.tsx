@@ -43,7 +43,6 @@ export default function MapScreen() {
       if (page === 'listView') {
         router.push('/listView');
       } else if (page === 'map') {
-        router.push('/Map/map');
       } else if (page === 'addEvent') {
         // router.push('/addEvent');
       } else if (page === 'bookmarks') {
