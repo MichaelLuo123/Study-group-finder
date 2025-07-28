@@ -46,7 +46,7 @@ const EventViewScreen = () => {
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const eventId = '72ccc433-dbcf-48ad-84b8-5c4d53d0c6c6'; // Hardcoded for now, or get from route.params
+  const eventId = '3272c557-e2c8-451b-8114-e9b2d5269d0a'; // Hardcoded for now, or get from route.params
   const commentInputRef = useRef<TextInput>(null);
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState('eventView');
@@ -85,18 +85,36 @@ const EventViewScreen = () => {
     declined_ids: [],
     declined_count: 0,
   };
-
+  // useEffect(() => {
+  //   console.log('Fetching event data...');
+  //   fetch(`http://10.1.1.97:3000/events/${eventId}`) //REPLACE IP WITH YOUR IP
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setEvent(data);
+  //       setLoading(false);
+  //     })
+  //     .catch((error) => {
+  //       console.log('Error:', error);
+  //       setLoading(false);
+  //   });
   useEffect(() => {
-    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL || `http://${process.env.CRAMR_DB_IP_ADDR || '132.249.242.182'}:8080`}/events/${eventId}`)
+    if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
+      console.error('Backend URL not configured');
+      setLoading(false);
+      return;
+    }
+
+    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`)
       .then(res => res.json())
       .then(data => {
         setEvent(data);
         setLoading(false);
       })
       .catch((error) => {
+        console.error('Failed to fetch event:', error);
         setLoading(false);
       });
-  }, [eventId]);
+  }, [eventId]); 
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -407,7 +425,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 80, // Space for navbar
+    paddingBottom: 80, 
   },
   content: {
     paddingHorizontal: 16,
@@ -469,22 +487,22 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 16,
     paddingBottom: 4,
-    marginTop: 10, // add space below the banner/header
+    marginTop: 10, 
   },
   label: {
-    paddingHorizontal: 14, // more horizontal padding
-    paddingVertical: 6,    // more vertical padding
-    borderRadius: 20,      // more rounded
+    paddingHorizontal: 14, 
+    paddingVertical: 6,   
+    borderRadius: 20,      
     marginRight: 8,
     marginBottom: 6,
-    backgroundColor: '#e0e7ff', // subtle color, adjust as needed
+    backgroundColor: '#e0e7ff',
     borderWidth: 1,
-    borderColor: '#a5b4fc',     // subtle border, adjust as needed
+    borderColor: '#a5b4fc',   
   },
   labelText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#3730a3', // deeper color for contrast
+    color: '#3730a3',
   },
   eventDetails: {
     paddingHorizontal: 16,
@@ -643,7 +661,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12, // Account for home indicator on iOS
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
   },
   navButton: {
     alignItems: 'center',
@@ -656,9 +674,9 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#5caef1', // Your desired dot color
+    backgroundColor: '#5caef1', 
     position: 'absolute',
-    bottom: -5, // Adjust as needed
+    bottom: -5, 
   },
 });
 
