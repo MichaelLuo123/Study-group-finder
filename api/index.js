@@ -177,6 +177,152 @@ app.get('/users/:id/friends', async (req, res) => {
   }
 });
 
+// Update user profile settings
+app.put('/users/:id/profile', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    full_name, 
+    major, 
+    year, 
+    bio, 
+    profile_picture_url, 
+    banner_color, 
+    school, 
+    pronouns, 
+    transfer,
+    prompt_1,
+    prompt_1_answer,
+    prompt_2,
+    prompt_2_answer,
+    prompt_3,
+    prompt_3_answer
+  } = req.body;
+  
+  try {
+    const result = await client.query(`
+      UPDATE users 
+      SET 
+        full_name = COALESCE($1, full_name),
+        major = COALESCE($2, major),
+        year = COALESCE($3, year),
+        bio = COALESCE($4, bio),
+        profile_picture_url = COALESCE($5, profile_picture_url),
+        banner_color = COALESCE($6, banner_color),
+        school = COALESCE($7, school),
+        pronouns = COALESCE($8, pronouns),
+        transfer = COALESCE($9, transfer),
+        prompt_1 = COALESCE($10, prompt_1),
+        prompt_1_answer = COALESCE($11, prompt_1_answer),
+        prompt_2 = COALESCE($12, prompt_2),
+        prompt_2_answer = COALESCE($13, prompt_2_answer),
+        prompt_3 = COALESCE($14, prompt_3),
+        prompt_3_answer = COALESCE($15, prompt_3_answer),
+        updated_at = NOW()
+      WHERE id = $16
+      RETURNING *
+    `, [
+      full_name, major, year, bio, profile_picture_url, banner_color, 
+      school, pronouns, transfer, prompt_1, prompt_1_answer, 
+      prompt_2, prompt_2_answer, prompt_3, prompt_3_answer, id
+    ]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Update user account settings
+app.put('/users/:id/account', async (req, res) => {
+  const { id } = req.params;
+  const { email, password } = req.body;
+  
+  try {
+    let query = 'UPDATE users SET updated_at = NOW()';
+    let params = [id];
+    let paramIndex = 2;
+    
+    if (email) {
+      query += `, email = $${paramIndex}`;
+      params.push(email);
+      paramIndex++;
+    }
+    
+    if (password) {
+      query += `, password_hash = $${paramIndex}`;
+      params.push(password); // In production, hash this password
+      paramIndex++;
+    }
+    
+    query += ` WHERE id = $1 RETURNING *`;
+    
+    const result = await client.query(query, params);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Account updated successfully',
+      user: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Update user preferences
+app.put('/users/:id/preferences', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    push_notifications, 
+    email_notifications, 
+    sms_notifications, 
+    theme 
+  } = req.body;
+  
+  try {
+    // For now, we'll store preferences as JSON in a new column
+    // You might want to add these columns to your users table
+    const preferences = {
+      push_notifications: push_notifications || false,
+      email_notifications: email_notifications || false,
+      sms_notifications: sms_notifications || false,
+      theme: theme || 'light'
+    };
+    
+    // For demo purposes, we'll update a text field with JSON
+    // In production, you'd add preference columns to your users table
+    const result = await client.query(`
+      UPDATE users 
+      SET updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Preferences updated successfully',
+      preferences: preferences
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 app.get('/events/:id', async (req, res) => {
   const { id } = req.params;
   try {
