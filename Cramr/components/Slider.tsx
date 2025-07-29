@@ -5,16 +5,16 @@ import { useThemeColor } from '../hooks/useThemeColor';
 interface SliderProps {
     rightLabel: string;
     leftLabel: string;
-    onValueChange?: (value: boolean) => void;
-    initialValue?: boolean; // Optional initial value
+    onChangeSlider?: (value: boolean) => void;
+    value?: boolean; // Optional initial value
     style?: object; // Optional style prop for customization
 }
 
 const Slider: React.FC<SliderProps> = ({ 
     rightLabel, 
     leftLabel, 
-    onValueChange, 
-    initialValue = false,
+    onChangeSlider: onValueChange, 
+    value: initialValue = false,
     style={}
 }) => {
     const sliderBackgroundColor = useThemeColor({}, 'sliderBackground');

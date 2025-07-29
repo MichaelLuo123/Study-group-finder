@@ -1,5 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -10,58 +10,80 @@ import {
 } from "react-native";
 import { useThemeColor } from '../hooks/useThemeColor';
 
-export default function ImageUpload() {
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const textInputColor = useThemeColor({}, 'textInput');
+interface ImageUploadProps {
+  value?: string | null; // URL or local path
+  onChangeImage: (uri: string | null) => void; // Callback to return the URI
+  style?: object;
+}
 
-  // Stores the selected image URI, starts as null
-  const [file, setFile] = useState<string | null>(null);
-  // Stores any error message
-  const [error, setError] = useState(null);
+export default function ImageUpload({value, onChangeImage, style}: ImageUploadProps) {
+  const backgroundColor = useThemeColor({}, 'background');
   
-  // Function to pick an image from the device's media library
+  const [image, setImage] = useState<string | null>(value || null);
+  const [error, setError] = useState(null);
+
+  // Update local state when value prop changes
+  useEffect(() => {
+    setImage(value || null);
+  }, [value]);
+
+  // Memoize the callback to prevent unnecessary re-renders
+  const handleImageChange = useCallback((newImage: string | null) => {
+    onChangeImage(newImage);
+  }, [onChangeImage]);
+
+  // Call onChangeImage whenever image changes
+  useEffect(() => {
+    handleImageChange(image);
+  }, [image, handleImageChange]);
+
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      // If permission is denied, show an alert
       Alert.alert("Permission Denied", `Sorry, we need camera roll permission to upload images.`);
     } else {
-      // Launch the image library and get the selected image
       const result = await ImagePicker.launchImageLibraryAsync();
       if (!result.canceled) {
-        // If an image is selected (not canceled), update the file state variable
-        setFile(result.assets[0].uri);
-        // Clear any previous errors
+        setImage(result.assets[0].uri);
         setError(null);
       }
     }
   };
 
-  // Function to remove the selected image
   const removeImage = () => {
-    setFile(null);
+    setImage(null); // Set to null instead of default image path
   };
-
+  
+  // Function to determine image source
+  const getImageSource = () => {
+    if (image) {
+      // If it's a URL (starts with http) or local URI, use { uri: image }
+      if (image.startsWith('http') || image.startsWith('file://')) {
+        return { uri: image };
+      }
+      // For any other string, treat as URI
+      return { uri: image };
+    }
+    // Fallback to default image when no image is set
+    return require('../assets/images/default_profile.jpg');
+  };
+  
   return (
     <View style={styles.container}>
-      {/* Button to choose an image */}
       <TouchableOpacity onPress={pickImage}>
-        {/* Show selected image if available, otherwise show default */}
         <Image
-          source={file ? { uri: file } : require('../assets/images/default_profile.jpg')}
+          source={getImageSource()}
           style={styles.profilePicture}
         />
       </TouchableOpacity>
       
       {/* Show remove button only if there's a selected image */}
-      {file && (
+      {image && (
         <TouchableOpacity onPress={removeImage} style={[styles.removeButton, {backgroundColor: backgroundColor}]}>
           <Text style={[styles.removeButtonText]}>×</Text>
         </TouchableOpacity>
       )}
-
-      {/* Display error message if there's an error */}
+      
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
