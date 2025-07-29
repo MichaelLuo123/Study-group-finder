@@ -44,6 +44,7 @@ const EventViewScreen = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const eventId = '3272c557-e2c8-451b-8114-e9b2d5269d0a'; // Hardcoded for now, or get from route.params
@@ -129,6 +130,10 @@ const EventViewScreen = () => {
       console.log('Posting comment:', comment);
       setComment('');
     }
+  };
+
+  const handleSaveEvent = () => {
+    setIsSaved(!isSaved);
   };
 
   const theme = isDarkMode ? darkTheme : lightTheme;
@@ -243,26 +248,38 @@ const EventViewScreen = () => {
 
             {/* RSVP Section */}
             <View style={styles.rsvpSection}>
-              <TouchableOpacity
-                onPress={handleRSVP}
-                style={[
-                  styles.rsvpButton,
-                  {
-                    backgroundColor: isRSVPed ? theme.rsvpActiveBackground : theme.rsvpBackground,
-                  }
-                ]}
-              >
-                <Text
+              <View style={styles.rsvpButtonContainer}>
+                <TouchableOpacity
+                  onPress={handleRSVP}
                   style={[
-                    styles.rsvpButtonText,
+                    styles.rsvpButton,
                     {
-                      color: isRSVPed ? theme.rsvpActiveText : theme.rsvpText,
+                      backgroundColor: isRSVPed ? theme.rsvpActiveBackground : theme.rsvpBackground,
                     }
                   ]}
                 >
-                  {isRSVPed ? 'GOING' : 'RSVP'}
-                </Text>
-              </TouchableOpacity>
+                                     <Text
+                     style={[
+                       styles.rsvpButtonText,
+                       {
+                         color: isRSVPed ? theme.rsvpActiveText : theme.rsvpText,
+                       }
+                     ]}
+                   >
+                     {isRSVPed ? 'RSVPed!' : 'RSVP'}
+                   </Text>
+                </TouchableOpacity>
+                                                  <TouchableOpacity
+                   onPress={handleSaveEvent}
+                   style={styles.saveButton}
+                 >
+                                       <Ionicons 
+                      name={isSaved ? "bookmark" : "bookmark-outline"} 
+                      size={26} 
+                      color={isSaved ? "#000000" : theme.saveButtonText} 
+                    />
+                 </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -344,14 +361,16 @@ const EventViewScreen = () => {
                 textAlignVertical="top"
                 scrollEnabled={false}
               />
-              <TouchableOpacity
-                onPress={handlePostComment}
-                style={[styles.sendButton, { backgroundColor: theme.sendButtonBackground }]}
-              >
-                <Text style={[styles.sendButtonText, { color: theme.sendButtonText }]}>
-                  →
-                </Text>
-              </TouchableOpacity>
+                             <TouchableOpacity
+                 onPress={handlePostComment}
+                 style={styles.sendButton}
+               >
+                                   <Ionicons 
+                    name="paper-plane-outline" 
+                    size={20} 
+                    color="#87CEEB" 
+                  />
+               </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -566,11 +585,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
+  rsvpButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   rsvpButton: {
+    flex: 1,
     paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderRadius: 20,
-    alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButton: {
+    width: 60,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  saveButtonText: {
+    fontSize: 18,
   },
   rsvpButtonText: {
     fontSize: 14,
@@ -639,9 +675,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   sendButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
@@ -689,8 +725,8 @@ const lightTheme = {
   labelTextColor: '#666666',
   rsvpBackground: '#007AFF',
   rsvpText: '#ffffff',
-  rsvpActiveBackground: '#007AFF',
-  rsvpActiveText: '#ffffff',
+  rsvpActiveBackground: '#E8E8E8',
+  rsvpActiveText: '#000000',
   commentBackground: '#f0f0f0',
   avatarBackground: '#cccccc',
   profileBackground: '#e8d5d5',
@@ -700,6 +736,8 @@ const lightTheme = {
   sendButtonText: '#ffffff',
   navBackground: '#ffffff',
   navBorder: '#e0e0e0',
+  saveButtonBorder: '#000000',
+  saveButtonText: '#000000',
 };
 
 const darkTheme = {
@@ -711,8 +749,8 @@ const darkTheme = {
   labelTextColor: '#d1d5db',
   rsvpBackground: '#007AFF',
   rsvpText: '#ffffff',
-  rsvpActiveBackground: '#007AFF',
-  rsvpActiveText: '#ffffff',
+  rsvpActiveBackground: '#E8E8E8',
+  rsvpActiveText: '#000000',
   commentBackground: '#374151',
   avatarBackground: '#4a5568',
   profileBackground: '#374151',
@@ -722,6 +760,8 @@ const darkTheme = {
   sendButtonText: '#ffffff',
   navBackground: '#2d2d2d',
   navBorder: '#4a5568',
+  saveButtonBorder: '#ffffff',
+  saveButtonText: '#ffffff',
 };
 
 
