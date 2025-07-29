@@ -117,13 +117,13 @@ export default function SettingsProfilePage() {
       const updatedData = {
         profile_picture: profilePicture,
         banner_color: bannerColor,
-        name: name,
+        full_name: name,
         username: username,
         school: school,
         major: major,
-        class_level: classLevel,
+        year: classLevel,
         pronouns: pronouns,
-        is_transfer: isTransfer,
+        transfer: isTransfer,
         bio: bio,
         prompt_1: prompt1,
         prompt_1_answer: prompt1Answer,
@@ -327,7 +327,10 @@ export default function SettingsProfilePage() {
             onChangeOption3Answer={setPrompt3Answer}
           />
 
-          <TouchableOpacity style={[styles.buttonContainer, {marginTop: 20}]}>
+          <TouchableOpacity 
+            style={[styles.buttonContainer, {marginTop: 20}]}
+            onPress={handleSave}
+          >
             <Text style={[styles.bodyText, {color: textColor}]}>Save</Text>
           </TouchableOpacity>
 
