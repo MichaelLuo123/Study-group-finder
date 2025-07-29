@@ -1,9 +1,22 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
+import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import { IconButton, TextInput, useTheme } from 'react-native-paper';
+import Animated, {
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
+} from 'react-native-reanimated';
 import EventList from '../listView/eventList';
+
+const { height: screenHeight } = Dimensions.get('window');
+const BOTTOM_SHEET_MIN_HEIGHT = 120; 
+const HEADER_HEIGHT = 100; 
+const NAVBAR_HEIGHT = 80; 
+const BOTTOM_SHEET_MAX_HEIGHT = screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT; 
 
 export default function MapScreen() {
   const theme = useTheme();
@@ -11,6 +24,7 @@ export default function MapScreen() {
   const router = useRouter();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentPage, setCurrentPage] = useState('map');
+  const translateY = useSharedValue(0);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -20,18 +34,6 @@ export default function MapScreen() {
           style={styles.logo}
           resizeMode="contain"
         />
-      ),
-      headerRight: () => (
-        <Button
-          mode="contained"
-          compact
-          buttonColor="#5caef1"
-          textColor="black"
-          style={styles.addButton}
-          onPress={() => {}}
-        >
-          Add Event
-        </Button>
       ),
       headerTitle: '', 
     });
@@ -43,6 +45,7 @@ export default function MapScreen() {
       if (page === 'listView') {
         router.push('/listView');
       } else if (page === 'map') {
+        // Already on map page, no navigation needed
       } else if (page === 'addEvent') {
         // router.push('/addEvent');
       } else if (page === 'bookmarks') {
@@ -53,36 +56,95 @@ export default function MapScreen() {
     }
   };
 
+  const gestureHandler = useAnimatedGestureHandler({
+    onStart: (_, context: any) => {
+      context.startY = translateY.value;
+    },
+    onActive: (event, context: any) => {
+      const newTranslateY = context.startY + event.translationY;
+      const maxUpward = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50); 
+      const maxDownward = 200; 
+      translateY.value = Math.max(maxUpward, Math.min(maxDownward, newTranslateY));
+    },
+    onEnd: (event) => {
+      const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50);
+      const middlePosition = 0;
+      const bottomPosition = 200;
+      const currentPosition = translateY.value;
+      let currentState;
+      if (currentPosition < topPosition / 2) {
+        currentState = 'top';
+      } else if (currentPosition < (middlePosition + bottomPosition) / 2) {
+        currentState = 'middle';
+      } else {
+        currentState = 'bottom';
+      }
+      
+      let targetState = currentState;
+      if (event.velocityY < -300) {
+        if (currentState === 'bottom') targetState = 'middle';
+        else if (currentState === 'middle') targetState = 'top';
+      } else if (event.velocityY > 300) {
+        if (currentState === 'top') targetState = 'middle';
+        else if (currentState === 'middle') targetState = 'bottom';
+      }
+      
+      if (targetState === 'top') {
+        translateY.value = withSpring(topPosition);
+      } else if (targetState === 'middle') {
+        translateY.value = withSpring(middlePosition);
+      } else {
+        translateY.value = withSpring(bottomPosition);
+      }
+    },
+  });
+
+  const bottomSheetStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>  
-      {/* Map Placeholder */}
+      {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-        <Text style={{textAlign: 'center', color: '#888', marginTop: 10}}>Map Placeholder</Text>
+        <Text style={styles.mapPlaceholder}>Map Placeholder</Text>
       </View>
 
-      {/* Search Bar + Filter */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchInputContainer}>
-          <TextInput
-            mode="flat"
-            placeholder="Search"
-            style={styles.searchInput}
-            left={<TextInput.Icon icon="magnify" />}
-            underlineColor="transparent"
-            activeUnderlineColor="transparent"
-          />
-        </View>
-        <IconButton
-          icon="filter"
-          size={28}
-          onPress={() => {}}
-          style={styles.filterButton}
-          iconColor="#000"
-        />
-      </View>
+      {/* Draggable Bottom Sheet */}
+      <PanGestureHandler onGestureEvent={gestureHandler}>
+        <Animated.View style={[styles.bottomSheet, bottomSheetStyle]}>
+          {/* Drag Handle */}
+          <View style={styles.dragHandle} />
+          
+          {/* Search Bar + Filter */}
+          <View style={styles.searchRow}>
+            <View style={styles.searchInputContainer}>
+              <TextInput
+                mode="flat"
+                placeholder="Search"
+                style={styles.searchInput}
+                left={<TextInput.Icon icon="magnify" />}
+                underlineColor="transparent"
+                activeUnderlineColor="transparent"
+              />
+            </View>
+            <IconButton
+              icon="filter"
+              size={28}
+              onPress={() => {}}
+              style={styles.filterButton}
+              iconColor="#000"
+            />
+          </View>
 
-      {/* Event List */}
-      <EventList />
+          {/* Event List - Only visible when expanded */}
+          <View style={styles.eventListContainer}>
+            <EventList />
+          </View>
+        </Animated.View>
+      </PanGestureHandler>
 
       {/* Bottom Navigation Icons - Fixed at bottom */}
       <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}> 
@@ -149,35 +211,60 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    justifyContent: 'flex-start',
-    paddingBottom: 80, 
   },
   logo: {
     height: 100,
     width: 100,
     marginLeft: 12,
   },
-  addButton: {
-    marginRight: 8,
-    borderRadius: 10,
-  },
   mapContainer: {
-    height: 300,
-    width: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#e5e5e5',
-    borderRadius: 20,
-    marginBottom: 10,
-    marginTop: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+  },
+  mapPlaceholder: {
+    textAlign: 'center',
+    color: '#888',
+    fontSize: 18,
+  },
+  bottomSheet: {
+    position: 'absolute',
+    top: HEADER_HEIGHT + (screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT) / 2, // Middle between header and navbar
+    left: 0,
+    right: 0,
+    height: BOTTOM_SHEET_MAX_HEIGHT, // Fixed height
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000, // Ensure it's above other elements
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#999',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 8,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   searchInputContainer: {
     flex: 1,
@@ -200,6 +287,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  eventListContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 20, // Add padding at bottom for extra space
+  },
   bottomNav: {
     position: 'absolute',
     bottom: 0,
@@ -212,6 +304,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopWidth: 1,
     paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
+    zIndex: 1001, // Ensure navbar is above bottom sheet
   },
   navButton: {
     alignItems: 'center',
