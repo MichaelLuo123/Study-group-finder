@@ -34,13 +34,37 @@ app.get('/events', async (req, res) => {
 
 // Create new event
 app.post('/events', async (req, res) => {
-  const { title, description, location, class: classField, date, tags, capacity } = req.body;
+  const { title, description, location, class: classField, date, tags, capacity, invitePeople } = req.body;
   
   try {
+    // First create the event
     const result = await client.query(
-      'INSERT INTO events (title, description, location, class, date, tags, capacity, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *',
+      'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *',
       [title, description, location, classField, date, tags, capacity]
     );
+    
+    const event = result.rows[0];
+    
+    // If invite people are provided, create event attendee records
+    if (invitePeople && invitePeople.length > 0) {
+      for (const username of invitePeople) {
+        // Find user by username
+        const userResult = await client.query(
+          'SELECT id FROM users WHERE username = $1',
+          [username.trim()]
+        );
+        
+        if (userResult.rows.length > 0) {
+          const userId = userResult.rows[0].id;
+          
+          // Add to event_attendees table
+          await client.query(
+            'INSERT INTO event_attendees (event_id, user_id, status) VALUES ($1, $2, $3) ON CONFLICT (event_id, user_id) DO NOTHING',
+            [event.id, userId, 'invited']
+          );
+        }
+      }
+    }
     
     res.status(201).json({
       success: true,
@@ -119,7 +143,7 @@ app.get('/users/:id', async (req, res) => {
   
   try {
     const result = await client.query(
-      'SELECT id, username, email, full_name, created_at FROM users WHERE id = $1',
+      'SELECT * FROM users WHERE id = $1',
       [id]
     );
     
@@ -128,6 +152,26 @@ app.get('/users/:id', async (req, res) => {
     }
     
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get user's friends
+app.get('/users/:id/friends', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    // Get accepted friends (both directions)
+    const result = await client.query(`
+      SELECT u.id, u.username, u.full_name, u.email
+      FROM users u
+      INNER JOIN friends f ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
+      WHERE f.status = 'accepted'
+      ORDER BY u.full_name
+    `, [id]);
+    
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
   }
@@ -189,6 +233,38 @@ app.put('/events/:id/location', async (req, res) => {
       success: true, 
       message: 'Location updated successfully',
       event: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Delete old entries endpoint
+app.post('/admin/delete-old-entries', async (req, res) => {
+  try {
+    // Delete old events (older than 30 days)
+    const eventsResult = await client.query(
+      'DELETE FROM events WHERE date_and_time < NOW() - INTERVAL \'30 days\''
+    );
+    
+    // Delete old event attendees (older than 60 days)
+    const attendeesResult = await client.query(
+      'DELETE FROM event_attendees WHERE rsvp_date < NOW() - INTERVAL \'60 days\''
+    );
+    
+    // Delete old pending friendship requests (older than 30 days)
+    const friendsResult = await client.query(
+      'DELETE FROM friends WHERE status = \'pending\' AND created_at < NOW() - INTERVAL \'30 days\''
+    );
+    
+    res.json({
+      success: true,
+      message: 'Old entries deleted successfully',
+      deleted: {
+        events: eventsResult.rowCount,
+        attendees: attendeesResult.rowCount,
+        friends: friendsResult.rowCount
+      }
     });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
