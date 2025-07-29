@@ -36,7 +36,6 @@ interface Event {
   accepted_count: number;
   declined_ids: string[];
   declined_count: number;
-  rsvping_ids: string[];
 }
 
 const EventViewScreen = () => {
@@ -62,30 +61,30 @@ const EventViewScreen = () => {
   };
 
 //mock event for testing purposes
-  const mockEvent: Event = {
-    id: '6dcba350-62b0-4e08-b54f-19331dbc79eb',
-    title: 'CS101 Study Group',
-    description: 'Study group for CS101: Introduction to Computer Science',
-    location: 'Sun God Lounge, Price Center East',
-    date_and_time: '2025-09-15T10:00:00Z',
-    creator_id: '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2',
-    created_at: '2025-08-01T12:00:00Z',
-    event_type: 'In-person',
-    status: 'active',
-    capacity: 30,
-    tags: ['CS101', 'Computer Science', 'Quiet'],
-    invited_ids: [
-      'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7', 'id8', 'id9', 'id10'
-    ], // all invited
-    rsvping_ids: [
-      'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7'
-    ], // those who RSVP'd
-    invited_count: 10,
-    accepted_ids: [],
-    accepted_count: 0,
-    declined_ids: [],
-    declined_count: 0,
-  };
+  // const mockEvent: Event = {
+  //   id: '6dcba350-62b0-4e08-b54f-19331dbc79eb',
+  //   title: 'CS101 Study Group',
+  //   description: 'Study group for CS101: Introduction to Computer Science',
+  //   location: 'Sun God Lounge, Price Center East',
+  //   date_and_time: '2025-09-15T10:00:00Z',
+  //   creator_id: '37bd4d1a-fd0e-4f43-8fd5-d3d436da39e2',
+  //   created_at: '2025-08-01T12:00:00Z',
+  //   event_type: 'In-person',
+  //   status: 'active',
+  //   capacity: 30,
+  //   tags: ['CS101', 'Computer Science', 'Quiet'],
+  //   invited_ids: [
+  //     'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7', 'id8', 'id9', 'id10'
+  //   ], // all invited
+  //   rsvping_ids: [
+  //     'id1', 'id2', 'id3', 'id4', 'id5', 'id6', 'id7'
+  //   ], // those who RSVP'd
+  //   invited_count: 10,
+  //   accepted_ids: [],
+  //   accepted_count: 0,
+  //   declined_ids: [],
+  //   declined_count: 0,
+  // };
   // useEffect(() => {
   //   console.log('Fetching event data...');
   //   fetch(`http://10.1.1.97:3000/events/${eventId}`) //REPLACE IP WITH YOUR IP
@@ -116,6 +115,13 @@ const EventViewScreen = () => {
         setLoading(false);
       });
   }, [eventId]); 
+
+  // //Mock event input, comment out later
+  //   setTimeout(() => {
+  //     setEvent(mockEvent);
+  //     setLoading(false);
+  //   }, 1000);
+  // }, []);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);

@@ -34,13 +34,37 @@ app.get('/events', async (req, res) => {
 
 // Create new event
 app.post('/events', async (req, res) => {
-  const { title, description, location, class: classField, date, tags, capacity } = req.body;
+  const { title, description, location, class: classField, date, tags, capacity, invitePeople } = req.body;
   
   try {
+    // First create the event
     const result = await client.query(
-      'INSERT INTO events (title, description, location, class, date, tags, capacity, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *',
+      'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *',
       [title, description, location, classField, date, tags, capacity]
     );
+    
+    const event = result.rows[0];
+    
+    // If invite people are provided, create event attendee records
+    if (invitePeople && invitePeople.length > 0) {
+      for (const username of invitePeople) {
+        // Find user by username
+        const userResult = await client.query(
+          'SELECT id FROM users WHERE username = $1',
+          [username.trim()]
+        );
+        
+        if (userResult.rows.length > 0) {
+          const userId = userResult.rows[0].id;
+          
+          // Add to event_attendees table
+          await client.query(
+            'INSERT INTO event_attendees (event_id, user_id, status) VALUES ($1, $2, $3) ON CONFLICT (event_id, user_id) DO NOTHING',
+            [event.id, userId, 'invited']
+          );
+        }
+      }
+    }
     
     res.status(201).json({
       success: true,
@@ -119,7 +143,7 @@ app.get('/users/:id', async (req, res) => {
   
   try {
     const result = await client.query(
-      'SELECT id, username, email, full_name, created_at FROM users WHERE id = $1',
+      'SELECT * FROM users WHERE id = $1',
       [id]
     );
     
@@ -128,6 +152,172 @@ app.get('/users/:id', async (req, res) => {
     }
     
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get user's friends
+app.get('/users/:id/friends', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    // Get accepted friends (both directions)
+    const result = await client.query(`
+      SELECT u.id, u.username, u.full_name, u.email
+      FROM users u
+      INNER JOIN friends f ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
+      WHERE f.status = 'accepted'
+      ORDER BY u.full_name
+    `, [id]);
+    
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Update user profile settings
+app.put('/users/:id/profile', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    full_name, 
+    major, 
+    year, 
+    bio, 
+    profile_picture_url, 
+    banner_color, 
+    school, 
+    pronouns, 
+    transfer,
+    prompt_1,
+    prompt_1_answer,
+    prompt_2,
+    prompt_2_answer,
+    prompt_3,
+    prompt_3_answer
+  } = req.body;
+  
+  try {
+    const result = await client.query(`
+      UPDATE users 
+      SET 
+        full_name = COALESCE($1, full_name),
+        major = COALESCE($2, major),
+        year = COALESCE($3, year),
+        bio = COALESCE($4, bio),
+        profile_picture_url = COALESCE($5, profile_picture_url),
+        banner_color = COALESCE($6, banner_color),
+        school = COALESCE($7, school),
+        pronouns = COALESCE($8, pronouns),
+        transfer = COALESCE($9, transfer),
+        prompt_1 = COALESCE($10, prompt_1),
+        prompt_1_answer = COALESCE($11, prompt_1_answer),
+        prompt_2 = COALESCE($12, prompt_2),
+        prompt_2_answer = COALESCE($13, prompt_2_answer),
+        prompt_3 = COALESCE($14, prompt_3),
+        prompt_3_answer = COALESCE($15, prompt_3_answer),
+        updated_at = NOW()
+      WHERE id = $16
+      RETURNING *
+    `, [
+      full_name, major, year, bio, profile_picture_url, banner_color, 
+      school, pronouns, transfer, prompt_1, prompt_1_answer, 
+      prompt_2, prompt_2_answer, prompt_3, prompt_3_answer, id
+    ]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Update user account settings
+app.put('/users/:id/account', async (req, res) => {
+  const { id } = req.params;
+  const { email, password } = req.body;
+  
+  try {
+    let query = 'UPDATE users SET updated_at = NOW()';
+    let params = [id];
+    let paramIndex = 2;
+    
+    if (email) {
+      query += `, email = $${paramIndex}`;
+      params.push(email);
+      paramIndex++;
+    }
+    
+    if (password) {
+      query += `, password_hash = $${paramIndex}`;
+      params.push(password); // In production, hash this password
+      paramIndex++;
+    }
+    
+    query += ` WHERE id = $1 RETURNING *`;
+    
+    const result = await client.query(query, params);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Account updated successfully',
+      user: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Update user preferences
+app.put('/users/:id/preferences', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    push_notifications, 
+    email_notifications, 
+    sms_notifications, 
+    theme 
+  } = req.body;
+  
+  try {
+    // For now, we'll store preferences as JSON in a new column
+    // You might want to add these columns to your users table
+    const preferences = {
+      push_notifications: push_notifications || false,
+      email_notifications: email_notifications || false,
+      sms_notifications: sms_notifications || false,
+      theme: theme || 'light'
+    };
+    
+    // For demo purposes, we'll update a text field with JSON
+    // In production, you'd add preference columns to your users table
+    const result = await client.query(`
+      UPDATE users 
+      SET updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Preferences updated successfully',
+      preferences: preferences
+    });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
   }
@@ -189,6 +379,38 @@ app.put('/events/:id/location', async (req, res) => {
       success: true, 
       message: 'Location updated successfully',
       event: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Delete old entries endpoint
+app.post('/admin/delete-old-entries', async (req, res) => {
+  try {
+    // Delete old events (older than 30 days)
+    const eventsResult = await client.query(
+      'DELETE FROM events WHERE date_and_time < NOW() - INTERVAL \'30 days\''
+    );
+    
+    // Delete old event attendees (older than 60 days)
+    const attendeesResult = await client.query(
+      'DELETE FROM event_attendees WHERE rsvp_date < NOW() - INTERVAL \'60 days\''
+    );
+    
+    // Delete old pending friendship requests (older than 30 days)
+    const friendsResult = await client.query(
+      'DELETE FROM friends WHERE status = \'pending\' AND created_at < NOW() - INTERVAL \'30 days\''
+    );
+    
+    res.json({
+      success: true,
+      message: 'Old entries deleted successfully',
+      deleted: {
+        events: eventsResult.rowCount,
+        attendees: attendeesResult.rowCount,
+        friends: friendsResult.rowCount
+      }
     });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });

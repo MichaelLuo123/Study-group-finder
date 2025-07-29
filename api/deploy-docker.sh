@@ -11,7 +11,7 @@ SSH_KEY_PATH=$CRAMR_SSH_KEY_PATH  # SSH key path from environment
 
 # Copy files to VM (excluding node_modules)
 echo "Copying files to VM..."
-rsync -avz --exclude 'node_modules' --exclude '.git' -e "ssh -i $SSH_KEY_PATH" api/ $VM_USER@$VM_IP:~/backend
+rsync -avz --exclude 'node_modules' --exclude '.git' -e "ssh -i $SSH_KEY_PATH" . $VM_USER@$VM_IP:~/backend
 
 # SSH into VM and setup Docker
 echo "Setting up Docker on VM..."
