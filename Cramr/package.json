@@ -39,7 +39,9 @@
     "expo-web-browser": "~14.2.0",
     "express": "^5.1.0",
     "lucide-react-native": "^0.525.0",
+    "node-mailjet": "^6.0.9",
     "pg": "^8.16.3",
+    "prompt-sync": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
@@ -51,7 +53,8 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "expo-image-picker": "~16.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
