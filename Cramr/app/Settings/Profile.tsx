@@ -27,7 +27,7 @@ interface User {
   prompt_3_answer: string;
 }
 
-export default function SettingsProfilePage() {
+export default function Profile() {
   const router = useRouter();
 
   // Colors
@@ -92,7 +92,7 @@ export default function SettingsProfilePage() {
           setMajor(userData.major || null);
           setClassLevel(userData.year || null);
           setPronouns(userData.pronouns || null);
-          setIsTransfer(userData.is_transfer || false);
+          setIsTransfer(userData.transfer || false);
           setBio(userData.bio || null);
           setPrompt1(userData.prompt_1 || null);
           setPrompt1Answer(userData.prompt_1_answer || null);
@@ -115,7 +115,7 @@ export default function SettingsProfilePage() {
   const handleSave = async () => {
     try {
       const updatedData = {
-        profile_picture: profilePicture,
+        profile_picture_url: profilePicture,
         banner_color: bannerColor,
         full_name: name,
         username: username,
@@ -133,8 +133,8 @@ export default function SettingsProfilePage() {
         prompt_3_answer: prompt3Answer,
       };
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/user/${userId}`, {
-        method: 'PUT',
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
