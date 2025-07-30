@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, test } from '@jest/globals';
 import { TwoFactorBE } from '../app/TwoFactor/TwoFactorBE';
 
-
 var testTwoFactor: TwoFactorBE;
 
 beforeAll(() => {

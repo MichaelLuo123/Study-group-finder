@@ -33,16 +33,14 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // TODO: Replace with actual user ID from authentication
-  const currentUserId = 'your-user-id'; // This should come from your auth system
+  const currentUserId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // Using hardcoded user ID for testing
 
   useEffect(() => {
     fetchFriends();
   }, []);
 
   const fetchFriends = async () => {
-    if (!currentUserId || currentUserId === 'your-user-id') {
-      // For demo purposes, show some sample friends
+    if (!currentUserId) {
       setFriends([
         { id: '1', username: 'john123', full_name: 'John Smith', email: 'john@ucsd.edu' },
         { id: '2', username: 'jane456', full_name: 'Jane Doe', email: 'jane@ucsd.edu' },
@@ -53,14 +51,38 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${currentUserId}/friends`);
+      console.log('Fetching friends for user:', currentUserId);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      let response;
+      try {
+        response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/friends`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        console.log('Response status:', response.status);
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.log('Request timed out');
+          Alert.alert('Error', 'Request timed out. API might be down.');
+          setFriends([]);
+          return;
+        }
+        throw error;
+      }
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Friends data:', data);
         setFriends(data);
       } else {
-        Alert.alert('Error', 'Failed to load friends');
+        console.log('API error:', response.status, response.statusText);
+        Alert.alert('Error', `Failed to load friends: ${response.status}`);
       }
     } catch (error) {
+      console.log('Network error:', error);
       Alert.alert('Error', 'Network error while loading friends');
     } finally {
       setLoading(false);
