@@ -4,7 +4,7 @@ import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, Touchable
 import Dropdown from '../../components/Dropdown';
 import ImageUpload from '../../components/ImageUpload';
 import Slider from '../../components/Slider';
-import { useThemeColor } from '../../hooks/useThemeColor';
+import { Colors } from '../../constants/Colors';
 
 // Define user interface
 interface User {
@@ -31,9 +31,9 @@ export default function Profile() {
   const router = useRouter();
 
   // Colors
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const textInputColor = useThemeColor({}, 'textInput');
+  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
+  const textColor = (true ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
 
   // User
   const [user, setUser] = useState<User | null>(null);
@@ -134,7 +134,7 @@ export default function Profile() {
       };
 
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`, {
-        method: 'POST',
+        method: 'EDIT',
         headers: {
           'Content-Type': 'application/json',
         },

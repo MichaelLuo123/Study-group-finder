@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useThemeColor } from '../hooks/useThemeColor';
+import { Colors } from '../constants/Colors';
 
 interface SliderProps {
     rightLabel: string;
@@ -17,9 +17,9 @@ const Slider: React.FC<SliderProps> = ({
     value: initialValue = false,
     style={}
 }) => {
-    const sliderBackgroundColor = useThemeColor({}, 'sliderBackground');
-    const sliderColor = useThemeColor({}, 'slider');
-    const textColor = useThemeColor({}, 'text');
+    const sliderBackgroundColor = (true ? Colors.light.sliderBackground : Colors.dark.sliderBackground)
+    const sliderColor = (true ? Colors.light.slider : Colors.dark.slider)
+    const textColor = (true ? Colors.light.text : Colors.dark.text)
 
     const [value, setValue] = useState(initialValue);
     const [slideAnim] = useState(new Animated.Value(initialValue ? 1 : 0));

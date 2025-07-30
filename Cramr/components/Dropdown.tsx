@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useThemeColor } from '../hooks/useThemeColor';
+import { Colors } from '../constants/Colors';
 
 interface DropdownOption {
     label: string;
@@ -42,9 +42,9 @@ const Dropdown: React.FC<DropdownProps> = ({
     option3Answer,
     onChangeOption3Answer
 }) => {
-    const dropdownColor = useThemeColor({}, 'dropdown');
-    const textInputColor = useThemeColor({}, 'textInput');
-    const textColor = useThemeColor({}, 'text');
+    const dropdownColor = (true ? Colors.light.dropdown : Colors.dark.dropdown)
+    const textColor = (true ? Colors.light.text : Colors.dark.text)
+    const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
 

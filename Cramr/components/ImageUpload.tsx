@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { useThemeColor } from '../hooks/useThemeColor';
+import { Colors } from '../constants/Colors';
 
 interface ImageUploadProps {
   value?: string | null; // URL or local path
@@ -17,7 +17,7 @@ interface ImageUploadProps {
 }
 
 export default function ImageUpload({value, onChangeImage, style}: ImageUploadProps) {
-  const backgroundColor = useThemeColor({}, 'background');
+  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
   
   const [image, setImage] = useState<string | null>(value || null);
   const [error, setError] = useState(null);
