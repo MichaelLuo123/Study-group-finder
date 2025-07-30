@@ -3,7 +3,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
 import { Dimensions, Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
-import MapView from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import Animated, {
   useAnimatedGestureHandler,
@@ -112,7 +112,7 @@ export default function MapScreen() {
       <View style={styles.mapContainer}>
         {/*<Text style={styles.mapPlaceholder}>Map Placeholder</Text>*/}
         {/*Edit this as you see fit once we get some designs in*/}
-        <MapView style={styles.map} />
+        <MapView style={styles.map} provider={PROVIDER_GOOGLE} />
       </View>
 
       {/* Draggable Bottom Sheet */}
