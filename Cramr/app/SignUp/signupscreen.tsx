@@ -83,7 +83,7 @@ const SignUpScreen = () => {
             setIsLoading(true);
             try {
                 // Send signup data to backend
-                const response = await fetch('http://192.168.1.3:8080/signup', {
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

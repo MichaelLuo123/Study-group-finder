@@ -125,7 +125,7 @@ app.post('/signup', async (req, res) => {
     
     // Create new user
     const result = await client.query(
-      'INSERT INTO users (username, password, email, full_name, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, username, email, full_name',
+      'INSERT INTO users (username, password_hash, email, full_name, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, username, email, full_name',
       [username, passwordHash, email, full_name]
     );
     
@@ -161,7 +161,7 @@ app.post('/login', async (req, res) => {
     const user = result.rows[0];
     
     // Compare the provided password with the hashed password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid username or password' });
