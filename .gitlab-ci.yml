@@ -21,14 +21,12 @@ before_script:
 install_dependencies:
   stage: install
   script:
-    - cd $EXPO_PROJECT_FOLDER  # Navigate to the Expo project folder
     - npm install  # Install Expo app dependencies
 
 # Run tests inside the Expo folder
 test_app:
   stage: test
   script:
-    - cd $EXPO_PROJECT_FOLDER  # Navigate to the Expo project folder
     - npx expo start
     - sleep 60
     - echo "At least it runs"
