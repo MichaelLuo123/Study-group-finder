@@ -23,7 +23,11 @@ CREATE TABLE users (
     prompt_2 VARCHAR(100),
     prompt_2_answer VARCHAR(100),
     prompt_3 VARCHAR(100),
-    prompt_3_answer VARCHAR(100)
+    prompt_3_answer VARCHAR(100),
+    phone_number VARCHAR(20),
+    push_notifications_enabled BOOLEAN DEFAULT true,
+    email_notifications_enabled BOOLEAN DEFAULT true,
+    sms_notifications_enabled BOOLEAN DEFAULT false
 );
 
 -- Create events table
