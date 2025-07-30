@@ -15,7 +15,6 @@ variables:
 
 before_script:
   - cd $EXPO_PROJECT_FOLDER
-  - npm install -g expo  # Install Expo CLI globally
 
 # Install dependencies inside the Expo folder
 install_dependencies:
@@ -26,7 +25,8 @@ install_dependencies:
 # Run tests inside the Expo folder
 test_app:
   stage: test
-  script:
+  script: 
+    - npm install expo  # Install Expo CLI globally
     - npx expo start
     - sleep 60
     - echo "At least it runs"
