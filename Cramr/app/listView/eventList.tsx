@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  ScrollView,
-  View,
-  Text,
-  StyleSheet,
   Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 const sampleEvents = [
@@ -41,54 +41,83 @@ const sampleEvents = [
 ];
 
 export default function EventList() {
+  const [collapsedEvents, setCollapsedEvents] = useState<Set<number>>(new Set());
+
+  const toggleEvent = (eventId: number) => {
+    setCollapsedEvents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {sampleEvents.map((event) => (
-        <View key={event.id} style={styles.card}>
-          {/* Title Header */}
-          <View style={[styles.header, { backgroundColor: event.color || '#eee' }]}>
-            <Text style={styles.title}>{event.title}</Text>
-            <Text style={styles.emoji}>{event.emoji}</Text>
-          </View>
-
-          {/* Labels */}
-          <View style={styles.labels}>
-            {event.labels.map((label, index) => (
-              <Text key={index} style={styles.label}>
-                {label}
-              </Text>
-            ))}
-          </View>
-
-          {/* Details */}
-          <View style={styles.detailRow}>
-            <Text style={styles.icon}>📘</Text>
-            <Text style={styles.detail}>{event.course}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.icon}>📍</Text>
-            <Text style={styles.detail}>{event.location}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.icon}>📅</Text>
-            <Text style={styles.detail}>{event.date}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.icon}>🕒</Text>
-            <Text style={styles.detail}>{event.time}</Text>
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.count}>
-              {event.current}/{event.max} 👥 {event.avatars} +{event.extraCount}
-            </Text>
-            <Pressable style={styles.rsvpButton}>
-              <Text style={{ color: 'white' }}>RSVP</Text>
+      {sampleEvents.map((event) => {
+        const isCollapsed = collapsedEvents.has(event.id);
+        
+        return (
+          <View key={event.id} style={styles.card}>
+            {/* Title Header - Clickable */}
+            <Pressable 
+              style={[styles.header, { backgroundColor: event.color || '#eee' }]}
+              onPress={() => toggleEvent(event.id)}
+            >
+              <Text style={styles.title}>{event.title}</Text>
+              <View style={styles.headerRight}>
+                <Text style={styles.emoji}>{event.emoji}</Text>
+                <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
+              </View>
             </Pressable>
+
+            {/* Collapsible Content */}
+            {!isCollapsed && (
+              <>
+                {/* Labels */}
+                <View style={styles.labels}>
+                  {event.labels.map((label, index) => (
+                    <Text key={index} style={styles.label}>
+                      {label}
+                    </Text>
+                  ))}
+                </View>
+
+                {/* Details */}
+                <View style={styles.detailRow}>
+                  <Text style={styles.icon}>📘</Text>
+                  <Text style={styles.detail}>{event.course}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.icon}>📍</Text>
+                  <Text style={styles.detail}>{event.location}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.icon}>📅</Text>
+                  <Text style={styles.detail}>{event.date}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.icon}>🕒</Text>
+                  <Text style={styles.detail}>{event.time}</Text>
+                </View>
+
+                {/* Footer */}
+                <View style={styles.footer}>
+                  <Text style={styles.count}>
+                    {event.current}/{event.max} 👥 {event.avatars} +{event.extraCount}
+                  </Text>
+                  <Pressable style={styles.rsvpButton}>
+                    <Text style={{ color: 'white' }}>RSVP</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </View>
-        </View>
-      ))}
+        );
+      })}
     </ScrollView>
   );
 }
@@ -113,10 +142,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 6,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
     marginBottom: 8,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     fontWeight: 'bold',
@@ -124,6 +158,11 @@ const styles = StyleSheet.create({
   },
   emoji: {
     fontSize: 18,
+    marginRight: 8,
+  },
+  collapseIcon: {
+    fontSize: 12,
+    color: '#666',
   },
   labels: {
     flexDirection: 'row',

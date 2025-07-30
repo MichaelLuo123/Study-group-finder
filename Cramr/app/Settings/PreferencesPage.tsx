@@ -1,9 +1,10 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Image,
   SafeAreaView, ScrollView, StyleSheet, Text,
-  TouchableOpacity, View, Image
+  TouchableOpacity, View
 } from 'react-native';
-import { useRouter } from 'expo-router';
 
 const PreferencesPage = () => {
   const router = useRouter();

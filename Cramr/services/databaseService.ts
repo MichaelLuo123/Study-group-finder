@@ -3,13 +3,14 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { Client } = require('pg');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
-//setup for postgres connection
+//setup for postgres connection using environment variables
 const client = new Client({
     user: 'postgres',
     host: '132.249.242.182',
     database: 'cramr_db',
-    password: 'innoutanimalfries',
+    password: process.env.CRAMR_DB_POSTGRES_PASSWORD || 'innoutanimalfries',
     port: 5432,
 });
 
@@ -92,7 +93,7 @@ app.post('/login', async (req: any, res: any) => {
 });
 
 // Start the server
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Backend API running on port ${PORT}`);
 }); 
