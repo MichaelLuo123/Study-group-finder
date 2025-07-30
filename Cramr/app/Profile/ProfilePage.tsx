@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useThemeColor } from '../../hooks/useThemeColor';
+import EventCollapsible from '../../components/EventCollapsible';
+import { Colors } from '../../constants/Colors';
+
 
 // Define user interface
 interface User {
@@ -28,9 +30,9 @@ export default function ProfilePage() {
   const router = useRouter();
 
   // Colors
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const textInputColor = useThemeColor({}, 'textInput');
+  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
+  const textColor = (true ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (true ? Colors.light.textInput : Colors.dark.backgroundColor)
   const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
   // User
@@ -95,7 +97,7 @@ export default function ProfilePage() {
   }, [userId]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView>
       <ScrollView>
         <View style={[styles.container, {backgroundColor: backgroundColor}]}>
 
@@ -110,11 +112,11 @@ export default function ProfilePage() {
           </View>
 
           <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 1], marginTop: 10}]}>
-            <View style={styles.leftBannerContainer}>
-              <Image source={profilePicture ? {uri: profilePicture} : require('../../assets/images/default_profile.jpg')} style={styles.profilePic}/>
+            <View style={styles.leftOfBannerContainer}>
+              <Image source={profilePicture ? {uri: profilePicture} : require('../../assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
             </View>
 
-            <View style={styles.rightBannerContainer}>
+            <View style={styles.rightOfBannerContainer}>
               <Text style={[styles.headerText, {color: textColor}]}>{name}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>@{username}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>
@@ -181,40 +183,27 @@ export default function ProfilePage() {
             </View>)}
           </View>)}
           
+
           <Text style={[styles.subheaderBoldText, {color: textColor, marginTop: 10}]}>Upcoming Events</Text>
-          <View style={styles.upcomingEventsContainer}>
-            <View style={styles.eventsContainer}>
-              <View style={styles.event}>
-                <Text style={styles.normalText}>
-                    In-N-Out Study Session!
-                  </Text>
-                <View style={styles.iconTextContainer}>
-                  <Image source={require('../../assets/images/book.png')} style={styles.eventIcon}/>
-                  <Text style={styles.smallText}> CSE 101 </Text>
-                </View>
-                <View style={styles.iconTextContainer}>
-                  <Image source={require('../../assets/images/location.png')} style={styles.eventIcon}/>
-                  <Text style={styles.smallText}> 2910 Damon Ave, San Diego </Text>
-                </View>
-                <View style={styles.iconTextContainer}>
-                  <Image source={require('../../assets/images/calendar.png')} style={styles.eventIcon}/>
-                  <Text style={styles.smallText}> July 10th, 2025 </Text>
-                </View>
-                <View style={styles.iconTextContainer}>
-                  <Image source={require('../../assets/images/clock.png')} style={styles.eventIcon}/>
-                  <Text style={styles.smallText}> 6:00 PM - 11:00 PM </Text>
-                </View>
-                <View style={styles.iconTextContainer}>
-                  <Image source={require('../../assets/images/person.png')} style={styles.eventIcon}/>
-                  <Text style={styles.smallText}> 7/8 </Text>
-                  <Image source={require('../../assets/images/avatar_1.png')} style={styles.smallProfilePic}/>
-                  <Image source={require('../../assets/images/avatar_2.png')} style={styles.smallProfilePic}/>
-                  <Image source={require('../../assets/images/avatar_3.png')} style={styles.smallProfilePic}/>
-                  <Text style={styles.smallText}> +4 </Text>
-                </View>
-              </View>
-            </View>
-          </View>
+
+          <EventCollapsible
+            title="In-N-Out Study Session"
+            bannerColor={bannerColors[bannerColor ? bannerColor : 1]}
+            tag1="Loud"
+            tag2="Music"
+            tag3="Pomodoro"
+            eventClass="CSE 120"
+            location="2910 Damon Ave, San Diego"
+            date="July 10th, 2025"
+            time="6:00 PM - 11:00 PM"
+            numAttendees={7}
+            capacity={8}
+            attendee1Profile={profilePicture ? profilePicture : ""}
+            attendee2Profile={profilePicture ? profilePicture : ""}
+            attendee3Profile={profilePicture ? profilePicture : ""}
+            light={true}
+            isOwner={true}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -244,15 +233,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
   },
-  smallText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    flexWrap: 'wrap',
-  },
-
 
   container: {
-    padding: 20
+    padding: 20,
+    height: 1000
   },
   topButtonsContainer: {
     flexDirection: 'row',
@@ -277,17 +261,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 10,
   },
-  leftBannerContainer: {
+  leftOfBannerContainer: {
     marginLeft: 10,
     marginRight: 10,
     justifyContent: 'center', // center vertically
     alignItems: 'center', // center horizontally
   },
-  rightBannerContainer: {
+  rightOfBannerContainer: {
     flex: 1, // takes up rest of space
     alignItems: 'center',
   },
-  profilePic: {
+  profilePictureContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
@@ -331,58 +315,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-  },
-
-  upcomingEventsContainer: {
-    flexDirection: 'column',
-    marginTop: 5,
-    marginBottom: 5,
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  eventsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  event: {
-    marginTop: 5,
-    marginBottom: 5,
-    marginLeft: 5,
-    marginRight: 5,
-    width: '45%',
-    backgroundColor: '#ffffff',
-    borderRadius: 25,
-    padding: 10,
-    // shadow for android
-    elevation: 3,
-    // shadow for ios
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  eventIcon: {
-    width: 20,
-    height: 20,
-  },
-  iconTextContainer: {
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  smallProfilePic: {
-    width: 20,
-    height: 20,
-    borderRadius: 50,
-    marginLeft: 2
-  },
-
-  pastEventsContainer: {
-    flexDirection: 'column',
-    marginTop: 5,
-    marginBottom: 5,
-    marginLeft: 10,
-    marginRight: 10,
   },
 });
