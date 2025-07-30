@@ -9,7 +9,7 @@ variables:
 
 before_script:
   - cd $EXPO_PROJECT_FOLDER
-  - npm add expo  # Install Expo CLI globally
+  - npm install -g expo  # Install Expo CLI globally
 
 # Install dependencies inside the Expo folder
 install_dependencies:
