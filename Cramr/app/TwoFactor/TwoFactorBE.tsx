@@ -14,8 +14,8 @@ export class TwoFactorBE {
         this.secretCode = Math.floor(Math.random() * (999999 + 1) + 0);
         this.mailjet = new Client({
             //replace these in .env and destroy when shipping production code.
-            apiKey: '5c0d15bd4bd31ce23181131a4714e8e1',
-            apiSecret: 'dcc70eeccd3807c5f055808b8e3261ad'
+            apiKey: process.env.EXPO_PUBLIC_MJ_API_KEY,
+            apiSecret: process.env.EXPO_PUBLIC_MJ_API_SECRET
 
         })
     }

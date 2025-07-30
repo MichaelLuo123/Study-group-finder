@@ -1,8 +1,9 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
-import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
+import MapView from 'react-native-maps';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import Animated, {
   useAnimatedGestureHandler,
@@ -109,7 +110,9 @@ export default function MapScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>  
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-        <Text style={styles.mapPlaceholder}>Map Placeholder</Text>
+        {/*<Text style={styles.mapPlaceholder}>Map Placeholder</Text>*/}
+        {/*Edit this as you see fit once we get some designs in*/}
+        <MapView style={styles.map} />
       </View>
 
       {/* Draggable Bottom Sheet */}
@@ -209,6 +212,10 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
+  map: {
+    width: '100%',
+    height: '100%'
+  },
   container: {
     flex: 1,
   },
