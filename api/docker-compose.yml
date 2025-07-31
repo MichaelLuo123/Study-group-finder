@@ -31,7 +31,7 @@ services:
 
 networks:
   cramr-network:
-    driver: bridge
+    driver: bridge 
 
 volumes:
   postgres_data:  # Named volume that persists data 

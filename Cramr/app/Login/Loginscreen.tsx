@@ -31,7 +31,7 @@ const LoginScreen = () => {
 
         if(email.trim() && email.endsWith('.edu') && password.trim()) { //might replace the last part with regex but this works for now
             try {
-                const response = await fetch('http://192.168.1.3:3001/login', {
+                const response = await fetch('http://192.168.1.3:8080/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -77,7 +77,7 @@ const LoginScreen = () => {
 
     //    if (!hasError) {
     //        try {
-    //            const response = await fetch('http://192.168.1.3:3001/login', {
+    //            const response = await fetch('http://192.168.1.3:8080/login', {
     //                method: 'POST',
     //                headers: { 'Content-Type': 'application/json' },
     //                body: JSON.stringify({ email, password })

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import FriendsDropdown from '../../components/FriendsDropdown';
 
 const CreateEventScreen = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -12,13 +13,14 @@ const CreateEventScreen = () => {
   const [date, setDate] = useState(new Date());
   const [tags, setTags] = useState('');
   const [capacity, setCapacity] = useState('');
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Date picker state
   const [dateInput, setDateInput] = useState(date.toLocaleDateString());
   const [timeInput, setTimeInput] = useState(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const eventData = {
       title,
       description,
@@ -27,9 +29,50 @@ const CreateEventScreen = () => {
       date: date.toISOString(),
       tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
       capacity: Number(capacity),
+      invitePeople: selectedFriends,
     };
     console.log('Event Data:', eventData);
-    // TODO: POST to backend
+    
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: eventData.title,
+          description: eventData.description,
+          location: eventData.location,
+          class: eventData.class,
+          date: eventData.date,
+          tags: eventData.tags,
+          capacity: eventData.capacity,
+          invitePeople: eventData.invitePeople,
+        })
+      });
+  
+      const data = await response.json();
+      
+      if (response.ok) {
+        Alert.alert('Success', 'Event created!');
+        // Clear form after successful creation
+        setTitle('');
+        setDescription('');
+        setLocation('');
+        setClassField('');
+        setTags('');
+        setCapacity('');
+        setSelectedFriends([]);
+        setDate(new Date());
+        setDateInput(new Date().toLocaleDateString());
+        setTimeInput(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        return data;
+      } else {
+        Alert.alert('Error', data.error || 'Failed to create event');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error. Please try again.');
+    }
   };
 
   const toggleTheme = () => {
@@ -147,6 +190,14 @@ const CreateEventScreen = () => {
               keyboardType="numeric"
               style={[styles.input, { color: theme.textColor, backgroundColor: theme.inputBackground }]}
             />
+            
+            {/* Invite People Dropdown */}
+             <FriendsDropdown
+               selectedFriends={selectedFriends}
+               onFriendsChange={setSelectedFriends}
+               placeholder="Select friends to invite"
+               theme={theme}
+             />
             
             {/* Date/Time Inputs */}
             <View style={styles.dateTimeContainer}>
