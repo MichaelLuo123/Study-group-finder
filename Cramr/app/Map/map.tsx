@@ -1,8 +1,10 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useNavigation, useRouter } from 'expo-router';
-import { useLayoutEffect, useState } from 'react';
-import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { Dimensions, Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import Animated, {
   useAnimatedGestureHandler,
@@ -23,6 +25,8 @@ export default function MapScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState('map');
   const translateY = useSharedValue(-100);
 
@@ -105,11 +109,39 @@ export default function MapScreen() {
     };
   });
 
+  //currently unnecessary, but we might need it once we need geocoordinates to find study groups near us.
+  useEffect(() => {
+    async function getCurrentLocation() {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if(status != 'granted'){
+        setErrorMsg('Permssion to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    }
+    
+    getCurrentLocation();
+  }, []);
+
+  
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>  
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-        <Text style={styles.mapPlaceholder}>Map Placeholder</Text>
+        {/* <Text style={styles.mapPlaceholder}>{JSON.stringify(location)}</Text> */}
+        <MapView 
+          style={styles.map}
+          provider={PROVIDER_GOOGLE} 
+          showsUserLocation={true}
+          initialRegion={location ? {
+            latitude: location.coords.latitude - .025,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421
+          } : undefined}
+        />
       </View>
 
       {/* Draggable Bottom Sheet */}
@@ -209,6 +241,10 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
+  map: {
+    width: '100%',
+    height: '100%'
+  },
   container: {
     flex: 1,
   },
