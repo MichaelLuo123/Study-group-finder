@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useThemeColor } from '../hooks/useThemeColor';
+import { Colors } from '../constants/Colors';
 
 interface SliderProps {
     rightLabel: string;
     leftLabel: string;
-    onValueChange?: (value: boolean) => void;
-    initialValue?: boolean; // Optional initial value
+    onChangeSlider?: (value: boolean) => void;
+    value?: boolean; // Optional initial value
     style?: object; // Optional style prop for customization
 }
 
 const Slider: React.FC<SliderProps> = ({ 
     rightLabel, 
     leftLabel, 
-    onValueChange, 
-    initialValue = false,
+    onChangeSlider: onValueChange, 
+    value: initialValue = false,
     style={}
 }) => {
-    const sliderBackgroundColor = useThemeColor({}, 'sliderBackground');
-    const sliderColor = useThemeColor({}, 'slider');
-    const textColor = useThemeColor({}, 'text');
+    const sliderBackgroundColor = (true ? Colors.light.sliderBackground : Colors.dark.sliderBackground)
+    const sliderColor = (true ? Colors.light.slider : Colors.dark.slider)
+    const textColor = (true ? Colors.light.text : Colors.dark.text)
 
     const [value, setValue] = useState(initialValue);
     const [slideAnim] = useState(new Animated.Value(initialValue ? 1 : 0));
