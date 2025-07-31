@@ -131,7 +131,17 @@ export default function MapScreen() {
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
         {/* <Text style={styles.mapPlaceholder}>{JSON.stringify(location)}</Text> */}
-        <MapView style={styles.map} provider={PROVIDER_GOOGLE} showsUserLocation={true}/>
+        <MapView 
+          style={styles.map}
+          provider={PROVIDER_GOOGLE} 
+          showsUserLocation={true}
+          initialRegion={location ? {
+            latitude: location.coords.latitude - .025,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421
+          } : undefined}
+        />
       </View>
 
       {/* Draggable Bottom Sheet */}
