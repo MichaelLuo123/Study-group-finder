@@ -27,6 +27,7 @@ test_app:
   stage: test
   script: 
     - npm install expo  # Install Expo CLI globally
+    - npx expo install typescript
     - npx expo start
     - sleep 60
     - echo "At least it runs"
