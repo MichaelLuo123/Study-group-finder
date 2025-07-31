@@ -24,7 +24,7 @@ export default function MapScreen() {
   const router = useRouter();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentPage, setCurrentPage] = useState('map');
-  const translateY = useSharedValue(0);
+  const translateY = useSharedValue(-100);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -63,13 +63,13 @@ export default function MapScreen() {
     onActive: (event, context: any) => {
       const newTranslateY = context.startY + event.translationY;
       const maxUpward = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50); 
-      const maxDownward = 200; 
+      const maxDownward = 200; // Back to original value
       translateY.value = Math.max(maxUpward, Math.min(maxDownward, newTranslateY));
     },
     onEnd: (event) => {
       const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50);
-      const middlePosition = 0;
-      const bottomPosition = 200;
+      const middlePosition = -100; // Make middle position 100px higher
+      const bottomPosition = 200; // Back to original bottom position
       const currentPosition = translateY.value;
       let currentState;
       if (currentPosition < topPosition / 2) {
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   bottomSheet: {
     position: 'absolute',
-    top: HEADER_HEIGHT + (screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT) / 2, // Middle between header and navbar
+    top: HEADER_HEIGHT + (screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT) / 2, // Back to original middle position
     left: 0,
     right: 0,
     height: BOTTOM_SHEET_MAX_HEIGHT, // Fixed height
