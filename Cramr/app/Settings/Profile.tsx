@@ -133,8 +133,8 @@ export default function Profile() {
         prompt_3_answer: prompt3Answer,
       };
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`, {
-        method: 'EDIT',
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/account`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
