@@ -1,9 +1,3 @@
-// authenticate myself for Mailjet. Put this in the .env folders once everything is set
-// export MJ_APIKEY_PUBLIC='5c0d15bd4bd31ce23181131a4714e8e1';
-// export MJ_APIKEY_PRIVATE='dcc70eeccd3807c5f055808b8e3261ad';
-
-// export MJ_API_TOKEN='your API token';
-
 import { Client, LibraryResponse, SendEmailV3_1 } from 'node-mailjet';
 
 export class TwoFactorBE {

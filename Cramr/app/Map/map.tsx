@@ -1,6 +1,7 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useNavigation, useRouter } from 'expo-router';
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { Dimensions, Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
@@ -24,8 +25,10 @@ export default function MapScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState('map');
-  const translateY = useSharedValue(0);
+  const translateY = useSharedValue(-100);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -69,8 +72,8 @@ export default function MapScreen() {
     },
     onEnd: (event) => {
       const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50);
-      const middlePosition = 0;
-      const bottomPosition = 200;
+      const middlePosition = -100;
+      const bottomPosition = 200; 
       const currentPosition = translateY.value;
       let currentState;
       if (currentPosition < topPosition / 2) {
@@ -106,13 +109,29 @@ export default function MapScreen() {
     };
   });
 
+  //currently unnecessary, but we might need it once we need geocoordinates to find study groups near us.
+  useEffect(() => {
+    async function getCurrentLocation() {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if(status != 'granted'){
+        setErrorMsg('Permssion to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    }
+    
+    getCurrentLocation();
+  }, []);
+
+  
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>  
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-        {/*<Text style={styles.mapPlaceholder}>Map Placeholder</Text>*/}
-        {/*Edit this as you see fit once we get some designs in*/}
-        <MapView style={styles.map} provider={PROVIDER_GOOGLE} />
+        {/* <Text style={styles.mapPlaceholder}>{JSON.stringify(location)}</Text> */}
+        <MapView style={styles.map} provider={PROVIDER_GOOGLE} showsUserLocation={true}/>
       </View>
 
       {/* Draggable Bottom Sheet */}
@@ -241,10 +260,10 @@ const styles = StyleSheet.create({
   },
   bottomSheet: {
     position: 'absolute',
-    top: HEADER_HEIGHT + (screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT) / 2, // Middle between header and navbar
+    top: HEADER_HEIGHT + (screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT) / 2, 
     left: 0,
     right: 0,
-    height: BOTTOM_SHEET_MAX_HEIGHT, // Fixed height
+    height: BOTTOM_SHEET_MAX_HEIGHT, 
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -256,7 +275,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: 1000, // Ensure it's above other elements
+    zIndex: 1000, 
   },
   dragHandle: {
     width: 40,
@@ -297,7 +316,7 @@ const styles = StyleSheet.create({
   eventListContainer: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 20, // Add padding at bottom for extra space
+    paddingBottom: 20, 
   },
   bottomNav: {
     position: 'absolute',
@@ -311,7 +330,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopWidth: 1,
     paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
-    zIndex: 1001, // Ensure navbar is above bottom sheet
+    zIndex: 1001, 
   },
   navButton: {
     alignItems: 'center',
