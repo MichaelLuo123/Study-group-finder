@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
+const { Client: MailjetClient } = require('node-mailjet');
 require('dotenv').config();
+const bcrypt = require('bcryptjs');
 
 const app = express();
 app.use(cors({
@@ -41,8 +43,22 @@ const client = new Client({
 });
 client.connect();
 
+// Initialize Mailjet client
+const mailjet = new MailjetClient({
+  apiKey: process.env.MJ_APIKEY_PUBLIC || '5c0d15bd4bd31ce23181131a4714e8e1',
+  apiSecret: process.env.MJ_APIKEY_PRIVATE || 'dcc70eeccd3807c5f055808b8e3261ad'
+});
+
+// Store OTP codes in memory (in production, use Redis or database)
+const otpStore = new Map();
+
 app.get('/test', (req, res) => {
   res.json({ message: 'Backend is working!' });
+});
+
+// Simple test endpoint that doesn't use database
+app.get('/ping', (req, res) => {
+  res.json({ message: 'pong', timestamp: new Date().toISOString() });
 });
 
 // Get all events
@@ -148,7 +164,6 @@ app.post('/signup', async (req, res) => {
     }
     
     // Hash the password
-    const bcrypt = require('bcryptjs');
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
     
@@ -188,7 +203,6 @@ app.post('/login', async (req, res) => {
     const user = userResult.rows[0];
     
     // Compare password with hash
-    const bcrypt = require('bcryptjs');
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid password' });
@@ -498,5 +512,117 @@ app.post('/admin/delete-old-entries', async (req, res) => {
   }
 });
 
+// TwoFactor Authentication endpoints
+app.post('/twofactor/send-code', async (req, res) => {
+  const { userEmail, username } = req.body;
+  
+  if (!userEmail || !username) {
+    return res.status(400).json({ error: 'Email and username are required' });
+  }
+  
+  try {
+    // Generate 6-digit OTP
+    const secretCode = Math.floor(Math.random() * 900000) + 100000;
+    
+    // Store OTP with user email as key
+    otpStore.set(userEmail, {
+      code: secretCode,
+      timestamp: Date.now(),
+      attempts: 0
+    });
+    
+    // Send email with OTP
+    const data = {
+      Messages: [
+        {
+          From: {
+            Email: "tylervo.2002@gmail.com",
+            Name: "Cramr Team" 
+          },
+          To: [
+            {
+              Email: userEmail,
+              Name: username
+            },
+          ],
+          Subject: "Your One Time Passcode",
+          TextPart: `Hello ${username},\n\nYou have tried to log in and your One Time Passcode is ${secretCode}. If you did not request a One Time Password, please change your password as soon as possible.\n\nThank you,\nThe Cramr Team`
+        }
+      ]
+    };
+    
+    const result = await mailjet
+      .post('send', { version: 'v3.1' })
+      .request(data);
+    
+    const { Status } = result.body.Messages[0];
+    
+    if (Status === 'success') {
+      res.json({
+        success: true,
+        message: 'OTP sent successfully'
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to send OTP email' });
+    }
+  } catch (err) {
+    console.error('Error sending OTP:', err);
+    res.status(500).json({ error: 'Failed to send OTP', details: err.message });
+  }
+});
+
+app.post('/twofactor/verify-code', async (req, res) => {
+  const { userEmail, otp } = req.body;
+  
+  if (!userEmail || !otp) {
+    return res.status(400).json({ error: 'Email and OTP are required' });
+  }
+  
+  try {
+    const storedData = otpStore.get(userEmail);
+    
+    if (!storedData) {
+      return res.status(400).json({ error: 'No OTP found for this email' });
+    }
+    
+    // Check if OTP is expired (15 minutes)
+    const now = Date.now();
+    const otpAge = now - storedData.timestamp;
+    const fifteenMinutes = 15 * 60 * 1000;
+    
+    if (otpAge > fifteenMinutes) {
+      otpStore.delete(userEmail);
+      return res.status(400).json({ error: 'OTP has expired' });
+    }
+    
+    // Check if too many attempts
+    if (storedData.attempts >= 3) {
+      otpStore.delete(userEmail);
+      return res.status(400).json({ error: 'Too many failed attempts' });
+    }
+    
+    // Verify OTP
+    if (storedData.code.toString() === otp.toString()) {
+      // Clear OTP after successful verification
+      otpStore.delete(userEmail);
+      res.json({
+        success: true,
+        message: 'OTP verified successfully'
+      });
+    } else {
+      // Increment attempts
+      storedData.attempts += 1;
+      otpStore.set(userEmail, storedData);
+      
+      res.status(400).json({ error: 'Invalid OTP' });
+    }
+  } catch (err) {
+    console.error('Error verifying OTP:', err);
+    res.status(500).json({ error: 'Failed to verify OTP', details: err.message });
+  }
+});
+
 const PORT = 8080;
-app.listen(PORT, '0.0.0.0', () => {});
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
