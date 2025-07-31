@@ -1,0 +1,11 @@
+# Copy this file to .env and fill in your values
+
+# Database Configuration
+CRAMR_DB_IP_ADDR=localhost
+CRAMR_DB_POSTGRES_PASSWORD=your_postgres_password
+
+# Optional: Set to 'production' for Docker deployment
+NODE_ENV=development
+
+# Backend URL for frontend to connect to
+EXPO_PUBLIC_BACKEND_URL=http://localhost:3000 

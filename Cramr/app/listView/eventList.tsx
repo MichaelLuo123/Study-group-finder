@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -7,43 +8,33 @@ import {
   View,
 } from 'react-native';
 
-const sampleEvents = [
-  {
-    id: 1,
-    title: 'In-N-Out',
-    emoji: '🍔',
-    color: '#f9caca',
-    labels: ['Loud', 'Music', 'Pomodoro'],
-    course: 'CSE 120',
-    location: '2910 Damon Ave, San Diego',
-    date: 'July 10th, 2025',
-    time: '6:00 PM - 11:00 PM',
-    current: 7,
-    max: 8,
-    avatars: '🧑‍🎓👨‍🏫🧑‍💻',
-    extraCount: 4,
-  },
-  {
-    id: 2,
-    title: 'CSE 140 Study Group',
-    emoji: '📚',
-    color: '#cce5ff',
-    labels: ['Quiet', 'Pomodoro'],
-    course: 'CSE 140',
-    location: 'zoom.us/j/3u4r3',
-    date: 'July 10th, 2025',
-    time: '10:30 AM - 12:00 PM',
-    current: 3,
-    max: 5,
-    avatars: '👩‍💻👨‍🎓',
-    extraCount: 2,
-  },
-];
-
 export default function EventList() {
-  const [collapsedEvents, setCollapsedEvents] = useState<Set<number>>(new Set());
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [collapsedEvents, setCollapsedEvents] = useState<Set<string>>(new Set());
 
-  const toggleEvent = (eventId: number) => {
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      const data = await response.json();
+      setEvents(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch events');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleEvent = (eventId: string) => {
     setCollapsedEvents(prev => {
       const newSet = new Set(prev);
       if (newSet.has(eventId)) {
@@ -55,21 +46,48 @@ export default function EventList() {
     });
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#5CAEF1" />
+        <Text style={styles.loadingText}>Loading events...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+        <Pressable style={styles.retryButton} onPress={fetchEvents}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {sampleEvents.map((event) => {
+    <ScrollView 
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={true}
+      nestedScrollEnabled={true}
+      style={{ flex: 1 }}
+      bounces={true}
+      alwaysBounceVertical={false}
+      scrollEnabled={true}
+    >
+      {events.map((event: any) => {
         const isCollapsed = collapsedEvents.has(event.id);
         
         return (
           <View key={event.id} style={styles.card}>
             {/* Title Header - Clickable */}
             <Pressable 
-              style={[styles.header, { backgroundColor: event.color || '#eee' }]}
+              style={[styles.header, { backgroundColor: '#f0f0f0' }]}
               onPress={() => toggleEvent(event.id)}
             >
               <Text style={styles.title}>{event.title}</Text>
               <View style={styles.headerRight}>
-                <Text style={styles.emoji}>{event.emoji}</Text>
                 <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
               </View>
             </Pressable>
@@ -78,36 +96,46 @@ export default function EventList() {
             {!isCollapsed && (
               <>
                 {/* Labels */}
-                <View style={styles.labels}>
-                  {event.labels.map((label, index) => (
-                    <Text key={index} style={styles.label}>
-                      {label}
-                    </Text>
-                  ))}
-                </View>
+                {event.tags && event.tags.length > 0 && (
+                  <View style={styles.labels}>
+                    {event.tags.map((tag: string, index: number) => (
+                      <Text key={index} style={styles.label}>
+                        {tag}
+                      </Text>
+                    ))}
+                  </View>
+                )}
 
                 {/* Details */}
-                <View style={styles.detailRow}>
-                  <Text style={styles.icon}>📘</Text>
-                  <Text style={styles.detail}>{event.course}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.icon}>📍</Text>
-                  <Text style={styles.detail}>{event.location}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.icon}>📅</Text>
-                  <Text style={styles.detail}>{event.date}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.icon}>🕒</Text>
-                  <Text style={styles.detail}>{event.time}</Text>
-                </View>
+                {event.class && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.icon}>📘</Text>
+                    <Text style={styles.detail}>{event.class}</Text>
+                  </View>
+                )}
+                {event.location && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.icon}>📍</Text>
+                    <Text style={styles.detail}>{event.location}</Text>
+                  </View>
+                )}
+                {event.date_and_time && (
+                  <>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.icon}>📅</Text>
+                      <Text style={styles.detail}>{new Date(event.date_and_time).toLocaleDateString()}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.icon}>🕒</Text>
+                      <Text style={styles.detail}>{new Date(event.date_and_time).toLocaleTimeString()}</Text>
+                    </View>
+                  </>
+                )}
 
                 {/* Footer */}
                 <View style={styles.footer}>
                   <Text style={styles.count}>
-                    {event.current}/{event.max} 👥 {event.avatars} +{event.extraCount}
+                    {event.accepted_count || 0}/{event.capacity || '∞'} 👥
                   </Text>
                   <Pressable style={styles.rsvpButton}>
                     <Text style={{ color: 'white' }}>RSVP</Text>
@@ -118,6 +146,9 @@ export default function EventList() {
           </View>
         );
       })}
+      
+      {/* Extra space that scales with number of events */}
+      <View style={[styles.extraSpace, { height: Math.max(events.length * 75 + 160, 300) }]} />
     </ScrollView>
   );
 }
@@ -126,6 +157,41 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 20,
     paddingHorizontal: 10,
+    minHeight: '100%',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ff0000',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#5CAEF1',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   card: {
     backgroundColor: 'white',
@@ -148,9 +214,23 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 10,
     marginBottom: 8,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  profilePicture: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  titleContainer: {
+    flex: 1,
   },
   title: {
     fontWeight: 'bold',
@@ -199,10 +279,25 @@ const styles = StyleSheet.create({
   count: {
     fontSize: 13,
   },
+  attendees: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatars: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  extraCount: {
+    fontSize: 12,
+    color: '#666',
+  },
   rsvpButton: {
     backgroundColor: '#5CAEF1',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 10,
+  },
+  extraSpace: {
+    
   },
 });

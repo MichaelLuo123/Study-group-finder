@@ -13,7 +13,21 @@ CREATE TABLE users (
     bio TEXT,
     profile_picture_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    transfer BOOLEAN DEFAULT false,
+    banner_color VARCHAR(100),
+    school VARCHAR(100),
+    pronouns VARCHAR(100),
+    prompt_1 VARCHAR(100),
+    prompt_1_answer VARCHAR(100),
+    prompt_2 VARCHAR(100),
+    prompt_2_answer VARCHAR(100),
+    prompt_3 VARCHAR(100),
+    prompt_3_answer VARCHAR(100),
+    phone_number VARCHAR(20),
+    push_notifications_enabled BOOLEAN DEFAULT true,
+    email_notifications_enabled BOOLEAN DEFAULT true,
+    sms_notifications_enabled BOOLEAN DEFAULT false
 );
 
 -- Create events table
@@ -22,6 +36,7 @@ CREATE TABLE events (
     title VARCHAR(100) NOT NULL,
     description VARCHAR(1000),
     location VARCHAR(200),
+    class VARCHAR(100),
     date_and_time TIMESTAMP NOT NULL,
     creator_id UUID REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -61,9 +76,9 @@ CREATE TABLE friends (
 -- ('kevinyang123', 'hashedpassword', 'alice@ucsd.edu', 'Kevin Yang', 'Computer Science', 'Senior', 'I love In-N-Out', 'http://132.249.242.182/profile-pictures/innout.png');
 
 -- Insert sample data into events
--- INSERT INTO events (title, description, location, date_and_time, creator_id, event_type, status, capacity, tags, invited_ids, accepted_ids, declined_ids, invited_count, accepted_count, declined_count)
+-- INSERT INTO events (title, description, location, class, date_and_time, creator_id, event_type, status, capacity, tags, invited_ids, accepted_ids, declined_ids, invited_count, accepted_count, declined_count)
 -- VALUES 
--- ('CS101 Study Group', 'Study group for CS101: Introduction to Computer Science', 'Room 101, UCSD', '2025-09-15 10:00:00', 
+-- ('CS101 Study Group', 'Study group for CS101: Introduction to Computer Science', 'Room 101, UCSD', 'CS101', '2025-09-15 10:00:00', 
 --  '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', 'In-person', 'Upcoming', 30, ARRAY['CS101', 'Computer Science', 'Quiet'], 
 --  ARRAY['2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'::UUID], ARRAY['2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'::UUID], ARRAY[]::UUID[], 1, 1, 0);
 
