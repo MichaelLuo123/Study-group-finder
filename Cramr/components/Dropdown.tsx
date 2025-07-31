@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useThemeColor } from '../hooks/useThemeColor';
+import { Colors } from '../constants/Colors';
 
 interface DropdownOption {
     label: string;
@@ -8,116 +8,201 @@ interface DropdownOption {
 }
 
 interface DropdownProps {
-    options: DropdownOption[]; // array of options with label and value
-    placeholder?: string; // optional placeholder text
-    onSelect: (value: string) => void; // callback when an option is selected
-    style?: object; // optional style for the dropdown container
+    options: DropdownOption[];
+    onSelect: (value: string) => void;
+    style?: object;
+    option1: string | null;
+    onChangeOption1: (value: string) => void;
+    option1Answer: string | null;
+    onChangeOption1Answer: (value: string) => void;
+    option2: string | null;
+    onChangeOption2: (value: string) => void;
+    option2Answer: string | null;
+    onChangeOption2Answer: (value: string) => void;
+    option3: string | null;
+    onChangeOption3: (value: string) => void;
+    option3Answer: string | null;
+    onChangeOption3Answer: (value: string) => void;
 }
 
 const Dropdown: React.FC<DropdownProps> = ({ 
-    options, 
-    placeholder = "Select an option", 
+    options,
     onSelect,
-    style = {marginLeft: 20, marginRight: 20}
+    style = {marginLeft: 20, marginRight: 20},
+    option1,
+    onChangeOption1,
+    option1Answer,
+    onChangeOption1Answer,
+    option2,
+    onChangeOption2,
+    option2Answer,
+    onChangeOption2Answer,
+    option3,
+    onChangeOption3,
+    option3Answer,
+    onChangeOption3Answer
 }) => {
-    // Get theme colors for consistent styling
-    const dropdownColor = useThemeColor({}, 'dropdown');
-    const textInputColor = useThemeColor({}, 'textInput');
-    const textColor = useThemeColor({}, 'text');
+    const dropdownColor = (true ? Colors.light.dropdown : Colors.dark.dropdown)
+    const textColor = (true ? Colors.light.text : Colors.dark.text)
+    const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
 
-    // State to track if dropdown is open/closed
     const [isOpen, setIsOpen] = useState<boolean>(false);
-  
-    // State to keep track of all selected options as an array
-    const [selectedOptions, setSelectedOptions] = useState<DropdownOption[]>([]);
 
-    // State to keep track of remaining unselected options
-    const [remainingOptions, setRemainingOptions] = useState<DropdownOption[]>(options);
+    // Get available options (exclude already selected ones)
+    const getAvailableOptions = () => {
+        const selectedValues = [option1, option2, option3].filter(Boolean);
+        return options.filter(option => !selectedValues.includes(option.value));
+    };
 
-    // Handler when an option is selected from the dropdown
     const handleSelect = (option: DropdownOption): void => {
-        // Add the selected option to the list of selected options
-        setSelectedOptions(prev => [...prev, option]);
-        // Remove the selected option from remaining options to prevent re-selection
-        setRemainingOptions(prevOptions => 
-            prevOptions.filter(opt => opt.value !== option.value)
-        );
-        // Close the dropdown after selection
+        // Find the first empty slot and assign the selected option
+        if (!option1) {
+            onChangeOption1(option.value);
+        } else if (!option2) {
+            onChangeOption2(option.value);
+        } else if (!option3) {
+            onChangeOption3(option.value);
+        }
+        
         setIsOpen(false);
-        // Call the parent component's callback with the selected value
         onSelect(option.value);
     };
 
-    // Handler to delete a selected option (called from swipe-to-delete)
-    const handleDelete = (indexToDelete: number): void => {
-        const deletedOption = selectedOptions[indexToDelete];
-    
-        // Remove the option from selected options array
-        setSelectedOptions(prev => prev.filter((_, index) => index !== indexToDelete));
-
-        // Add the deleted option back to remaining options and sort alphabetically
-        setRemainingOptions(prev => [...prev, deletedOption].sort((a, b) => a.value.localeCompare(b.value)));
+    const handleDelete = (optionNumber: 1 | 2 | 3): void => {
+        switch (optionNumber) {
+            case 1:
+                onChangeOption1('');
+                onChangeOption1Answer('');
+                break;
+            case 2:
+                onChangeOption2('');
+                onChangeOption2Answer('');
+                break;
+            case 3:
+                onChangeOption3('');
+                onChangeOption3Answer('');
+                break;
+        }
     };
+
+    const getOptionLabel = (value: string) => {
+        const option = options.find(opt => opt.value === value);
+        return option ? option.label : value;
+    };
+
+    const availableOptions = getAvailableOptions();
+    const hasAvailableSlots = !option1 || !option2 || !option3;
 
     return (
         <View style={styles.container}>
-            {/* Gray bar with arrow - the main dropdown trigger */}
-            <TouchableOpacity
-                style={[styles.grayBar, { backgroundColor: dropdownColor }]}
-                onPress={() => setIsOpen(!isOpen)} // Toggle dropdown open/closed state
-                activeOpacity={0.7}
-            >
-                {/* Down arrow icon that rotates when dropdown opens */}
-                <Image 
-                    source={require('../assets/images/down_arrow.png')} 
-                    style={[styles.icon, { transform: [{ rotate: isOpen ? '180deg' : '0deg' }] }]} 
-                />
-            </TouchableOpacity>
+            {/* Only show dropdown if there are available slots and options */}
+            {hasAvailableSlots && availableOptions.length > 0 && (
+                <>
+                    <TouchableOpacity
+                        style={[styles.grayBar, { backgroundColor: dropdownColor }]}
+                        onPress={() => setIsOpen(!isOpen)}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={[styles.bodyText, { color: textColor }]}>Add a prompt</Text>
+                        <Image 
+                            source={require('../assets/images/down_arrow.png')} 
+                            style={[styles.icon, { transform: [{ rotate: isOpen ? '180deg' : '0deg' }] }]} 
+                        />
+                    </TouchableOpacity>
 
-            {/* Dropdown menu - only visible when isOpen is true */}
-            {isOpen && (
-                <View style={[styles.menu, { backgroundColor: textInputColor }]}>
-                    {/* Map through remaining options to create selectable items */}
-                    {remainingOptions.map((option, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={[
-                                styles.option,
-                                // Remove border from last item for cleaner look
-                                index === remainingOptions.length - 1 && styles.lastOption
-                            ]}
-                            onPress={() => handleSelect(option)}
-                        >
-                            <Text style={[styles.bodyText, { color: textColor }]}>{option.label}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                    {isOpen && (
+                        <View style={[styles.menu, { backgroundColor: textInputColor }]}>
+                            {availableOptions.map((option, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={[
+                                        styles.option,
+                                        index === availableOptions.length - 1 && styles.lastOption
+                                    ]}
+                                    onPress={() => handleSelect(option)}
+                                >
+                                    <Text style={[styles.bodyText, { color: textColor }]}>{option.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                </>
             )}
 
-            {/* Render all selected options with swipe-to-delete functionality */}
-            {selectedOptions.map((option, index) => (
-                <View key={index}>
-                    <View style={[styles.selectedContainer, { backgroundColor: textInputColor, marginTop: 10 }]}>
-                        <Text style={[styles.bodyText, { color: textColor }]}>{option.label}</Text>
+            {/* Render Option 1 */}
+            {option1 && (
+                <View style={{ marginTop: 10 }}>
+                    <View style={[styles.selectedContainer, { backgroundColor: textInputColor }]}>
+                        <Text style={[styles.bodyText, { color: textColor }]}>{getOptionLabel(option1)}</Text>
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => handleDelete(1)}
+                        >
+                            <Text style={styles.deleteText}>✕</Text>
+                        </TouchableOpacity>
                     </View>
-
                     <TextInput
                         style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1 }]}
                         placeholder="Enter answer to prompt."
+                        value={option1Answer || ''}
+                        onChangeText={onChangeOption1Answer}
                         textAlign="left"
                         textAlignVertical="top"
                         maxLength={100}
                         multiline={true}
                     />
-
-                    <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => handleDelete(index)}
-                    >
-                        <Text style={[styles.deleteText]}>✕</Text>
-                    </TouchableOpacity>
                 </View>
-            ))}
+            )}
+
+            {/* Render Option 2 */}
+            {option2 && (
+                <View style={{ marginTop: 10 }}>
+                    <View style={[styles.selectedContainer, { backgroundColor: textInputColor }]}>
+                        <Text style={[styles.bodyText, { color: textColor }]}>{getOptionLabel(option2)}</Text>
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => handleDelete(2)}
+                        >
+                            <Text style={styles.deleteText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <TextInput
+                        style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1 }]}
+                        placeholder="Enter answer to prompt."
+                        value={option2Answer || ''}
+                        onChangeText={onChangeOption2Answer}
+                        textAlign="left"
+                        textAlignVertical="top"
+                        maxLength={100}
+                        multiline={true}
+                    />
+                </View>
+            )}
+
+            {/* Render Option 3 */}
+            {option3 && (
+                <View style={{ marginTop: 10 }}>
+                    <View style={[styles.selectedContainer, { backgroundColor: textInputColor }]}>
+                        <Text style={[styles.bodyText, { color: textColor }]}>{getOptionLabel(option3)}</Text>
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => handleDelete(3)}
+                        >
+                            <Text style={styles.deleteText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <TextInput
+                        style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1 }]}
+                        placeholder="Enter answer to prompt."
+                        value={option3Answer || ''}
+                        onChangeText={onChangeOption3Answer}
+                        textAlign="left"
+                        textAlignVertical="top"
+                        maxLength={100}
+                        multiline={true}
+                    />
+                </View>
+            )}
         </View>
     );
 };
@@ -139,13 +224,12 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     selectedContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         padding: 10,
         borderRadius: 10,
-    },
-    selectedText: {
-        color: 'white',
-        fontSize: 16,
-        flex: 1,
+        position: 'relative',
     },
     icon: {
         width: 20,
@@ -153,6 +237,7 @@ const styles = StyleSheet.create({
     },
     menu: {
         borderRadius: 10,
+        marginTop: 5,
     },
     option: {
         paddingHorizontal: 15,
@@ -170,11 +255,9 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     deleteButton: {
-        position: 'absolute',
-        right: 15,
-        top: 23,
         justifyContent: 'center',
         alignItems: 'center',
+        padding: 5,
     },
     deleteText: {
         fontSize: 14,
