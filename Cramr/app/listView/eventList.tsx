@@ -298,6 +298,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   extraSpace: {
-    // Height will be set dynamically based on number of events
+    
   },
 });
