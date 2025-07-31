@@ -357,6 +357,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Light',
     fontSize: 12,
   },
+  
   container: {
     padding: 20,
     height: 2000,

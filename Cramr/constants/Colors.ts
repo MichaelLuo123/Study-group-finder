@@ -12,10 +12,11 @@ export const Colors = {
     text: '#ffffff',
     placeholderText: '#e5e5e5',
     background: '#393939',
-    textInput: '#272727',
+    backgroundColor: '#272727',
     dropdown: '#6e6e6e',
     searchInput: '#6e6e6e',
     slider: '#272727',
     sliderBackground: '#6e6e6e',
   },
+  button: '#5CAEF1'
 };
