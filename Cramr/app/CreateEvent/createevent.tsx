@@ -1,4 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -15,6 +16,8 @@ const CreateEventScreen = () => {
   const [capacity, setCapacity] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currentPage, setCurrentPage] = useState('addEvent');
+  const router = useRouter();
 
   // Date picker state
   const [dateInput, setDateInput] = useState(date.toLocaleDateString());
@@ -66,6 +69,8 @@ const CreateEventScreen = () => {
         setDate(new Date());
         setDateInput(new Date().toLocaleDateString());
         setTimeInput(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        // Navigate back to home after successful creation
+        router.push('/(tabs)');
         return data;
       } else {
         Alert.alert('Error', data.error || 'Failed to create event');
@@ -77,6 +82,23 @@ const CreateEventScreen = () => {
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
+  };
+
+  const handleNavigation = (page: string) => {
+    if (currentPage !== page) {
+      setCurrentPage(page);
+      if (page === 'listView') {
+        router.push('/listView');
+      } else if (page === 'map') {
+        router.push('/Map/map');
+      } else if (page === 'addEvent') {
+        // Already on addEvent page, no navigation needed
+      } else if (page === 'bookmarks') {
+        // router.push('/bookmarks');
+      } else if (page === 'profile') {
+        router.push('/Settings/SettingsFrontPage');
+      }
+    }
   };
 
   const updateDateFromInputs = () => {
@@ -129,7 +151,10 @@ const CreateEventScreen = () => {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
               <Text style={[styles.backText, { color: theme.textColor }]}>←</Text>
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: theme.textColor }]}>Create Event</Text>
@@ -251,19 +276,62 @@ const CreateEventScreen = () => {
         </View>
       </KeyboardAwareScrollView>
 
-      {/* Bottom Navigation Icons - Fixed at bottom */}
-      <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.navBorder }]}>
-        <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>📚</Text>
+      {/* Bottom Navigation Bar - Same as Map */}
+      <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}> 
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('listView')}
+        >
+          <MaterialCommunityIcons 
+            name="clipboard-list-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'listView' && <View style={styles.activeDot} />}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>🌍</Text>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('map')}
+        >
+          <Ionicons 
+            name="map-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'map' && <View style={styles.activeDot} />}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>📊</Text>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('addEvent')}
+        >
+          <Feather 
+            name="plus-square" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'addEvent' && <View style={styles.activeDot} />}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>👤</Text>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('bookmarks')}
+        >
+          <Feather 
+            name="bookmark" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => handleNavigation('profile')}
+        >
+          <Ionicons 
+            name="person-circle-outline" 
+            size={24} 
+            color={isDarkMode ? "#ffffff" : "#000000"} 
+          />
+          {currentPage === 'profile' && <View style={styles.activeDot} />}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -416,14 +484,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
+    zIndex: 1001, 
   },
   navButton: {
     alignItems: 'center',
     padding: 8,
   },
-  navIcon: {
-    fontSize: 24,
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#5caef1',
+    position: 'absolute',
+    bottom: -5,
   },
 });
 

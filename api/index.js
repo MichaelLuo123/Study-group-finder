@@ -64,6 +64,10 @@ app.get('/ping', (req, res) => {
 // Get all events
 app.get('/events', async (req, res) => {
   try {
+<<<<<<< HEAD
+    console.log('Fetching events with creator info...');
+=======
+>>>>>>> origin/dev
     const result = await client.query(`
       SELECT 
         e.*,
@@ -71,11 +75,21 @@ app.get('/events', async (req, res) => {
         u.profile_picture_url as creator_profile_picture,
         u.username as creator_username
       FROM events e
+<<<<<<< HEAD
+      LEFT JOIN users u ON e.creator_id::uuid = u.id::uuid
+      ORDER BY e.created_at DESC
+    `);
+    
+    console.log('Query result:', result.rows);
+   
+=======
       LEFT JOIN users u ON e.creator_id = u.id
       ORDER BY e.created_at DESC
     `);
+>>>>>>> origin/dev
     res.json(result.rows);
   } catch (err) {
+    console.error('Database error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });

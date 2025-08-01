@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,7 +19,7 @@ export default function EventList() {
     fetchEvents();
   }, []);
 
-  const fetchEvents = async () => {
+    const fetchEvents = async () => {
     try {
       setLoading(true);
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
@@ -26,7 +27,44 @@ export default function EventList() {
         throw new Error('Failed to fetch events');
       }
       const data = await response.json();
-      setEvents(data);
+      
+      // Fallback: If events are missing creator info, try to fetch it manually
+      const eventsWithCreators = await Promise.all(
+        data.map(async (event: any) => {
+          if (!event.creator_name && event.creator_id) {
+            try {
+              console.log(`Fetching creator info for event ${event.id} with creator_id ${event.creator_id}`);
+              const userResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${event.creator_id}`);
+              if (userResponse.ok) {
+                const userData = await userResponse.json();
+                return {
+                  ...event,
+                  creator_name: userData.full_name,
+                  creator_profile_picture: userData.profile_picture_url,
+                  creator_username: userData.username
+                };
+              }
+            } catch (err) {
+              console.log('Failed to fetch creator info:', err);
+            }
+          }
+          return event;
+        })
+      );
+      
+      console.log('Events data with creators:', eventsWithCreators); // Debug log to see the actual data
+      // Log each event's creator info
+      eventsWithCreators.forEach((event: any, index: number) => {
+        console.log(`Event ${index + 1}:`, {
+          title: event.title,
+          creator_id: event.creator_id,
+          creator_name: event.creator_name,
+          creator_profile_picture: event.creator_profile_picture,
+          creator_username: event.creator_username
+        });
+      });
+      
+      setEvents(eventsWithCreators);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
     } finally {
@@ -76,21 +114,55 @@ export default function EventList() {
       alwaysBounceVertical={false}
       scrollEnabled={true}
     >
-      {events.map((event: any) => {
-        const isCollapsed = collapsedEvents.has(event.id);
+             {events.map((event: any) => {
+         const isCollapsed = collapsedEvents.has(event.id);
+         
+         // Debug log for each event being rendered
+         console.log('Rendering event:', {
+           id: event.id,
+           title: event.title,
+           creator_id: event.creator_id,
+           creator_name: event.creator_name,
+           creator_profile_picture: event.creator_profile_picture,
+           hasProfilePicture: !!event.creator_profile_picture
+         });
         
         return (
           <View key={event.id} style={styles.card}>
             {/* Title Header - Clickable */}
-            <Pressable 
-              style={[styles.header, { backgroundColor: '#f0f0f0' }]}
-              onPress={() => toggleEvent(event.id)}
-            >
-              <Text style={styles.title}>{event.title}</Text>
-              <View style={styles.headerRight}>
-                <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
-              </View>
-            </Pressable>
+                         <Pressable 
+               style={[styles.header, { backgroundColor: '#f0f0f0' }]}
+               onPress={() => toggleEvent(event.id)}
+             >
+               <View style={styles.headerLeft}>
+                 <View style={styles.titleContainer}>
+                   <Text style={styles.title}>{event.title}</Text>
+                   <Text style={styles.creatorName}>
+                     by {event.creator_name || 'Unknown User'}
+                   </Text>
+                 </View>
+               </View>
+               <View style={styles.headerRight}>
+                 {/* Creator Profile Picture */}
+                 {event.creator_profile_picture ? (
+                   <Image 
+                     source={{ uri: event.creator_profile_picture }} 
+                     style={styles.profilePicture}
+                     defaultSource={require('../../assets/images/default_profile.jpg')}
+                     onError={() => {
+                       // If image fails to load, it will fall back to defaultSource
+                     }}
+                   />
+                 ) : (
+                   <View style={styles.defaultProfilePicture}>
+                     <Text style={styles.defaultProfileText}>
+                       {event.creator_name ? event.creator_name.charAt(0).toUpperCase() : 'U'}
+                     </Text>
+                   </View>
+                 )}
+                 <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
+               </View>
+             </Pressable>
 
             {/* Collapsible Content */}
             {!isCollapsed && (
@@ -227,7 +299,25 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 10,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  defaultProfilePicture: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#5CAEF1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  defaultProfileText: {
+    fontSize: 18,
+    color: 'white',
+    fontWeight: 'bold',
   },
   titleContainer: {
     flex: 1,
@@ -235,6 +325,11 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  creatorName: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
   emoji: {
     fontSize: 18,

@@ -51,7 +51,7 @@ export default function MapScreen() {
       } else if (page === 'map') {
         // Already on map page, no navigation needed
       } else if (page === 'addEvent') {
-        // router.push('/addEvent');
+        router.push('/CreateEvent/createevent');
       } else if (page === 'bookmarks') {
         // router.push('/bookmarks');
       } else if (page === 'profile') {
