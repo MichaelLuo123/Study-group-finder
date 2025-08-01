@@ -22,7 +22,7 @@ export class PrivateStudySession extends StudySession{
         try {
             const response = await this.client.geocode({
                 params : {
-                    key: "AIzaSyBxoV_Ap9575C4SuJY2TaIftwlgSSSF6gw", //we're gonna use environment variables for the API Key in final production code
+                    key: process.env.EXPO_PUBLIC_GOOGLE_API_KEY, //we're gonna use environment variables for the API Key in final production code
                     address: this.getLocation,
                     
                 },

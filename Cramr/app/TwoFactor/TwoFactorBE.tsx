@@ -1,9 +1,3 @@
-// // authenticate myself for Mailjet. Put this in the .env folders once everything is set
-// // export MJ_APIKEY_PUBLIC='5c0d15bd4bd31ce23181131a4714e8e1';
-// // export MJ_APIKEY_PRIVATE='dcc70eeccd3807c5f055808b8e3261ad';
-
-// // export MJ_API_TOKEN='your API token';
-
 // import { Client, LibraryResponse, SendEmailV3_1 } from 'node-mailjet';
 
 // export class TwoFactorBE {
@@ -14,8 +8,8 @@
 //         this.secretCode = Math.floor(Math.random() * (999999 + 1) + 0);
 //         this.mailjet = new Client({
 //             //replace these in .env and destroy when shipping production code.
-//             apiKey: '5c0d15bd4bd31ce23181131a4714e8e1',
-//             apiSecret: 'dcc70eeccd3807c5f055808b8e3261ad'
+//             apiKey: process.env.EXPO_PUBLIC_MJ_API_KEY,
+//             apiSecret: process.env.EXPO_PUBLIC_MJ_API_SECRET
 
 //         })
 //     }

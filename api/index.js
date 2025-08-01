@@ -8,8 +8,23 @@ const bcrypt = require('bcryptjs');
 const app = express();
 app.use(cors({
   origin: [
-    'http://localhost:8081',
-    'http://192.168.1.3:8081',
+    'http://localhost:8081',  // Expo dev server
+    'http://localhost:3000',  // Alternative dev port
+    'http://192.168.1.3:8081', // Your local IP with dev port
+    'http://localhost:19006', // Expo web dev server
+    'http://192.168.1.3:19006' // Your local IP with Expo web port
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.options('*', cors({
+  origin: [
+    'http://localhost:8081',  // Expo dev server
+    'http://localhost:3000',  // Alternative dev port
+    'http://192.168.1.3:8081', // Your local IP with dev port
+    'http://localhost:19006', // Expo web dev server
+    'http://192.168.1.3:19006' // Your local IP with Expo web port
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -49,7 +64,10 @@ app.get('/ping', (req, res) => {
 // Get all events
 app.get('/events', async (req, res) => {
   try {
+<<<<<<< HEAD
     console.log('Fetching events with creator info...');
+=======
+>>>>>>> origin/dev
     const result = await client.query(`
       SELECT 
         e.*,
@@ -57,12 +75,18 @@ app.get('/events', async (req, res) => {
         u.profile_picture_url as creator_profile_picture,
         u.username as creator_username
       FROM events e
+<<<<<<< HEAD
       LEFT JOIN users u ON e.creator_id::uuid = u.id::uuid
       ORDER BY e.created_at DESC
     `);
     
     console.log('Query result:', result.rows);
    
+=======
+      LEFT JOIN users u ON e.creator_id = u.id
+      ORDER BY e.created_at DESC
+    `);
+>>>>>>> origin/dev
     res.json(result.rows);
   } catch (err) {
     console.error('Database error:', err);
@@ -72,13 +96,13 @@ app.get('/events', async (req, res) => {
 
 // Create new event
 app.post('/events', async (req, res) => {
-  const { title, description, location, class: classField, date, tags, capacity, invitePeople } = req.body;
+  const { title, description, location, class: classField, date, tags, capacity, invitePeople, creator_id } = req.body;
   
   try {
     // First create the event
     const result = await client.query(
-      'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *',
-      [title, description, location, classField, date, tags, capacity]
+      'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, creator_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
+      [title, description, location, classField, date, tags, capacity, creator_id]
     );
     
     const event = result.rows[0];
@@ -116,31 +140,51 @@ app.post('/events', async (req, res) => {
 
 // User signup
 app.post('/signup', async (req, res) => {
-  const { username, password, email, full_name } = req.body;
+  const { username, password, email, full_name, created_at } = req.body;
   
-  // Hash password
-  const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash(password, salt);
+  console.log('Signup request received:', { username, password: password ? '[HIDDEN]' : 'undefined', email, full_name, created_at });
+  
+  if (!username || !password || !email || !full_name) {
+    console.log('Missing fields detected:', { 
+      username: !!username, 
+      password: !!password, 
+      email: !!email, 
+      full_name: !!full_name 
+    });
+    return res.status(400).json({ success: false, message: 'Missing required fields' });
+  }
   
   try {
-    if (!client.connection) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    
-    // Check if user already exists
-    const existingUser = await client.query(
-      'SELECT * FROM users WHERE username = $1 OR email = $2',
-      [username, email]
+    // Check if email is already taken
+    const emailExists = await client.query(
+      'SELECT 1 FROM users WHERE email = $1',
+      [email]
     );
-    
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'Username or email already exists' });
+    console.log('Email check result:', { email, exists: emailExists.rows.length > 0 });
+    if (emailExists.rows.length > 0) {
+      console.log('Returning 409 for duplicate email');
+      return res.status(409).json({ success: false, message: 'User with this email already exists' });
     }
     
-    // Create new user
+    // Check if username is already taken
+    const usernameExists = await client.query(
+      'SELECT 1 FROM users WHERE username = $1',
+      [username]
+    );
+    console.log('Username check result:', { username, exists: usernameExists.rows.length > 0 });
+    if (usernameExists.rows.length > 0) {
+      console.log('Returning 409 for duplicate username');
+      return res.status(409).json({ success: false, message: 'Username is already taken' });
+    }
+    
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+    
+    // Insert new user with provided created_at or use NOW()
     const result = await client.query(
-      'INSERT INTO users (username, password_hash, email, full_name, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, username, email, full_name',
-      [username, passwordHash, email, full_name]
+      'INSERT INTO users (username, password_hash, email, full_name, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, full_name',
+      [username, passwordHash, email, full_name, created_at || new Date().toISOString()]
     );
     
     res.status(201).json({
@@ -149,36 +193,33 @@ app.post('/signup', async (req, res) => {
       user: result.rows[0]
     });
   } catch (err) {
-    res.status(500).json({ error: 'Database error', details: err.message });
+    res.status(500).json({ success: false, message: 'Failed to register user. Please try again.' });
   }
 });
 
 // User login
 app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Missing email or password' });
+  }
   
   try {
-    if (!client.connection) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    
-    // First get the user by username (without password check)
-    const result = await client.query(
-      'SELECT * FROM users WHERE username = $1',
-      [username]
+    // Look up user by email
+    const userResult = await client.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
     );
-    
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'Invalid email' });
     }
+    const user = userResult.rows[0];
     
-    const user = result.rows[0];
-    
-    // Compare the provided password with the hashed password
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+    // Compare password with hash
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid password' });
     }
     
     res.json({
@@ -192,24 +233,7 @@ app.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ error: 'Database error', details: err.message });
-  }
-});
-
-// Get all users (for testing)
-app.get('/users', async (req, res) => {
-  try {
-    if (!client.connection) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    
-    const result = await client.query(
-      'SELECT id, username, email, full_name FROM users ORDER BY created_at DESC'
-    );
-    
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Database error', details: err.message });
+    res.status(500).json({ success: false, message: 'Failed to log in. Please try again.' });
   }
 });
 
@@ -218,10 +242,6 @@ app.get('/users/:id', async (req, res) => {
   const { id } = req.params;
   
   try {
-    if (!client.connection) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    
     const result = await client.query(
       'SELECT * FROM users WHERE id = $1',
       [id]
@@ -242,14 +262,6 @@ app.get('/users/:id/friends', async (req, res) => {
   const { id } = req.params;
   
   try {
-    console.log('Friends request for user:', id);
-    
-    if (!client.connection) {
-      console.log('Database not connected');
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    
-    console.log('Executing friends query...');
     // Get accepted friends (both directions)
     const result = await client.query(`
       SELECT u.id, u.username, u.full_name, u.email
@@ -259,7 +271,6 @@ app.get('/users/:id/friends', async (req, res) => {
       ORDER BY u.full_name
     `, [id]);
     
-    console.log('Friends query result:', result.rows);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
@@ -284,8 +295,7 @@ app.put('/users/:id/profile', async (req, res) => {
     prompt_2,
     prompt_2_answer,
     prompt_3,
-    prompt_3_answer,
-    phone_number
+    prompt_3_answer
   } = req.body;
   
   try {
@@ -307,14 +317,13 @@ app.put('/users/:id/profile', async (req, res) => {
         prompt_2_answer = COALESCE($13, prompt_2_answer),
         prompt_3 = COALESCE($14, prompt_3),
         prompt_3_answer = COALESCE($15, prompt_3_answer),
-        phone_number = COALESCE($16, phone_number),
         updated_at = NOW()
-      WHERE id = $17
+      WHERE id = $16
       RETURNING *
     `, [
       full_name, major, year, bio, profile_picture_url, banner_color, 
       school, pronouns, transfer, prompt_1, prompt_1_answer, 
-      prompt_2, prompt_2_answer, prompt_3, prompt_3_answer, phone_number, id
+      prompt_2, prompt_2_answer, prompt_3, prompt_3_answer, id
     ]);
     
     if (result.rows.length === 0) {
@@ -334,13 +343,9 @@ app.put('/users/:id/profile', async (req, res) => {
 // Update user account settings
 app.put('/users/:id/account', async (req, res) => {
   const { id } = req.params;
-  const { email, phone_number, password } = req.body;
+  const { email, password } = req.body;
   
   try {
-    if (!client.connection) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    
     let query = 'UPDATE users SET updated_at = NOW()';
     let params = [id];
     let paramIndex = 2;
@@ -348,12 +353,6 @@ app.put('/users/:id/account', async (req, res) => {
     if (email) {
       query += `, email = $${paramIndex}`;
       params.push(email);
-      paramIndex++;
-    }
-    
-    if (phone_number) {
-      query += `, phone_number = $${paramIndex}`;
-      params.push(phone_number);
       paramIndex++;
     }
     
@@ -381,152 +380,34 @@ app.put('/users/:id/account', async (req, res) => {
   }
 });
 
-// Update user notification preferences
-app.put('/users/:id/notifications', async (req, res) => {
-  const { id } = req.params;
-  const { push_notifications_enabled, email_notifications_enabled, sms_notifications_enabled } = req.body;
-  
-  try {
-    if (!client.connection) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    
-    let query = 'UPDATE users SET updated_at = NOW()';
-    let params = [id];
-    let paramIndex = 2;
-    
-    if (push_notifications_enabled !== undefined) {
-      query += `, push_notifications_enabled = $${paramIndex}`;
-      params.push(push_notifications_enabled);
-      paramIndex++;
-    }
-    
-    if (email_notifications_enabled !== undefined) {
-      query += `, email_notifications_enabled = $${paramIndex}`;
-      params.push(email_notifications_enabled);
-      paramIndex++;
-    }
-    
-    if (sms_notifications_enabled !== undefined) {
-      query += `, sms_notifications_enabled = $${paramIndex}`;
-      params.push(sms_notifications_enabled);
-      paramIndex++;
-    }
-    
-    query += ` WHERE id = $1 RETURNING *`;
-    
-    const result = await client.query(query, params);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    res.json({
-      success: true,
-      message: 'Notification preferences updated successfully',
-      user: result.rows[0]
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Database error', details: err.message });
-  }
-});
-
-// Comprehensive user details update endpoint
-app.put('/users/:id/details', async (req, res) => {
+// Update user preferences
+app.put('/users/:id/preferences', async (req, res) => {
   const { id } = req.params;
   const { 
-    email, phone_number, password,
-    full_name, major, year, bio, school, pronouns,
-    push_notifications_enabled, email_notifications_enabled, sms_notifications_enabled
+    push_notifications, 
+    email_notifications, 
+    sms_notifications, 
+    theme 
   } = req.body;
   
   try {
-    if (!client.connection) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
+    // For now, we'll store preferences as JSON in a new column
+    // You might want to add these columns to your users table
+    const preferences = {
+      push_notifications: push_notifications || false,
+      email_notifications: email_notifications || false,
+      sms_notifications: sms_notifications || false,
+      theme: theme || 'light'
+    };
     
-    let query = 'UPDATE users SET updated_at = NOW()';
-    let params = [id];
-    let paramIndex = 2;
-    
-    // Account settings
-    if (email) {
-      query += `, email = $${paramIndex}`;
-      params.push(email);
-      paramIndex++;
-    }
-    
-    if (phone_number) {
-      query += `, phone_number = $${paramIndex}`;
-      params.push(phone_number);
-      paramIndex++;
-    }
-    
-    if (password) {
-      query += `, password_hash = $${paramIndex}`;
-      params.push(password); // In production, hash this password
-      paramIndex++;
-    }
-    
-    // Profile settings
-    if (full_name) {
-      query += `, full_name = $${paramIndex}`;
-      params.push(full_name);
-      paramIndex++;
-    }
-    
-    if (major) {
-      query += `, major = $${paramIndex}`;
-      params.push(major);
-      paramIndex++;
-    }
-    
-    if (year) {
-      query += `, year = $${paramIndex}`;
-      params.push(year);
-      paramIndex++;
-    }
-    
-    if (bio) {
-      query += `, bio = $${paramIndex}`;
-      params.push(bio);
-      paramIndex++;
-    }
-    
-    if (school) {
-      query += `, school = $${paramIndex}`;
-      params.push(school);
-      paramIndex++;
-    }
-    
-    if (pronouns) {
-      query += `, pronouns = $${paramIndex}`;
-      params.push(pronouns);
-      paramIndex++;
-    }
-    
-    // Notification preferences
-    if (push_notifications_enabled !== undefined) {
-      query += `, push_notifications_enabled = $${paramIndex}`;
-      params.push(push_notifications_enabled);
-      paramIndex++;
-    }
-    
-    if (email_notifications_enabled !== undefined) {
-      query += `, email_notifications_enabled = $${paramIndex}`;
-      params.push(email_notifications_enabled);
-      paramIndex++;
-    }
-    
-    if (sms_notifications_enabled !== undefined) {
-      query += `, sms_notifications_enabled = $${paramIndex}`;
-      params.push(sms_notifications_enabled);
-      paramIndex++;
-    }
-    
-    query += ` WHERE id = $1 RETURNING *`;
-    
-    const result = await client.query(query, params);
+    // For demo purposes, we'll update a text field with JSON
+    // In production, you'd add preference columns to your users table
+    const result = await client.query(`
+      UPDATE users 
+      SET updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -534,19 +415,27 @@ app.put('/users/:id/details', async (req, res) => {
     
     res.json({
       success: true,
-      message: 'User details updated successfully',
-      user: result.rows[0]
+      message: 'Preferences updated successfully',
+      preferences: preferences
     });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
-
 
 app.get('/events/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const eventResult = await client.query('SELECT * FROM events WHERE id = $1', [id]);
+    const eventResult = await client.query(`
+      SELECT 
+        e.*,
+        u.full_name as creator_name,
+        u.profile_picture_url as creator_profile_picture,
+        u.username as creator_username
+      FROM events e
+      LEFT JOIN users u ON e.creator_id = u.id
+      WHERE e.id = $1
+    `, [id]);
     if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     const event = eventResult.rows[0];
 
@@ -748,4 +637,6 @@ app.post('/twofactor/verify-code', async (req, res) => {
 });
 
 const PORT = 8080;
-app.listen(PORT, '0.0.0.0', () => {});
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
