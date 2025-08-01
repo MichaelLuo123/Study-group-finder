@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { useFonts } from 'expo-font';
+
 import {
   Modal,
   Pressable,
@@ -9,15 +11,35 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 
 const SettingsFrontPage = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
+  const [fontsLoaded] = useFonts({
+    'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
+    'Poppins-Bold': require('../../assets/fonts/Poppins/Poppins-Bold.ttf'),
+    'Poppins-SemiBold': require('../../assets/fonts/Poppins/Poppins-SemiBold.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return null; 
+  }
+
   const router = useRouter();
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Image
+            source={require('../../assets/images/Arrow_black.png')}
+            style={styles.backArrowImage}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
         <Text style={styles.heading}>Settings</Text>
 
         <TouchableOpacity
@@ -94,7 +116,7 @@ const SettingsFrontPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
   },
   scrollContent: {
     padding: 24,
@@ -104,30 +126,41 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     alignSelf: 'center',
     marginBottom: 24,
+    fontFamily: 'Poppins-Bold',
+  },
+  backArrowImage: {
+    width: 30,
+    height: 30,
+  },
+  backButton: {
+    width: 30,
+    height: 30,
+    marginBottom: 12,
   },
   item: {
     backgroundColor: '#f9fafb',
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: 10,
+    marginBottom: 10,
   },
   itemText: {
     fontSize: 16,
     color: '#111827',
+    fontFamily: 'Poppins-Regular',
   },
   signOutButton: {
     backgroundColor: '#5CAEF1',
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    marginTop: 12,
+    borderRadius: 10,
   },
   signOutText: {
-    color: '#fff',
+    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
+    // textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
   },
   modalBackground: {
     flex: 1,
@@ -139,7 +172,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 24,
     borderRadius: 16,
-    width: '80%',
+    width: '60%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -151,10 +184,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
     textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 16,
   },
   modalButton: {
     paddingVertical: 12,
@@ -169,11 +204,13 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
-    color: '#111827',
+    color: '#000000',
+    fontFamily: 'Poppins-Regular',
   },
   confirmText: {
     fontSize: 16,
-    color: '#fff',
+    color: '#000000',
+    fontFamily: 'Poppins-Regular',
   },
 });
 

@@ -10,9 +10,20 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFonts } from 'expo-font';
 
 const AboutPage = () => {
   const router = useRouter();
+
+  const [fontsLoaded] = useFonts({
+    'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
+    'Poppins-Bold': require('../../assets/fonts/Poppins/Poppins-Bold.ttf'),
+    'Poppins-SemiBold': require('../../assets/fonts/Poppins/Poppins-SemiBold.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return null; 
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -30,10 +41,10 @@ const AboutPage = () => {
         <Text style={styles.sectionTitle}>Terms of Service</Text>
         <View style={styles.input}>
           <ScrollView>
-            <Text>
+            <Text style={styles.text}>
               Terms of Service
               {"\n\n"}
-              Effective Date: [Insert Date]
+              Effective Date: 01/01/2025
               {"\n\n"}
               Welcome to Cramer, a mobile app developed under the UC San Diego Supercomputer Center. By using Cramer, you agree to the following terms:
               {"\n\n"}
@@ -59,10 +70,10 @@ const AboutPage = () => {
         <Text style={styles.sectionTitle}>Privacy Policy</Text>
         <View style={styles.input}>
           <ScrollView>
-            <Text>
+            <Text style={styles.text}>
               Privacy Policy
               {"\n\n"}
-              Effective Date: [Insert Date]
+              Effective Date: 01/01/2025
               {"\n\n"}
               Cramer respects your privacy. This policy outlines what information we collect and how we use it.
               {"\n\n"}
@@ -99,7 +110,7 @@ const AboutPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
   },
   scrollContent: {
     padding: 24,
@@ -123,14 +134,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     alignSelf: 'center',
     marginBottom: 24,
+    fontFamily: 'Poppins-Bold',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#FFFFFF',
     borderRadius: 10,
     padding: 12,
     marginBottom: 20,
     height: 200,
+    backgroundColor: '#FFFFFF',
+    fontFamily: 'Poppins-Regular',
+  },
+  text: {
+    fontFamily: 'Poppins-Regular',
   },
   item: {
     paddingVertical: 16,
@@ -138,6 +155,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f2f2f2',
     borderRadius: 8,
     marginBottom: 12,
+    fontFamily: 'Poppins-Regular',
   },
   itemText: {
     fontSize: 16,
@@ -162,10 +180,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
     color: '#222',
+    fontFamily: 'Poppins-Regular',
   },
   divider: {
     height: 1,
