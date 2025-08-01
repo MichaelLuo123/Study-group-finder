@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface Friend {
@@ -148,7 +148,6 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
         <Text style={[styles.dropdownText, { color: theme.textColor }]}>
           {getSelectedFriendsText()}
         </Text>
-        <Text style={[styles.arrow, { color: theme.textColor }]}>▼</Text>
       </TouchableOpacity>
 
       <Modal
