@@ -31,7 +31,7 @@ const LoginScreen = () => {
 
         if(email.trim() && email.endsWith('.edu') && password.trim()) { //might replace the last part with regex but this works for now
             try {
-                const response = await fetch('http://192.168.1.3:8080/login', {
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -65,41 +65,6 @@ const LoginScreen = () => {
         }
 
     };
-
-    //    if (!password.trim()) {
-    //        newErrors.password = 'Please enter your password!';
-    //        hasError = true;
-    //    }
-
-
-       
-
-
-    //    if (!hasError) {
-    //        try {
-    //            const response = await fetch('http://192.168.1.3:8080/login', {
-    //                method: 'POST',
-    //                headers: { 'Content-Type': 'application/json' },
-    //                body: JSON.stringify({ email, password })
-    //            });
-    //            const result = await response.json();
-    //            if (result.success) {
-    //                setLoginStatus('success');
-    //                setLoginMessage('Login successful!');
-    //            } else {
-    //                setLoginStatus('error');
-    //                setLoginMessage(result.message || 'Login failed.');
-    //            }
-    //        } catch (error) {
-    //            setLoginStatus('error');
-    //            setLoginMessage('Network error. Please try again.');
-    //        }
-    //    } else {
-    //        setLoginStatus('idle');
-    //        setLoginMessage('');
-    //    }
-
-   
 
    const styles = getStyles(isDarkMode);
 

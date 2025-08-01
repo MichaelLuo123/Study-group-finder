@@ -95,15 +95,37 @@ const SignUpScreen = () => {
                     })
                 });
                 const result = await response.json();
-                if (result.success) {
+                console.log('Signup response:', { status: response.status, result });
+                
+                if (response.ok && result.success) {
                     console.log('User registered successfully');
                     router.push('/SignUp/signupsuccess');
                 } else {
-                    setErrors({ ...newErrors, email: result.message });
+                    // Get the error message from any possible field
+                    const errorMessage = result.message || result.error || result.msg || JSON.stringify(result) || 'Something went wrong. Please try again.';
+                    
+                    // Handle different error cases
+                    if (response.status === 409) {
+                        // Duplicate email or username
+                        if (errorMessage.includes('email')) {
+                            setErrors(prev => ({ ...prev, email: errorMessage }));
+                        } else if (errorMessage.includes('username')) {
+                            setErrors(prev => ({ ...prev, userUsername: errorMessage }));
+                        } else {
+                            setErrors(prev => ({ ...prev, email: errorMessage }));
+                        }
+                    } else if (response.status === 400) {
+                        // Missing required fields or other 400 errors
+                        console.log('Setting error message:', errorMessage);
+                        setErrors(prev => ({ ...prev, email: errorMessage }));
+                    } else {
+                        // Other errors
+                        setErrors(prev => ({ ...prev, email: errorMessage }));
+                    }
                 }
             } catch (error) {
                 console.error('Signup error:', error);
-                setErrors({ ...newErrors, email: 'Something went wrong. Please try again.' });
+                setErrors(prev => ({ ...prev, email: 'Something went wrong. Please try again.' }));
             } finally {
                 setIsLoading(false);
             }

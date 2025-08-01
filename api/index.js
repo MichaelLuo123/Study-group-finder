@@ -49,9 +49,23 @@ app.get('/ping', (req, res) => {
 // Get all events
 app.get('/events', async (req, res) => {
   try {
-    const result = await client.query('SELECT * FROM events ORDER BY created_at DESC');
+    console.log('Fetching events with creator info...');
+    const result = await client.query(`
+      SELECT 
+        e.*,
+        u.full_name as creator_name,
+        u.profile_picture_url as creator_profile_picture,
+        u.username as creator_username
+      FROM events e
+      LEFT JOIN users u ON e.creator_id::uuid = u.id::uuid
+      ORDER BY e.created_at DESC
+    `);
+    
+    console.log('Query result:', result.rows);
+   
     res.json(result.rows);
   } catch (err) {
+    console.error('Database error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });

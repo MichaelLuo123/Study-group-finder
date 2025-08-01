@@ -46,6 +46,9 @@ export default function HomeScreen() {
       if (page === 'map') {
         router.push('/Map/map');
       }
+      if (page === 'addEvent') {
+        router.push('/CreateEvent/createevent');
+      }
     }
   };
 
