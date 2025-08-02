@@ -28,43 +28,9 @@ export default function EventList() {
       }
       const data = await response.json();
       
-      // Fallback: If events are missing creator info, try to fetch it manually
-      const eventsWithCreators = await Promise.all(
-        data.map(async (event: any) => {
-          if (!event.creator_name && event.creator_id) {
-            try {
-              console.log(`Fetching creator info for event ${event.id} with creator_id ${event.creator_id}`);
-              const userResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${event.creator_id}`);
-              if (userResponse.ok) {
-                const userData = await userResponse.json();
-                return {
-                  ...event,
-                  creator_name: userData.full_name,
-                  creator_profile_picture: userData.profile_picture_url,
-                  creator_username: userData.username
-                };
-              }
-            } catch (err) {
-              console.log('Failed to fetch creator info:', err);
-            }
-          }
-          return event;
-        })
-      );
-      
-      console.log('Events data with creators:', eventsWithCreators); // Debug log to see the actual data
-      // Log each event's creator info
-      eventsWithCreators.forEach((event: any, index: number) => {
-        console.log(`Event ${index + 1}:`, {
-          title: event.title,
-          creator_id: event.creator_id,
-          creator_name: event.creator_name,
-          creator_profile_picture: event.creator_profile_picture,
-          creator_username: event.creator_username
-        });
-      });
-      
-      setEvents(eventsWithCreators);
+             console.log('Events data:', data); // Debug log to see the actual data
+       
+       setEvents(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
     } finally {
@@ -143,23 +109,13 @@ export default function EventList() {
                  </View>
                </View>
                <View style={styles.headerRight}>
-                 {/* Creator Profile Picture */}
-                 {event.creator_profile_picture ? (
-                   <Image 
-                     source={{ uri: event.creator_profile_picture }} 
-                     style={styles.profilePicture}
-                     defaultSource={require('../../assets/images/default_profile.jpg')}
-                     onError={() => {
-                       // If image fails to load, it will fall back to defaultSource
-                     }}
-                   />
-                 ) : (
-                   <View style={styles.defaultProfilePicture}>
-                     <Text style={styles.defaultProfileText}>
-                       {event.creator_name ? event.creator_name.charAt(0).toUpperCase() : 'U'}
-                     </Text>
-                   </View>
-                 )}
+                                   {/* Creator Profile Picture */}
+                  {event.creator_profile_picture && (
+                    <Image 
+                      source={{ uri: event.creator_profile_picture }} 
+                      style={styles.profilePicture}
+                    />
+                  )}
                  <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
                </View>
              </Pressable>
@@ -303,22 +259,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  defaultProfilePicture: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#5CAEF1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  defaultProfileText: {
-    fontSize: 18,
-    color: 'white',
-    fontWeight: 'bold',
-  },
+
   titleContainer: {
     flex: 1,
   },
