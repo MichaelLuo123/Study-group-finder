@@ -2,6 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
 const { Client: MailjetClient } = require('node-mailjet');
+const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 
@@ -34,7 +38,7 @@ app.use(express.json());
 
 const client = new Client({
   user: 'postgres',
-  host: process.env.NODE_ENV === 'production' ? '172.18.0.2' : process.env.CRAMR_DB_IP_ADDR,
+  host: process.env.NODE_ENV === 'production' ? 'postgres' : process.env.CRAMR_DB_IP_ADDR,
   database: 'cramr_db',
   password: process.env.CRAMR_DB_POSTGRES_PASSWORD,
   port: 5432,
@@ -52,13 +56,46 @@ const mailjet = new MailjetClient({
 // Store OTP codes in memory (in production, use Redis or database)
 const otpStore = new Map();
 
-app.get('/test', (req, res) => {
-  res.json({ message: 'Backend is working!' });
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    // Generate unique filename with original extension
+    const uniqueName = uuidv4() + path.extname(file.originalname);
+    cb(null, uniqueName);
+  }
 });
 
-// Simple test endpoint that doesn't use database
-app.get('/ping', (req, res) => {
-  res.json({ message: 'pong', timestamp: new Date().toISOString() });
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Allow only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
+
+// Health check endpoint for Docker
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
 });
 
 // Get all events
@@ -133,15 +170,7 @@ app.post('/events', async (req, res) => {
 app.post('/signup', async (req, res) => {
   const { username, password, email, full_name, created_at } = req.body;
   
-  console.log('Signup request received:', { username, password: password ? '[HIDDEN]' : 'undefined', email, full_name, created_at });
-  
   if (!username || !password || !email || !full_name) {
-    console.log('Missing fields detected:', { 
-      username: !!username, 
-      password: !!password, 
-      email: !!email, 
-      full_name: !!full_name 
-    });
     return res.status(400).json({ success: false, message: 'Missing required fields' });
   }
   
@@ -633,7 +662,49 @@ app.post('/twofactor/verify-code', async (req, res) => {
   }
 });
 
+// Image upload endpoints
+app.post('/upload/image', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    // Generate the URL for the uploaded image
+    const imageUrl = `/uploads/${req.file.filename}`;
+    
+    res.json({
+      success: true,
+      message: 'Image uploaded successfully',
+      imageUrl: imageUrl,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Failed to upload image', details: error.message });
+  }
+});
+
+// Error handling for multer
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+    }
+    return res.status(400).json({ error: 'File upload error', details: error.message });
+  }
+  
+  if (error.message === 'Only image files are allowed!') {
+    return res.status(400).json({ error: 'Only image files are allowed!' });
+  }
+  
+  next(error);
+});
+
 const PORT = 8080;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Database host:', process.env.NODE_ENV === 'production' ? 'postgres' : process.env.CRAMR_DB_IP_ADDR);
 });
