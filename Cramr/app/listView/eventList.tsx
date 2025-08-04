@@ -28,9 +28,15 @@ export default function EventList() {
       }
       const data = await response.json();
       
-             console.log('Events data:', data); // Debug log to see the actual data
+      console.log('Events data:', data); // Debug log to see the actual data
        
-       setEvents(data);
+      // sort the JSON data here (I'm gonna sort by name as a test)
+      const sortedData = [...data].sort((a, b) => {
+        const locA = a.title?.toLowerCase() || '';
+        const locB = b.title?.toLowerCase() || '';
+        return locA.localeCompare(locB);
+      });
+      setEvents(sortedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
     } finally {
