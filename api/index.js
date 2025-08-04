@@ -64,10 +64,7 @@ app.get('/ping', (req, res) => {
 // Get all events
 app.get('/events', async (req, res) => {
   try {
-<<<<<<< HEAD
     console.log('Fetching events with creator info...');
-=======
->>>>>>> origin/dev
     const result = await client.query(`
       SELECT 
         e.*,
@@ -75,18 +72,12 @@ app.get('/events', async (req, res) => {
         u.profile_picture_url as creator_profile_picture,
         u.username as creator_username
       FROM events e
-<<<<<<< HEAD
       LEFT JOIN users u ON e.creator_id::uuid = u.id::uuid
       ORDER BY e.created_at DESC
     `);
     
     console.log('Query result:', result.rows);
    
-=======
-      LEFT JOIN users u ON e.creator_id = u.id
-      ORDER BY e.created_at DESC
-    `);
->>>>>>> origin/dev
     res.json(result.rows);
   } catch (err) {
     console.error('Database error:', err);
@@ -155,26 +146,32 @@ app.post('/signup', async (req, res) => {
   }
   
   try {
-    // Check if email is already taken
-    const emailExists = await client.query(
-      'SELECT 1 FROM users WHERE email = $1',
-      [email]
-    );
+    // Check both email and username simultaneously
+    const [emailExists, usernameExists] = await Promise.all([
+      client.query('SELECT 1 FROM users WHERE email = $1', [email]),
+      client.query('SELECT 1 FROM users WHERE username = $1', [username])
+    ]);
+    
     console.log('Email check result:', { email, exists: emailExists.rows.length > 0 });
+    console.log('Username check result:', { username, exists: usernameExists.rows.length > 0 });
+    
+    // Collect all errors
+    const errors = {};
     if (emailExists.rows.length > 0) {
-      console.log('Returning 409 for duplicate email');
-      return res.status(409).json({ success: false, message: 'User with this email already exists' });
+      errors.email = 'User with this email already exists';
+    }
+    if (usernameExists.rows.length > 0) {
+      errors.username = 'Username is already taken';
     }
     
-    // Check if username is already taken
-    const usernameExists = await client.query(
-      'SELECT 1 FROM users WHERE username = $1',
-      [username]
-    );
-    console.log('Username check result:', { username, exists: usernameExists.rows.length > 0 });
-    if (usernameExists.rows.length > 0) {
-      console.log('Returning 409 for duplicate username');
-      return res.status(409).json({ success: false, message: 'Username is already taken' });
+    // If there are any conflicts, return all errors
+    if (Object.keys(errors).length > 0) {
+      console.log('Returning 409 for conflicts:', errors);
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Validation failed',
+        errors: errors
+      });
     }
     
     // Hash the password
