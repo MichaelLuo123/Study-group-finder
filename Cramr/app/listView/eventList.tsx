@@ -1,3 +1,5 @@
+import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
+import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,13 +16,30 @@ export default function EventList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collapsedEvents, setCollapsedEvents] = useState<Set<string>>(new Set());
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
 
   useEffect(() => {
     fetchEvents();
+    //replica of the getCurrentLocation function in mapView. If we can import a specific function to reduce redundancy, that would be great.
+    async function getCurrentLocation() {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if(status != 'granted'){
+        setErrorMsg('Permssion to access location was denied');
+        return;
+      }
+    
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    }
+        
+    getCurrentLocation();
   }, []);
 
     const fetchEvents = async () => {
     try {
+      const factory = new PublicStudySessionFactory();
+
       setLoading(true);
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
       if (!response.ok) {
@@ -31,11 +50,27 @@ export default function EventList() {
       console.log('Events data:', data); // Debug log to see the actual data
        
       // sort the JSON data here (I'm gonna sort by name as a test)
-      const sortedData = [...data].sort((a, b) => {
-        const locA = a.title?.toLowerCase() || '';
-        const locB = b.title?.toLowerCase() || '';
-        return locA.localeCompare(locB);
-      });
+
+      const eventsWithCoordinates = await Promise.all(data.map(async (event) => {
+        const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
+        const coords = await studySession.addressToCoordinates();
+        return {
+          ...event,
+          coordinates: coords.geometry.location
+        }
+      }));
+
+      const sortedData = eventsWithCoordinates.sort((a, b) => {
+        const aDistance = compareDistanceFromLocation(a.lat, a.long);
+        const bDistance = compareDistanceFromLocation(b.lat, b.long);
+        return aDistance - bDistance; 
+      })
+
+      // const sortedData = [...data].sort((a, b) => {
+      //   const locA = a.title?.toLowerCase() || '';
+      //   const locB = b.title?.toLowerCase() || '';
+      //   return locA.localeCompare(locB);
+      // });
       setEvents(sortedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
@@ -43,6 +78,15 @@ export default function EventList() {
       setLoading(false);
     }
   };
+
+  const compareDistanceFromLocation = (lat:number, long:number) => {
+    let latDistance = location?.coords.latitude || 0;
+    latDistance -= lat;
+    let longDistance = location?.coords.longitude || 0;
+    longDistance -= long;
+    
+    return Math.sqrt(latDistance ** 2 + longDistance ** 2);
+  }
 
   const toggleEvent = (eventId: string) => {
     setCollapsedEvents(prev => {
