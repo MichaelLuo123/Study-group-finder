@@ -65,12 +65,6 @@ export default function EventList() {
         const bDistance = compareDistanceFromLocation(b.lat, b.long);
         return aDistance - bDistance; 
       })
-
-      // const sortedData = [...data].sort((a, b) => {
-      //   const locA = a.title?.toLowerCase() || '';
-      //   const locB = b.title?.toLowerCase() || '';
-      //   return locA.localeCompare(locB);
-      // });
       setEvents(sortedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
@@ -80,11 +74,8 @@ export default function EventList() {
   };
 
   const compareDistanceFromLocation = (lat:number, long:number) => {
-    let latDistance = location?.coords.latitude || 0;
-    latDistance -= lat;
-    let longDistance = location?.coords.longitude || 0;
-    longDistance -= long;
-    
+    let latDistance = (location?.coords.latitude || 0) - lat;
+    let longDistance = (location?.coords.longitude || 0) - long;
     return Math.sqrt(latDistance ** 2 + longDistance ** 2);
   }
 
