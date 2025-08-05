@@ -18,6 +18,8 @@ export default function EventList() {
   const [collapsedEvents, setCollapsedEvents] = useState<Set<string>>(new Set());
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  
+  type eventFilter = "distance" | "alphabetical" | "subject" | "time";
 
   useEffect(() => {
     fetchEvents();
@@ -61,10 +63,18 @@ export default function EventList() {
       }));
 
       const sortedData = eventsWithCoordinates.sort((a, b) => {
-        const aDistance = compareDistanceFromLocation(a.lat, a.long);
-        const bDistance = compareDistanceFromLocation(b.lat, b.long);
-        return aDistance - bDistance; 
+        const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
+        const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
+        return bDistance - aDistance; 
       })
+
+      // Sort aphabetically
+      // const sortedData = [...data].sort((a, b) => {
+      //   const locA = a.title?.toLowerCase() || '';
+      //   const locB = b.title?.toLowerCase() || '';
+      //   return locA.localeCompare(locB);
+      // });
+
       setEvents(sortedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
