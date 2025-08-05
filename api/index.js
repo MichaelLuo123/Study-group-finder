@@ -22,18 +22,14 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.options('*', cors({
-  origin: [
-    'http://localhost:8081',  // Expo dev server
-    'http://localhost:3000',  // Alternative dev port
-    'http://192.168.1.3:8081', // Your local IP with dev port
-    'http://localhost:19006', // Expo web dev server
-    'http://192.168.1.3:19006' // Your local IP with Expo web port
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Enable preflight for all routes
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 app.use(express.json());
 
 const client = new Client({
