@@ -4,7 +4,7 @@
 echo "Deploying backend with Docker to cloud VM..."
 
 # Load environment variables from .my_env file
-source ~/.my_env
+source ~/.env
 VM_IP=$CRAMR_DB_IP_ADDR  # Use the environment variable
 VM_USER="ubuntu"          # Replace with your VM username
 SSH_KEY_PATH=$CRAMR_SSH_KEY_PATH  # SSH key path from environment
