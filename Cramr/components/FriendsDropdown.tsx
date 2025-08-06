@@ -1,3 +1,4 @@
+import { useUser } from '@/contexts/UserContext';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -32,20 +33,17 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(false);
+  const { user: loggedInUser } = useUser();
 
-  const currentUserId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // Using hardcoded user ID for testing
+  const currentUserId = loggedInUser?.id; // Use the logged-in user's ID
 
   useEffect(() => {
     fetchFriends();
-  }, []);
+  }, [currentUserId]);
 
   const fetchFriends = async () => {
     if (!currentUserId) {
-      setFriends([
-        { id: '1', username: 'john123', full_name: 'John Smith', email: 'john@ucsd.edu' },
-        { id: '2', username: 'jane456', full_name: 'Jane Doe', email: 'jane@ucsd.edu' },
-        { id: '3', username: 'mike789', full_name: 'Mike Johnson', email: 'mike@ucsd.edu' },
-      ]);
+      setFriends([]);
       return;
     }
 
