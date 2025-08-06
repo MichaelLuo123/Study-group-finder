@@ -1,3 +1,4 @@
+import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -24,6 +25,7 @@ const LoginScreen = () => {
     const [loginStatus, setLoginStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [loginMessage, setLoginMessage] = useState('');
     const router = useRouter();
+    const { setUser } = useUser();
 
     //refactored to make it look cleaner
     const handleLogin = async () => {
@@ -40,6 +42,12 @@ const LoginScreen = () => {
                 if (result.success) {
                     setLoginStatus('success');
                     setLoginMessage('Login successful!');
+                    // Store user information in context
+                    setUser(result.user);
+                    // Navigate to list view page after successful login
+                    setTimeout(() => {
+                        router.push('/listView');
+                    }, 1000); // Small delay to show success message
                 } else {
                     setLoginStatus('error');
                     setLoginMessage(result.message || 'Login failed.');

@@ -49,6 +49,9 @@ export default function HomeScreen() {
       if (page === 'addEvent') {
         router.push('/CreateEvent/createevent');
       }
+      if (page === 'profile') {
+        router.push('/Profile/ProfilePage');
+      }
     }
   };
 
