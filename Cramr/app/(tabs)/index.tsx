@@ -66,6 +66,7 @@ export default function HomeScreen() {
         <Button title="Go to Profile Page (Internal)" onPress={() => router.push('/Profile/Internal')} />
         <Button title="Go to Profile Page (External)" onPress={() => router.push('/Profile/External')} />
         <Button title="Go to Saved/RSVP Events" onPress={() => router.push('/Saved/Saved')} />
+        <Button title="Go to Follow Page" onPress={() => router.push('/Follow/follow')} />
       </ThemedView>
     </ParallaxScrollView>
   );
