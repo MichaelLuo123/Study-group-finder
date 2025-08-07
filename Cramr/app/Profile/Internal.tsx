@@ -1,3 +1,4 @@
+import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -56,6 +57,7 @@ interface Event {
 
 export default function Internal() {
   const router = useRouter();
+  const { user: loggedInUser } = useUser();
 
   // Colors
   const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
@@ -65,7 +67,7 @@ export default function Internal() {
 
   // User
   const [user, setUser] = useState<User | null>(null);
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const [isLoading, setIsLoading] = useState(false);
 
   // Form state;
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -90,8 +92,14 @@ export default function Internal() {
   // pull user data from database
   useEffect(() => {
     const fetchUserData = async () => {
+      // Only fetch if we have a valid logged-in user
+      if (!loggedInUser?.id) {
+        return; // Don't fetch if no logged-in user
+      }
+      
+      setIsLoading(true);
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
         
         if (response.ok) {
           const userData = await response.json();
@@ -121,11 +129,13 @@ export default function Internal() {
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchUserData();
-  }, [userId]);
+  }, [loggedInUser?.id]);
 
   // Events
   const [allEvents, setAllEvents] = useState<Event[]>([]);
@@ -197,8 +207,29 @@ export default function Internal() {
     <SafeAreaView>
       <ScrollView>
         <View style={[styles.container, {backgroundColor: backgroundColor}]}>
+          
+          {/* Show message if no user is logged in */}
+          {!loggedInUser && (
+            <View style={styles.messageContainer}>
+              <Text style={[styles.messageText, {color: textColor}]}>
+                Please log in to view your profile
+              </Text>
+            </View>
+          )}
 
-          <View style={styles.topButtonsContainer}>
+          {/* Show loading state */}
+          {isLoading && (
+            <View style={styles.messageContainer}>
+              <Text style={[styles.messageText, {color: textColor}]}>
+                Loading profile...
+              </Text>
+            </View>
+          )}
+
+          {/* Show profile content only if user is logged in and not loading */}
+          {loggedInUser && !isLoading && (
+            <>
+              <View style={styles.topButtonsContainer}>
             <TouchableOpacity onPress={() => router.back()}>
               <Image source={require('../../assets/images/cramr_logo.png')} style={[styles.logoContainer]} />
             </TouchableOpacity>
@@ -312,6 +343,8 @@ export default function Internal() {
                 isOwner={true}
               />
             ))
+          )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -433,5 +466,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  messageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  messageText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

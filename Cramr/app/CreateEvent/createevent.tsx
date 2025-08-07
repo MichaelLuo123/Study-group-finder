@@ -96,7 +96,7 @@ const CreateEventScreen = () => {
       } else if (page === 'bookmarks') {
         // router.push('/bookmarks');
       } else if (page === 'profile') {
-        router.push('/Settings/SettingsFrontPage');
+        router.push('/Profile/ProfilePage');
       }
     }
   };

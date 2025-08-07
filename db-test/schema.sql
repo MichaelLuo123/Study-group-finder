@@ -44,12 +44,9 @@ CREATE TABLE events (
     status VARCHAR(50) DEFAULT 'active',
     capacity INTEGER,
     tags TEXT[],
-    invited_ids UUID[],
-    accepted_ids UUID[],
-    declined_ids UUID[],
-    invited_count INTEGER DEFAULT 0,
-    accepted_count INTEGER DEFAULT 0,
-    declined_count INTEGER DEFAULT 0
+    banner_color VARCHAR(100),
+    date VARCHAR(50),
+    time VARCHAR(50)
 );
 
 -- Create event_attendees table

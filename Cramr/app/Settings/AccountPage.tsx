@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import {
-  SafeAreaView, ScrollView, StyleSheet, Text, TextInput,
-  TouchableOpacity, View, Modal, Pressable, Image,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import { useUser } from '@/contexts/UserContext';
 import { useFonts } from 'expo-font';
-import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+    Image,
+    Modal, Pressable,
+    SafeAreaView, ScrollView, StyleSheet, Text, TextInput,
+    TouchableOpacity, View,
+} from 'react-native';
 
 const AccountPage = () => {
   const router = useRouter();
@@ -14,6 +16,8 @@ const AccountPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { user: loggedInUser } = useUser();
 
   const [fontsLoaded] = useFonts({
     'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
@@ -25,12 +29,16 @@ const AccountPage = () => {
     return null; 
   }
 
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
-
   useEffect(() => {
     const fetchUserData = async () => {
+      // Only fetch if we have a valid logged-in user
+      if (!loggedInUser?.id) {
+        return; // Don't fetch if no logged-in user
+      }
+      
+      setIsLoading(true);
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
         if (response.ok) {
           const data = await response.json();
           setEmail(data.email || '');
@@ -40,11 +48,13 @@ const AccountPage = () => {
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchUserData();
-  }, []);
+  }, [loggedInUser?.id]);
 
   const handleSave = async () => {
     if (newPassword && newPassword !== confirmPassword) {
@@ -59,7 +69,7 @@ const AccountPage = () => {
         password: newPassword || undefined,
       };
   
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/account`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser?.id}/account`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -85,15 +95,37 @@ const AccountPage = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Image
-            source={require('../../assets/images/Arrow_black.png')}
-            style={styles.backArrowImage}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
+        
+        {/* Show message if no user is logged in */}
+        {!loggedInUser && (
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageText}>
+              Please log in to edit your account
+            </Text>
+          </View>
+        )}
 
-        <Text style={styles.heading}>Account</Text>
+        {/* Show loading state */}
+        {isLoading && (
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageText}>
+              Loading account...
+            </Text>
+          </View>
+        )}
+
+        {/* Show account content only if user is logged in and not loading */}
+        {loggedInUser && !isLoading && (
+          <>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Image
+                source={require('../../assets/images/Arrow_black.png')}
+                style={styles.backArrowImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+
+            <Text style={styles.heading}>Account</Text>
 
         <Text style={styles.subheading}>Email</Text>
         <TextInput style={styles.input} placeholder="email@ucsd.edu" 
@@ -163,6 +195,8 @@ const AccountPage = () => {
             </View>
           </View>
         </Modal>
+            </>
+          )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -288,6 +322,17 @@ const styles = StyleSheet.create({
     confirmText: {
       fontSize: 16,
       color: '#000000',
+      fontFamily: 'Poppins-Regular',
+    },
+    messageContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    messageText: {
+      fontSize: 16,
+      textAlign: 'center',
       fontFamily: 'Poppins-Regular',
     },
 });
