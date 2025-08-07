@@ -1,24 +1,22 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
 
 interface EventCollapsibleProps {
     title: string;
     bannerColor: string;
-    tag1?: string,
-    tag2?: string,
-    tag3?: string,
-    ownerProfile?: string;
+    tag1?: string | null,
+    tag2?: string | null,
+    tag3?: string | null,
+    ownerId: string
     eventClass: string;
     location: string;
     date: string;
     time: string;
     numAttendees: number;
     capacity: number;
-    attendee1Profile?: string;
-    attendee2Profile?: string;
-    attendee3Profile?: string;
+    acceptedIds: string[];
     light: boolean;
     isOwner: boolean;
 }
@@ -29,16 +27,14 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     tag1,
     tag2,
     tag3,
-    ownerProfile,
+    ownerId,
     eventClass,
     location,
     date,
     time,
     numAttendees,
     capacity,
-    attendee1Profile,
-    attendee2Profile,
-    attendee3Profile,
+    acceptedIds,
     light,
     isOwner,
 }) => {
@@ -50,6 +46,65 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     const buttonColor = Colors.button
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
+
+    // Add state for attendee profile pictures
+    const [attendeeProfiles, setAttendeeProfiles] = useState<string[]>([]);
+
+    // Fetch profile pictures when component mounts or acceptedIds changes
+    useEffect(() => {
+        const fetchAttendeeProfiles = async () => {
+            if (!acceptedIds || acceptedIds.length === 0) return;
+            
+            try {
+                const firstThreeIds = acceptedIds.slice(0, 3);
+                const profilePromises = firstThreeIds.map(async (userId) => {
+                    const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+                    if (response.ok) {
+                        const userData = await response.json();
+                        return userData.profile_picture_url || '';
+                    }
+                    return '';
+                });
+                
+                const profiles = await Promise.all(profilePromises);
+                setAttendeeProfiles(profiles.filter(profile => profile !== ''));
+            } catch (error) {
+                console.error('Error fetching attendee profiles:', error);
+            }
+        };
+
+        fetchAttendeeProfiles();
+    }, [acceptedIds]);
+
+    const [ownerProfile, setOwnerProfile] = useState<string>(''); // Changed to string since you're storing profile_picture_url
+
+    useEffect(() => {
+    const fetchOwnerProfile = async () => {
+        if (!ownerId) return;
+        
+        try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${ownerId}`);
+        if (response.ok) {
+            const userData = await response.json();
+            const profileUrl = userData.profile_picture_url || '';
+            setOwnerProfile(profileUrl); // Fixed: use setOwnerProfile instead of setAttendeeProfiles
+        } else {
+            setOwnerProfile(''); // Handle non-ok responses
+        }
+        } catch (error) {
+        console.error('Error fetching owner profile:', error);
+        setOwnerProfile(''); // Set empty string on error
+        }
+    };
+
+    fetchOwnerProfile();
+    }, [ownerId]); // Added dependency array
+    
+
+    // Extract individual profile pictures for easier use
+    const attendee1Profile = attendeeProfiles[0] || null;
+    const attendee2Profile = attendeeProfiles[1] || null;
+    const attendee3Profile = attendeeProfiles[2] || null;
     
     return (
         <View style={[styles.eventContainer, {backgroundColor: textInputColor}]}>
@@ -103,10 +158,10 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                         {attendee3Profile != null && (
                             <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>)}
                         <Text style={[styles.normalText, {color: textColor ? Colors.light.text : Colors.dark.text}]}>
-                            +{numAttendees - 
+                            {numAttendees > 3 && (+numAttendees - 
                             (attendee1Profile != null ? 1 : 0) -
                             (attendee2Profile != null ? 1 : 0) -
-                            (attendee3Profile != null ? 1 : 0)}
+                            (attendee3Profile != null ? 1 : 0))}
                         </Text>
                     </View>
                     {isOwner && (<TouchableOpacity onPress={() => router.push('')}>
@@ -208,12 +263,13 @@ const styles = StyleSheet.create({
         marginRight: 3
     },
     buttonContainer: {
-        width: '100%',
+        width: 330,
         height: 35,
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 8
+        marginTop: 10,
+        marginBottom: 5
     }
 });
 

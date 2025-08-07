@@ -7,6 +7,7 @@ export const Colors = {
     dropdown: '#e5e5e5',
     slider: '#ffffff',
     sliderBackground: '#e5e5e5',
+    cancelButton: '#e5e5e5',
   },
   dark: {
     text: '#ffffff',
@@ -17,6 +18,7 @@ export const Colors = {
     searchInput: '#6e6e6e',
     slider: '#272727',
     sliderBackground: '#6e6e6e',
+    cancelButton: '#6e6e6e',
   },
   button: '#5CAEF1'
 };

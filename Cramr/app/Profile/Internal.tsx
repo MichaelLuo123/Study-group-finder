@@ -24,9 +24,37 @@ interface User {
   prompt_2_answer: string;
   prompt_3: string;
   prompt_3_answer: string;
+  following: number;
+  follwers: number;
 }
 
-export default function ProfilePage() {
+interface Event {
+  id: string;
+  title: string;
+  banner_color: number;
+  description: string;
+  location: string;
+  date: string;
+  time: string;
+  creator_id: string;
+  created_at: string;
+  event_type: string;
+  status: string;
+  capacity: number;
+  tags: string[];
+  invited_ids: string[];
+  accepted_ids: string[];
+  declined_ids: string[];
+  invited_count: number;
+  accepted_count: number;
+  declined_count: number;
+  class: string;
+  creator_name: string;
+  creator_profile_picture: string;
+  creator_username: string;
+}
+
+export default function Internal() {
   const router = useRouter();
 
   // Colors
@@ -56,7 +84,8 @@ export default function ProfilePage() {
   const [prompt2Answer, setPrompt2Answer] = useState<string | null>(null);
   const [prompt3, setPrompt3] = useState<string | null>(null);
   const [prompt3Answer, setPrompt3Answer] = useState<string | null>(null);
-
+  const [followers, setFollowers] = useState<string | null>(null);
+  const [following, setFollowing] = useState<string | null>(null);
 
   // pull user data from database
   useEffect(() => {
@@ -85,6 +114,8 @@ export default function ProfilePage() {
           setPrompt2Answer(userData.prompt_2_answer || null);
           setPrompt3(userData.prompt_3 || null);
           setPrompt3Answer(userData.prompt_3_answer || null);
+          setFollowers(userData.followers);
+          setFollowing(userData.following);
         } else {
           console.error('Failed to fetch user data');
         }
@@ -96,6 +127,72 @@ export default function ProfilePage() {
     fetchUserData();
   }, [userId]);
 
+  // Events
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [userEvents, setUserEvents] = useState<Event[]>([]);
+
+  // Fetch all events from database and filter by creator_id
+  useEffect(() => {
+    const fetchAllEventsAndFilter = async () => {
+      try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+        if (response.ok) {
+          const eventsData = await response.json();
+          setAllEvents(eventsData);
+          
+          // Filter events where creator_id matches userId
+          const filteredEvents = eventsData.filter((event: Event) => event.creator_id === userId);
+          setUserEvents(filteredEvents);
+          
+          console.log(`Found ${filteredEvents.length} events created by user ${userId}`);
+        } else {
+          console.error('Failed to fetch events data');
+        }
+      } catch (error) {
+        console.error('Error fetching events data:', error);
+      }
+    };
+
+    fetchAllEventsAndFilter();
+  }, [userId]);
+
+  const getUserProfilePicture = async (userId: string): Promise<string | null> => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+      if (response.ok) {
+        const userData = await response.json();
+        return userData.profile_picture_url || null;
+      }
+    } catch (error) {
+      console.error('Error fetching user profile picture:', error);
+    }
+    return null;
+  };
+
+  const [acceptedUserProfilePics, setAcceptedUserProfilePics] = useState<string[]>([]);
+
+  const fetchAcceptedUserProfilePics = async (acceptedIds: string[]) => {
+    try {
+      // Take only first 3 IDs
+      const firstThreeIds = acceptedIds.slice(0, 3);
+      const profilePicPromises = firstThreeIds.map(async (userId) => {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+        if (response.ok) {
+          const userData = await response.json();
+          return userData.profile_picture_url || null;
+        }
+        return null;
+      });
+      
+      const profilePics = await Promise.all(profilePicPromises);
+      // Filter out any null results
+      const validProfilePics = profilePics.filter(pic => pic !== null);
+      setAcceptedUserProfilePics(validProfilePics);
+    } catch (error) {
+      console.error('Error fetching profile pictures:', error);
+    }
+  };
+
   return (
     <SafeAreaView>
       <ScrollView>
@@ -103,15 +200,21 @@ export default function ProfilePage() {
 
           <View style={styles.topButtonsContainer}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Image source={require('../../assets/images/Arrow_black.png')} style={[styles.iconContainer]} />
+              <Image source={require('../../assets/images/cramr_logo.png')} style={[styles.logoContainer]} />
             </TouchableOpacity>
             
-            <TouchableOpacity onPress={() => router.push('/Settings/SettingsFrontPage')}>
-              <Image source={require('../../assets/images/settings.png')} style={styles.iconContainer} />
-            </TouchableOpacity>
+            <View style={styles.notificationsAndSettingsButtonContainer}>
+              <TouchableOpacity onPress={() => router.push('')}>
+                <Image source={require('../../assets/images/bell.png')} style={styles.iconContainer} />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => router.push('/Settings/SettingsFrontPage')}>
+                <Image source={require('../../assets/images/settings.png')} style={styles.iconContainer} />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 1], marginTop: 10}]}>
+          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 1], marginTop: 20}]}>
             <View style={styles.leftOfBannerContainer}>
               <Image source={profilePicture ? {uri: profilePicture} : require('../../assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
             </View>
@@ -120,11 +223,11 @@ export default function ProfilePage() {
               <Text style={[styles.headerText, {color: textColor}]}>{name}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>@{username}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>
-                <Text style={[styles.subheaderBoldText, {color: textColor}]}>5</Text> Followers
+                <Text style={[styles.subheaderBoldText, {color: textColor}]}>{followers}</Text> Followers
                 <View style={styles.dotContainer}>
                   <View style={[styles.dot, {backgroundColor: textColor}]} />
                 </View>
-                <Text style={[styles.subheaderBoldText, {color: textColor}]}>5</Text> Following
+                <Text style={[styles.subheaderBoldText, {color: textColor}]}>{following}</Text> Following
               </Text>
               <View style={[styles.tagContainer, {marginTop: 3}]}>
                 <View style={[styles.tag, {backgroundColor: textInputColor}]}>
@@ -184,26 +287,32 @@ export default function ProfilePage() {
           </View>)}
           
 
-          <Text style={[styles.subheaderBoldText, {color: textColor, marginTop: 10}]}>Upcoming Events</Text>
-
-          <EventCollapsible
-            title="In-N-Out Study Session"
-            bannerColor={bannerColors[bannerColor ? bannerColor : 1]}
-            tag1="Loud"
-            tag2="Music"
-            tag3="Pomodoro"
-            eventClass="CSE 120"
-            location="2910 Damon Ave, San Diego"
-            date="July 10th, 2025"
-            time="6:00 PM - 11:00 PM"
-            numAttendees={7}
-            capacity={8}
-            attendee1Profile={profilePicture ? profilePicture : ""}
-            attendee2Profile={profilePicture ? profilePicture : ""}
-            attendee3Profile={profilePicture ? profilePicture : ""}
-            light={true}
-            isOwner={true}
-          />
+          <Text style={[styles.subheaderBoldText, {color: textColor, marginTop: 10}]}>{name}'s Events</Text>
+          
+          {userEvents.length === 0 ? (
+            <Text style={styles.normalText}> No events </Text>
+          ) : (
+            userEvents.map((event) => (
+              <EventCollapsible
+                key={event.id} // Add this key prop
+                title={event.title}
+                bannerColor={bannerColors[bannerColor ? bannerColor : 1]}
+                tag1={event.tags[0] != null ? event.tags[0] : null} // Also fixed this - should be event.tags[0], not EventSource.tags[0]
+                tag2={event.tags[1] != null ? event.tags[1] : null} // Fixed this too
+                tag3={event.tags[2] != null ? event.tags[2] : null} // Fixed this too
+                ownerId = {event.creator_id}
+                eventClass={event.class}
+                location={event.location}
+                date={event.date}
+                time={event.time}
+                numAttendees={event.accepted_count}
+                capacity={event.capacity}
+                acceptedIds={event.accepted_ids}
+                light={true}
+                isOwner={true}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -238,9 +347,18 @@ const styles = StyleSheet.create({
     padding: 20,
     height: 1000
   },
+  logoContainer: {
+    height: 27,
+    width: 120
+  },
   topButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between'
+  },
+  notificationsAndSettingsButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 70,
   },
   iconContainer: {
     width: 25,
