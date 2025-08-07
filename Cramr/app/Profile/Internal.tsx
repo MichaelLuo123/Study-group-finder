@@ -68,6 +68,7 @@ export default function Internal() {
   // User
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
 
   // Form state;
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -229,7 +230,7 @@ export default function Internal() {
           {/* Show profile content only if user is logged in and not loading */}
           {loggedInUser && !isLoading && (
             <>
-              <View style={styles.topButtonsContainer}>
+            <View style={styles.topButtonsContainer}>
             <TouchableOpacity onPress={() => router.back()}>
               <Image source={require('../../assets/images/cramr_logo.png')} style={[styles.logoContainer]} />
             </TouchableOpacity>
