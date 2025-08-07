@@ -143,11 +143,7 @@ export default function Profile() {
         prompt_3_answer: prompt3Answer,
       };
 
-<<<<<<< HEAD
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/profile`, {
-=======
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser?.id}/profile`, {
->>>>>>> 7184ed4746724f448384f0b87e0b1ead9c63d33b
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

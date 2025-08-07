@@ -229,7 +229,7 @@ export default function Internal() {
           {/* Show profile content only if user is logged in and not loading */}
           {loggedInUser && !isLoading && (
             <>
-              <View style={styles.topButtonsContainer}>
+            <View style={styles.topButtonsContainer}>
             <TouchableOpacity onPress={() => router.back()}>
               <Image source={require('../../assets/images/cramr_logo.png')} style={[styles.logoContainer]} />
             </TouchableOpacity>
