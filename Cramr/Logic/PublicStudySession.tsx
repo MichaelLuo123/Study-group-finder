@@ -20,15 +20,17 @@ export class PublicStudySession extends StudySession{
     //returns a google LatLng object, which works well with front end map. Change after 
     public async addressToCoordinates(){
         try {
-            const response = await this.client.geocode({
-                params : {
-                    key: process.env.EXPO_PUBLIC_GOOGLE_API_KEY, //we're gonna use environment variables for the API Key in final production code
-                    address: this.getLocation,
+            // const response = await this.client.geocode({
+            //     params : {
+            //         key: process.env.EXPO_PUBLIC_GOOGLE_API_KEY, //we're gonna use environment variables for the API Key in final production code
+            //         address: this.getLocation,
                     
-                },
-                timeout: 1000 //might be shorter given the constraints of the project.
-            });
-            return response.data.results[0]; //returns a JSON. You can access coords from geometry.location
+            //     },
+            //     timeout: 1000 //might be shorter given the constraints of the project.
+            // });
+            const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(this.getLocation)}&key=${process.env.EXPO_PUBLIC_GOOGLE_API_KEY}`)
+            const data = await response.json();
+            return data.results[0]; //returns a JSON. You can access coords from geometry.location
         } catch (error) {
             console.error("Error decoding address:" , error);
             throw new Error("Failed to decode address");

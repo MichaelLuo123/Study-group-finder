@@ -1,16 +1,20 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
-import { useLayoutEffect, useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
 import EventList from './eventList';
+import FilterModal, { Filters } from './filter';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
+
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentPage, setCurrentPage] = useState('listView');
+  const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState<Filters | null>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -40,21 +44,21 @@ export default function HomeScreen() {
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
       setCurrentPage(page);
-      if (page === 'listView') {
-        router.push('/listView');
-      }
-      if (page === 'map') {
-        router.push('/Map/map');
-      }
-      if (page === 'addEvent') {
-        router.push('/CreateEvent/createevent');
-      }
+      if (page === 'listView') router.push('/listView');
+      if (page === 'map') router.push('/Map/map');
+      if (page === 'addEvent') router.push('/CreateEvent/createevent');
+      if (page === 'profile') router.push('/Profile/ProfilePage');
     }
+  };
+
+  // Handler for saving filters from FilterModal
+  const handleSaveFilters = (filterData: Filters) => {
+    setFilters(filterData);
+    setShowFilter(false);
   };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      
       {/* Search Bar + Filter */}
       <View style={styles.searchRow}>
         <View style={styles.searchInputContainer}>
@@ -70,16 +74,30 @@ export default function HomeScreen() {
         <IconButton
           icon="filter"
           size={28}
-          onPress={() => {}}
+          onPress={() => setShowFilter(true)}
           style={styles.filterButton}
           iconColor="#000"
         />
       </View>
 
-      {<EventList />}
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilter}
+        onClose={() => setShowFilter(false)}
+        onSave={handleSaveFilters}
+      />
+
+      {/* Event List (with filters) */}
+      <EventList filters={filters} />
 
       {/* Bottom Navigation Icons - Fixed at bottom */}
-      <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}>
+      <View style={[
+        styles.bottomNav,
+        {
+          backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff',
+          borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0'
+        }
+      ]}>
         <TouchableOpacity 
           style={styles.navButton}
           onPress={() => handleNavigation('listView')}
@@ -146,7 +164,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     justifyContent: 'flex-start',
-    paddingBottom: 80, 
+    paddingBottom: 80,
   },
   logo: {
     height: 100,
@@ -194,7 +212,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12,
   },
   navButton: {
     alignItems: 'center',

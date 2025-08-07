@@ -1,3 +1,4 @@
+import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -19,9 +20,50 @@ const CreateEventScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentPage, setCurrentPage] = useState('addEvent');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const { user: loggedInUser } = useUser();
+
+
 
   const handleSubmit = async () => {
+
+    // Validate required fields
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please enter an event title');
+      return;
+    }
+
+    if (!description.trim()) {
+      Alert.alert('Error', 'Please enter an event description');
+      return;
+    }
+
+    if (!location.trim()) {
+      Alert.alert('Error', 'Please enter an event location');
+      return;
+    }
+
+    if (!classField.trim()) {
+      Alert.alert('Error', 'Please enter a class name');
+      return;
+    }
+
+    if (!capacity || isNaN(Number(capacity)) || Number(capacity) <= 0) {
+      Alert.alert('Error', 'Please enter a valid capacity (must be a positive number)');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+
+
+    // Check if user is logged in before creating event
+    if (!loggedInUser?.id) {
+      Alert.alert('Error', 'You must be logged in to create an event');
+      return;
+    }
+
     const eventData = {
       title,
       description,
@@ -30,7 +72,8 @@ const CreateEventScreen = () => {
       date: date.toISOString(),
       tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
       capacity: Number(capacity),
-      invitePeople: selectedFriends,
+      invitePeople: selectedFriends, // Send user IDs directly
+      creator_id: loggedInUser.id, // Add the creator_id
     };
     console.log('Event Data:', eventData);
     
@@ -49,6 +92,7 @@ const CreateEventScreen = () => {
           tags: eventData.tags,
           capacity: eventData.capacity,
           invitePeople: eventData.invitePeople,
+          creator_id: eventData.creator_id, // Include creator_id in the request
         })
       });
   
@@ -73,6 +117,8 @@ const CreateEventScreen = () => {
       }
     } catch (error) {
       Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -92,7 +138,7 @@ const CreateEventScreen = () => {
       } else if (page === 'bookmarks') {
         // router.push('/bookmarks');
       } else if (page === 'profile') {
-        router.push('/Settings/SettingsFrontPage');
+        router.push('/Profile/ProfilePage');
       }
     }
   };
@@ -137,6 +183,8 @@ const CreateEventScreen = () => {
   };
 
   const theme = isDarkMode ? darkTheme : lightTheme;
+
+
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
@@ -262,10 +310,19 @@ const CreateEventScreen = () => {
             <TouchableOpacity
               onPress={handleSubmit}
               style={[styles.submitButton, { backgroundColor: theme.rsvpBackground }]}
+              disabled={isSubmitting}
             >
-              <Text style={[styles.submitButtonText, { color: theme.rsvpText }]}>
-                Create Event
-              </Text>
+              {isSubmitting ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={[styles.submitButtonText, { color: theme.rsvpText }]}>
+                    Creating...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.submitButtonText, { color: theme.rsvpText }]}>
+                  Create Event
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -467,6 +524,14 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottomNav: {
     position: 'absolute',
