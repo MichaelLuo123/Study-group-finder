@@ -18,6 +18,7 @@ interface Friend {
   full_name: string;
   email: string;
   avatar?: string;
+  status?: string;
 }
 
 interface User {
@@ -26,14 +27,16 @@ interface User {
   full_name: string;
   email: string;
   avatar?: string;
+  status?: string;
 }
 
-const FriendsList = () => {
+const FollowList = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'followers' | 'following' | 'add'>('followers');
+  const [activeTab, setActiveTab] = useState<'following' | 'followers' | 'add'>('following');
   const [searchQuery, setSearchQuery] = useState('');
   const [addFriendSearchQuery, setAddFriendSearchQuery] = useState('');
-  const [friends, setFriends] = useState<Friend[]>([]);
+  const [following, setFollowing] = useState<Friend[]>([]);
+  const [followers, setFollowers] = useState<Friend[]>([]);
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -42,26 +45,46 @@ const FriendsList = () => {
   const currentUserId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
 
   useEffect(() => {
-    if (activeTab !== 'add') {
-      fetchFriends();
+    if (activeTab === 'following') {
+      fetchFollowing();
+    } else if (activeTab === 'followers') {
+      fetchFollowers();
     }
   }, [activeTab]);
 
-  const fetchFriends = async () => {
+  const fetchFollowing = async () => {
     setLoading(true);
     try {
-      // For now, using the same endpoint for both tabs
-      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/friends`);
+      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/following`);
       if (response.ok) {
         const data = await response.json();
-        setFriends(data);
+        setFollowing(data.following || []);
       } else {
-        console.log('Failed to load friends');
-        setFriends([]);
+        console.log('Failed to load following');
+        setFollowing([]);
       }
     } catch (error) {
       console.log('Network error:', error);
-      setFriends([]);
+      setFollowing([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFollowers = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/followers`);
+      if (response.ok) {
+        const data = await response.json();
+        setFollowers(data.followers || []);
+      } else {
+        console.log('Failed to load followers');
+        setFollowers([]);
+      }
+    } catch (error) {
+      console.log('Network error:', error);
+      setFollowers([]);
     } finally {
       setLoading(false);
     }
@@ -79,10 +102,10 @@ const FriendsList = () => {
       const response = await fetch(`http://132.249.242.182:8080/users/search?q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
-        // Filter out current user and existing friends
+        // Filter out current user and people already following
         const filteredData = data.filter((user: User) => 
           user.id !== currentUserId && 
-          !friends.some(friend => friend.id === user.id)
+          !following.some(followingUser => followingUser.id === user.id)
         );
         setSearchResults(filteredData);
       } else {
@@ -97,25 +120,24 @@ const FriendsList = () => {
     }
   };
 
-  const addFriend = async (userId: string) => {
+  const followUser = async (userId: string) => {
     try {
-      // TODO: Replace with actual add friend endpoint
-      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/friends`, {
+      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/follow`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ friendId: userId }),
+        body: JSON.stringify({ userId: userId }),
       });
 
       if (response.ok) {
-        Alert.alert('Success', 'Friend request sent!');
+        Alert.alert('Success', 'Now following!');
         // Remove from search results
         setSearchResults(searchResults.filter(user => user.id !== userId));
-        // Refresh friends list
-        fetchFriends();
+        // Refresh following list
+        fetchFollowing();
       } else {
-        Alert.alert('Error', 'Failed to send friend request');
+        Alert.alert('Error', 'Failed to follow user');
       }
     } catch (error) {
       console.log('Network error:', error);
@@ -123,17 +145,36 @@ const FriendsList = () => {
     }
   };
 
-  const removeFriend = (friendId: string) => {
-    // TODO: Implement remove friend functionality
-    setFriends(friends.filter(friend => friend.id !== friendId));
+  const unfollowUser = async (userId: string) => {
+    try {
+      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/follow/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        Alert.alert('Success', 'Unfollowed successfully!');
+        // Update UI
+        setFollowing(following.filter(user => user.id !== userId));
+      } else {
+        Alert.alert('Error', 'Failed to unfollow user');
+      }
+    } catch (error) {
+      console.log('Network error:', error);
+      Alert.alert('Error', 'Network error occurred');
+    }
   };
 
-  const filteredFriends = friends.filter(friend =>
-    friend.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    friend.username?.toLowerCase().includes(searchQuery.toLowerCase())
+
+
+  const filteredFollowing = following.filter(user =>
+    user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderFriendItem = ({ item }: { item: Friend }) => (
+  const renderFollowingItem = ({ item }: { item: Friend }) => (
     <View style={styles.friendContainer}>
       <View style={styles.avatarContainer}>
         <View style={styles.avatar}>
@@ -150,36 +191,48 @@ const FriendsList = () => {
       
       <TouchableOpacity
         style={styles.removeButton}
-        onPress={() => removeFriend(item.id)}
+        onPress={() => unfollowUser(item.id)}
       >
         <Ionicons name="close" size={20} color="#FF4444" />
       </TouchableOpacity>
     </View>
   );
 
-  const renderSearchResultItem = ({ item }: { item: User }) => (
-    <View style={styles.searchResultContainer}>
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {item.full_name?.charAt(0) || item.username?.charAt(0) || '?'}
-          </Text>
+  const renderSearchResultItem = ({ item }: { item: User }) => {
+    // Check if this user is already being followed
+    const isFollowing = following.some(user => user.id === item.id);
+    
+    return (
+      <View style={styles.searchResultContainer}>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {item.full_name?.charAt(0) || item.username?.charAt(0) || '?'}
+            </Text>
+          </View>
         </View>
+        
+        <View style={styles.friendInfo}>
+          <Text style={styles.friendName}>{item.full_name || 'Unknown'}</Text>
+          <Text style={styles.friendUsername}>@{item.username}</Text>
+          {isFollowing && (
+            <Text style={styles.followingText}>Following</Text>
+          )}
+        </View>
+        
+        {!isFollowing && (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => followUser(item.id)}
+          >
+            <Ionicons name="add" size={20} color="#007AFF" />
+          </TouchableOpacity>
+        )}
       </View>
-      
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.full_name || 'Unknown'}</Text>
-        <Text style={styles.friendUsername}>@{item.username}</Text>
-      </View>
-      
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => addFriend(item.id)}
-      >
-        <Ionicons name="add" size={20} color="#007AFF" />
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
+
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -188,27 +241,39 @@ const FriendsList = () => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Friends</Text>
+        <Text style={styles.headerTitle}>Follow</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'followers' && styles.activeTab]}
-          onPress={() => setActiveTab('followers')}
+          style={[styles.tab, activeTab === 'following' && styles.activeTab]}
+          onPress={() => setActiveTab('following')}
         >
-          <Text style={[styles.tabText, activeTab === 'followers' && styles.activeTabText]}>
-            Followers
+          <Ionicons 
+            name="people" 
+            size={16} 
+            color={activeTab === 'following' ? '#fff' : '#666'} 
+            style={styles.tabIcon}
+          />
+          <Text style={[styles.tabText, activeTab === 'following' && styles.activeTabText]}>
+            Following
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'following' && styles.activeTab]}
-          onPress={() => setActiveTab('following')}
+          style={[styles.tab, activeTab === 'followers' && styles.activeTab]}
+          onPress={() => setActiveTab('followers')}
         >
-          <Text style={[styles.tabText, activeTab === 'following' && styles.activeTabText]}>
-            Following
+          <Ionicons 
+            name="heart" 
+            size={16} 
+            color={activeTab === 'followers' ? '#fff' : '#666'} 
+            style={styles.tabIcon}
+          />
+          <Text style={[styles.tabText, activeTab === 'followers' && styles.activeTabText]}>
+            Followers
           </Text>
         </TouchableOpacity>
 
@@ -216,8 +281,14 @@ const FriendsList = () => {
           style={[styles.tab, activeTab === 'add' && styles.activeTab]}
           onPress={() => setActiveTab('add')}
         >
+          <Ionicons 
+            name="add-circle" 
+            size={16} 
+            color={activeTab === 'add' ? '#fff' : '#666'} 
+            style={styles.tabIcon}
+          />
           <Text style={[styles.tabText, activeTab === 'add' && styles.activeTabText]}>
-            Add Friends
+            Add
           </Text>
         </TouchableOpacity>
       </View>
@@ -257,31 +328,49 @@ const FriendsList = () => {
             }
           />
         </>
-      ) : (
+      ) : activeTab === 'followers' ? (
         <>
-          {/* Friends Search Bar */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search friends"
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-
-          {/* Friends List */}
+          {/* Followers List */}
           <FlatList
-            data={filteredFriends}
-            renderItem={renderFriendItem}
+            data={followers}
+            renderItem={renderFollowingItem}
             keyExtractor={(item) => item.id}
             style={styles.friendsList}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
-                  {loading ? 'Loading...' : 'No friends found'}
+                  {loading ? 'Loading...' : 'No followers found'}
+                </Text>
+              </View>
+            }
+          />
+        </>
+      ) : (
+        <>
+          {/* Following Search Bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search following"
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          {/* Following List */}
+          <FlatList
+            data={filteredFollowing}
+            renderItem={renderFollowingItem}
+            keyExtractor={(item) => item.id}
+            style={styles.friendsList}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {loading ? 'Loading...' : 'Not following anyone yet'}
                 </Text>
               </View>
             }
@@ -319,31 +408,36 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    gap: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    gap: 6,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 25,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e0e0e0',
     backgroundColor: '#fff',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
   },
   activeTab: {
-    backgroundColor: '#f0f0f0',
-    borderColor: '#ccc',
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#666',
   },
   activeTabText: {
-    color: '#333',
+    color: '#fff',
+  },
+  tabIcon: {
+    marginBottom: 2,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -370,10 +464,12 @@ const styles = StyleSheet.create({
   friendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#fff',
     padding: 15,
     borderRadius: 12,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -431,7 +527,9 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   removeButton: {
-    padding: 5,
+    padding: 8,
+    backgroundColor: '#FFE8E8',
+    borderRadius: 20,
   },
   addButton: {
     padding: 8,
@@ -449,6 +547,43 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
+  followingText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  pendingText: {
+    fontSize: 12,
+    color: '#FF9800',
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  requestButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  acceptButton: {
+    padding: 8,
+    backgroundColor: '#E8F5E8',
+    borderRadius: 20,
+  },
+  declineButton: {
+    padding: 8,
+    backgroundColor: '#FFE8E8',
+    borderRadius: 20,
+  },
+  sentText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  cancelButton: {
+    padding: 8,
+    backgroundColor: '#FFE8E8',
+    borderRadius: 20,
+  },
 });
 
-export default FriendsList; 
+export default FollowList; 
