@@ -12,6 +12,7 @@ import Animated, {
   useSharedValue,
   withSpring
 } from 'react-native-reanimated';
+import { useUser } from '../../contexts/UserContext';
 import EventList from '../listView/eventList';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -24,7 +25,7 @@ export default function MapScreen() {
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const {isDarkMode} = useUser();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState('map');
