@@ -10,7 +10,6 @@ import {
   Text,
   View,
 } from 'react-native';
-
 export default function EventList() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
