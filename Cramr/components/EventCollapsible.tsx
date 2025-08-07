@@ -19,6 +19,7 @@ interface EventCollapsibleProps {
     acceptedIds: string[];
     light: boolean;
     isOwner: boolean;
+    style: object;
 }
 
 const EventCollapsible: React.FC<EventCollapsibleProps> = ({
@@ -37,6 +38,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     acceptedIds,
     light,
     isOwner,
+    style,
 }) => {
     const router = useRouter();
 
@@ -107,7 +109,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     const attendee3Profile = attendeeProfiles[2] || null;
     
     return (
-        <View style={[styles.eventContainer, {backgroundColor: textInputColor}]}>
+        <View style={[styles.eventContainer, {backgroundColor: textInputColor,}, style]}>
             <TouchableOpacity onPress={() => setIsOpen(!isOpen)} style={[styles.bannerContainer, {backgroundColor: bannerColor}]}>
                 <Text style={[styles.normalBoldText, {color: textColor ? Colors.light.text : Colors.dark.text}]}>{title}</Text>
                 <Image source={{uri: ownerProfile}} style={styles.profilePictureContainer}/>

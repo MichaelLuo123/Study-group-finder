@@ -1,5 +1,6 @@
+import EventCollapsible from '@/components/EventCollapsible';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Slider from '../../components/Slider';
 import { Colors } from '../../constants/Colors';
@@ -18,31 +19,56 @@ interface Event {
     status: string;
     capacity: number;
     tags: string[];
-    invited_ids: string[];
-    accepted_ids: string[];
-    declined_ids: string[];
-    invited_count: number;
-    accepted_count: number;
-    declined_count: number;
+    rsvped_count: number;
+    rsvped_ids: string[];
+    saved_ids: string[]
     class: string;
-    creator_name: string;
     creator_profile_picture: string;
-    creator_username: string;
-    following: number;
-    follwers: number;
-    following_ids: string[];
-    followers_ids: string[];
 }
 
 export default function Saved() {
     const router = useRouter();
 
+    // Colors
     const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
     const textColor = (true ? Colors.light.text : Colors.dark.text)
     const textInputColor = (true ? Colors.light.textInput : Colors.dark.backgroundColor)
     const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
     const [isSwitch, setIsSwitch] = useState<boolean>(false);
+    
+    // User
+    const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+
+    // Events
+    const [rsvpedEvents, setRsvpedEvents] = useState<Event[]>([]);
+    const [savedEvents, setSavedEvents] = useState<Event[]>([]);
+    
+    useEffect(() => {
+    const fetchEvents = async () => {
+        try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+        if (response.ok) {
+            const eventsData = await response.json();
+        
+            // Corrected filter for saved events
+            const savedEvents = eventsData.filter((event: Event) => event.saved_ids && event.saved_ids.includes(userId));
+            setSavedEvents(savedEvents);
+
+            // Corrected filter for RSVPed events
+            const rsvpedEvents = eventsData.filter((event: Event) => event.rsvped_ids && event.rsvped_ids.includes(userId));
+            setRsvpedEvents(rsvpedEvents);
+
+        } else {
+            console.error('Failed to fetch events data');
+        }
+        } catch (error) {
+        console.error('Error fetching events data:', error);
+        }
+    };
+
+    fetchEvents(); // You must call the function to execute it
+    }, [userId]);
 
     return (
         <SafeAreaView>
@@ -61,13 +87,59 @@ export default function Saved() {
                         />
                     </View>
 
-                    {isSwitch == false  && (
-                        <Text>rsvped events</Text>
+                    {isSwitch === false && (
+                        rsvpedEvents.length === 0 ? 
+                        (<Text style={styles.normalText}> No RSVPed events... </Text>) 
+                        : 
+                        (rsvpedEvents.map((event) => (
+                            <EventCollapsible
+                                key={event.id}
+                                title={event.title}
+                                bannerColor={bannerColors[event.banner_color || 1]}
+                                ownerId={event.creator_id}
+                                tag1={event.tags[0] || null}
+                                tag2={event.tags[1] || null}
+                                tag3={event.tags[2] || null}
+                                eventClass={event.class}
+                                location={event.location}
+                                date={event.date}
+                                time={event.time}
+                                numAttendees={event.rsvped_count}
+                                capacity={event.capacity}
+                                acceptedIds={event.rsvped_ids}
+                                light={true}
+                                isOwner={false}
+                            />
+                        )))
                     )}
 
-                    {isSwitch == true  && (
-                        <Text>saved events</Text>
+                    {isSwitch === true && (
+                        savedEvents.length === 0 ? 
+                        (<Text style={styles.normalText}> No saved events.. </Text>) 
+                        : 
+                        (savedEvents.map((event) => (
+                            <EventCollapsible
+                                key={event.id}
+                                title={event.title}
+                                bannerColor={bannerColors[event.banner_color || 1]}
+                                ownerId={event.creator_id}
+                                tag1={event.tags[0] || null}
+                                tag2={event.tags[1] || null}
+                                tag3={event.tags[2] || null}
+                                eventClass={event.class}
+                                location={event.location}
+                                date={event.date}
+                                time={event.time}
+                                numAttendees={event.rsvped_count}
+                                capacity={event.capacity}
+                                acceptedIds={event.rsvped_ids}
+                                light={true}
+                                isOwner={false}
+                                style={{marginBottom: 10}}
+                            />
+                        )))
                     )}
+
                 </View>
             </ScrollView>
         </SafeAreaView>
