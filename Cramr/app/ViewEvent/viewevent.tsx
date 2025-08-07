@@ -1,3 +1,4 @@
+import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -15,7 +16,6 @@ import {
   View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-
 const { width } = Dimensions.get('window');
 
 interface Event {
@@ -40,7 +40,7 @@ interface Event {
 
 const EventViewScreen = () => {
   
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const {isDarkMode, toggleDarkMode} = useUser();
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -123,8 +123,9 @@ const EventViewScreen = () => {
   //   }, 1000);
   // }, []);
 
+  //this is redundent. Consider deleting this
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
+    toggleDarkMode();
   };
 
   const handleRSVP = () => {

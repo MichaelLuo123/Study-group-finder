@@ -20,7 +20,7 @@ const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const {isDarkMode, toggleDarkMode} = useUser();
     const [errors, setErrors] = useState({ email: '', password: '' });
     const [loginStatus, setLoginStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [loginMessage, setLoginMessage] = useState('');
@@ -97,7 +97,7 @@ const LoginScreen = () => {
                    <View style={styles.themeToggleContainer}>
                        <TouchableOpacity
                            style={styles.themeToggle}
-                           onPress={() => setIsDarkMode(!isDarkMode)}
+                           onPress={toggleDarkMode}
                        >
                            <Ionicons name={isDarkMode ? "sunny" : "moon"} size={20} color={isDarkMode ? "#fff" : "#000"} />
                        </TouchableOpacity>

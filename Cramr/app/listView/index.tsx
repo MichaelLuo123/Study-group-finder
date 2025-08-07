@@ -3,13 +3,14 @@ import { useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
+import { useUser } from '../../contexts/UserContext';
 import EventList from './eventList';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const {isDarkMode} = useUser();
   const [currentPage, setCurrentPage] = useState('listView');
 
   useLayoutEffect(() => {

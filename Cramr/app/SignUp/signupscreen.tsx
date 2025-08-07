@@ -1,3 +1,4 @@
+import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -13,7 +14,6 @@ import {
     View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-
 //manages the state for input fields, password validation, error messages, and dark mode
 const SignUpScreen = () => {
     const [username, setUsername] = useState('');
@@ -22,7 +22,7 @@ const SignUpScreen = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const {isDarkMode, toggleDarkMode} = useUser();
     const [isLoading, setIsLoading] = useState(false);
     const [userUsername, setUserUsername] = useState('');
     const [errors, setErrors] = useState({
@@ -166,7 +166,7 @@ const SignUpScreen = () => {
                     <View style={styles.themeToggleContainer}>
                         <TouchableOpacity
                             style={styles.themeToggle}
-                            onPress={() => setIsDarkMode(!isDarkMode)}
+                            onPress={toggleDarkMode}
                         >
                             <Ionicons 
                                 name={isDarkMode ? "sunny" : "moon"} 

@@ -1,12 +1,12 @@
+import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   SafeAreaView, ScrollView, StyleSheet, Text,
   TouchableOpacity, View
 } from 'react-native';
-import { useFonts } from 'expo-font';
-import { useEffect } from 'react';
+import { useUser } from '../../contexts/UserContext';
 // import Slider from '../../components/Slider';
 
 const PreferencesPage = () => {
@@ -14,7 +14,8 @@ const PreferencesPage = () => {
   const [switch1, setSwitch1] = useState(false);
   const [switch2, setSwitch2] = useState(false);
   const [switch3, setSwitch3] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  const {isDarkMode, toggleDarkMode} = useUser();
 
   const styles = getStyles(isDarkMode);
 
@@ -157,7 +158,7 @@ const PreferencesPage = () => {
                   ? styles.themeButtonActive
                   : null
               ]}
-              onPress={() => setIsDarkMode(t === 'dark')}
+              onPress={toggleDarkMode}
             >
               <Text style={styles.themeText}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
             </TouchableOpacity>
