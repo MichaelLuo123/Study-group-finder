@@ -490,7 +490,7 @@ export default function External() {
                       style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
                       onPress={handleBlock}
                     >
-                      <Text style={[styles.normalText, {color: 'white'}]}>Block</Text>
+                      <Text style={[styles.normalText, {color: textColor}]}>Block</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -516,7 +516,7 @@ export default function External() {
                       style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
                       onPress={handleRemoveFollower}
                     >
-                      <Text style={[styles.normalText, {color: 'white'}]}>Remove</Text>
+                      <Text style={[styles.normalText, {color: textColor}]}>Remove</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
