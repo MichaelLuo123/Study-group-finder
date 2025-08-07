@@ -122,7 +122,22 @@ app.get('/events', async (req, res) => {
 app.post('/events', async (req, res) => {
   const { title, description, location, class: classField, date, tags, capacity, invitePeople, creator_id } = req.body;
   
+  // Validate required fields
+  if (!title || !creator_id) {
+    return res.status(400).json({ error: 'Missing required fields: title and creator_id are required' });
+  }
+
   try {
+    // Verify that the creator_id exists in the users table
+    const creatorCheck = await client.query(
+      'SELECT id FROM users WHERE id = $1',
+      [creator_id]
+    );
+    
+    if (creatorCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid creator_id: user not found' });
+    }
+
     // First create the event
     const result = await client.query(
       'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, creator_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
@@ -158,6 +173,7 @@ app.post('/events', async (req, res) => {
       event: result.rows[0]
     });
   } catch (err) {
+    console.error('Error creating event:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
