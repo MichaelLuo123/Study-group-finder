@@ -1,9 +1,11 @@
+import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import FriendsDropdown from '../../components/FriendsDropdown';
+import FollowersDropdown from '../../components/FollowersDropdown';
 
 const CreateEventScreen = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -16,14 +18,52 @@ const CreateEventScreen = () => {
   const [capacity, setCapacity] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentPage, setCurrentPage] = useState('addEvent');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const { user: loggedInUser } = useUser();
 
-  // Date picker state
-  const [dateInput, setDateInput] = useState(date.toLocaleDateString());
-  const [timeInput, setTimeInput] = useState(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
 
   const handleSubmit = async () => {
+
+    // Validate required fields
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please enter an event title');
+      return;
+    }
+
+    if (!description.trim()) {
+      Alert.alert('Error', 'Please enter an event description');
+      return;
+    }
+
+    if (!location.trim()) {
+      Alert.alert('Error', 'Please enter an event location');
+      return;
+    }
+
+    if (!classField.trim()) {
+      Alert.alert('Error', 'Please enter a class name');
+      return;
+    }
+
+    if (!capacity || isNaN(Number(capacity)) || Number(capacity) <= 0) {
+      Alert.alert('Error', 'Please enter a valid capacity (must be a positive number)');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+
+
+    // Check if user is logged in before creating event
+    if (!loggedInUser?.id) {
+      Alert.alert('Error', 'You must be logged in to create an event');
+      return;
+    }
+
     const eventData = {
       title,
       description,
@@ -32,7 +72,8 @@ const CreateEventScreen = () => {
       date: date.toISOString(),
       tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
       capacity: Number(capacity),
-      invitePeople: selectedFriends,
+      invitePeople: selectedFriends, // Send user IDs directly
+      creator_id: loggedInUser.id, // Add the creator_id
     };
     console.log('Event Data:', eventData);
     
@@ -51,6 +92,7 @@ const CreateEventScreen = () => {
           tags: eventData.tags,
           capacity: eventData.capacity,
           invitePeople: eventData.invitePeople,
+          creator_id: eventData.creator_id, // Include creator_id in the request
         })
       });
   
@@ -67,8 +109,6 @@ const CreateEventScreen = () => {
         setCapacity('');
         setSelectedFriends([]);
         setDate(new Date());
-        setDateInput(new Date().toLocaleDateString());
-        setTimeInput(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         // Navigate back to home after successful creation
         router.push('/(tabs)');
         return data;
@@ -77,6 +117,8 @@ const CreateEventScreen = () => {
       }
     } catch (error) {
       Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -101,41 +143,48 @@ const CreateEventScreen = () => {
     }
   };
 
-  const updateDateFromInputs = () => {
-    try {
-      const dateParts = dateInput.split('/');
-      const timeParts = timeInput.split(':');
-      
-      if (dateParts.length === 3 && timeParts.length === 2) {
-        const month = parseInt(dateParts[0]) - 1; // Month is 0-indexed
-        const day = parseInt(dateParts[1]);
-        const year = parseInt(dateParts[2]);
-        const hour = parseInt(timeParts[0]);
-        const minute = parseInt(timeParts[1]);
-        
-        // Validate the inputs
-        if (month >= 0 && month <= 11 && 
-            day >= 1 && day <= 31 && 
-            year >= 2024 && year <= 2030 &&
-            hour >= 0 && hour <= 23 &&
-            minute >= 0 && minute <= 59) {
-          
-          const newDate = new Date(year, month, day, hour, minute);
-          
-          // Check if the date is valid (handles edge cases like Feb 30)
-          if (!isNaN(newDate.getTime()) && 
-              newDate.getMonth() === month && 
-              newDate.getDate() === day) {
-            setDate(newDate);
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Invalid date/time format');
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      // Preserve the current time when changing date
+      const newDate = new Date(selectedDate);
+      newDate.setHours(date.getHours());
+      newDate.setMinutes(date.getMinutes());
+      setDate(newDate);
     }
   };
 
+  const onTimeChange = (event: any, selectedTime?: Date) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      // Preserve the current date when changing time
+      const newDate = new Date(date);
+      newDate.setHours(selectedTime.getHours());
+      newDate.setMinutes(selectedTime.getMinutes());
+      setDate(newDate);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   const theme = isDarkMode ? darkTheme : lightTheme;
+
+
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
@@ -217,49 +266,43 @@ const CreateEventScreen = () => {
             />
             
             {/* Invite People Dropdown */}
-             <FriendsDropdown
+                           <FollowersDropdown
                selectedFriends={selectedFriends}
                onFriendsChange={setSelectedFriends}
-               placeholder="Select friends to invite"
+                               placeholder="Select people to invite"
                theme={theme}
              />
             
-            {/* Date/Time Inputs */}
+            {/* Improved Date/Time Picker */}
             <View style={styles.dateTimeContainer}>
-              <Text style={[styles.dateTimeLabel, { color: theme.textColor }]}>Date & Time</Text>
+              <Text style={[styles.dateTimeLabel, { color: theme.textColor }]}>Event Date & Time</Text>
               
               <View style={styles.dateTimeRow}>
-                <View style={styles.dateTimeInputContainer}>
-                  <Text style={[styles.dateTimeInputLabel, { color: theme.textColor }]}>Date (MM/DD/YYYY)</Text>
-                  <TextInput
-                    placeholder="12/25/2024"
-                    placeholderTextColor={theme.placeholderColor}
-                    value={dateInput}
-                    onChangeText={(text) => {
-                      setDateInput(text);
-                      updateDateFromInputs();
-                    }}
-                    style={[styles.input, styles.dateTimeInput, { color: theme.textColor, backgroundColor: theme.inputBackground }]}
-                  />
-                </View>
-                
-                <View style={styles.dateTimeInputContainer}>
-                  <Text style={[styles.dateTimeInputLabel, { color: theme.textColor }]}>Time (HH:MM)</Text>
-                  <TextInput
-                    placeholder="14:30"
-                    placeholderTextColor={theme.placeholderColor}
-                    value={timeInput}
-                    onChangeText={(text) => {
-                      setTimeInput(text);
-                      updateDateFromInputs();
-                    }}
-                    style={[styles.input, styles.dateTimeInput, { color: theme.textColor, backgroundColor: theme.inputBackground }]}
-                  />
-                </View>
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, { backgroundColor: theme.inputBackground, borderColor: theme.placeholderColor }]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={theme.textColor} />
+                  <Text style={[styles.dateTimeButtonText, { color: theme.textColor }]}>
+                    {formatDate(date)}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={theme.placeholderColor} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, { backgroundColor: theme.inputBackground, borderColor: theme.placeholderColor }]}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Ionicons name="time-outline" size={20} color={theme.textColor} />
+                  <Text style={[styles.dateTimeButtonText, { color: theme.textColor }]}>
+                    {formatTime(date)}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={theme.placeholderColor} />
+                </TouchableOpacity>
               </View>
               
               <Text style={[styles.selectedDateTime, { color: theme.textColor }]}>
-                Selected: {date.toLocaleString()}
+                📅 {formatDate(date)} at {formatTime(date)}
               </Text>
             </View>
             
@@ -267,14 +310,44 @@ const CreateEventScreen = () => {
             <TouchableOpacity
               onPress={handleSubmit}
               style={[styles.submitButton, { backgroundColor: theme.rsvpBackground }]}
+              disabled={isSubmitting}
             >
-              <Text style={[styles.submitButtonText, { color: theme.rsvpText }]}>
-                Create Event
-              </Text>
+              {isSubmitting ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={[styles.submitButtonText, { color: theme.rsvpText }]}>
+                    Creating...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.submitButtonText, { color: theme.rsvpText }]}>
+                  Create Event
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      {/* Date Picker Modal */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {/* Time Picker Modal */}
+      {showTimePicker && (
+        <DateTimePicker
+          value={date}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onTimeChange}
+        />
+      )}
 
       {/* Bottom Navigation Bar - Same as Map */}
       <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}> 
@@ -337,31 +410,6 @@ const CreateEventScreen = () => {
     </SafeAreaView>
   );
 };
-
-const pickerSelectStyles = (theme: any) => ({
-  inputIOS: {
-    fontSize: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    color: theme.textColor,
-    backgroundColor: theme.inputBackground,
-    paddingRight: 30,
-  },
-  inputAndroid: {
-    fontSize: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    color: theme.textColor,
-    backgroundColor: theme.inputBackground,
-    paddingRight: 30,
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -443,24 +491,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+    gap: 12,
   },
-  dateTimeInputContainer: {
+  dateTimeButton: {
     flex: 1,
-    marginHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: '#ccc',
   },
-  dateTimeInputLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  dateTimeInput: {
-    textAlign: 'center',
+  dateTimeButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
   selectedDateTime: {
     fontSize: 14,
     textAlign: 'center',
     marginTop: 8,
     fontStyle: 'italic',
+    fontWeight: '500',
   },
   submitButton: {
     paddingHorizontal: 20,
@@ -472,6 +524,14 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottomNav: {
     position: 'absolute',

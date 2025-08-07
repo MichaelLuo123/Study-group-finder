@@ -49,14 +49,15 @@ export default function MapScreen() {
       setCurrentPage(page);
       if (page === 'listView') {
         router.push('/listView');
-      } else if (page === 'map') {
-        // Already on map page, no navigation needed
-      } else if (page === 'addEvent') {
+      }
+      if (page === 'addEvent') {
         router.push('/CreateEvent/createevent');
-      } else if (page === 'bookmarks') {
+      } 
+      if (page === 'bookmarks') {
         // router.push('/bookmarks');
-      } else if (page === 'profile') {
-        // router.push('/profile');
+      } 
+      if (page === 'profile') {
+        router.push('/Profile/ProfilePage');
       }
     }
   };

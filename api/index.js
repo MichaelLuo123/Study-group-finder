@@ -133,16 +133,14 @@ app.post('/events', async (req, res) => {
     
     // If invite people are provided, create event attendee records
     if (invitePeople && invitePeople.length > 0) {
-      for (const username of invitePeople) {
-        // Find user by username
+      for (const userId of invitePeople) {
+        // Validate that the user exists
         const userResult = await client.query(
-          'SELECT id FROM users WHERE username = $1',
-          [username.trim()]
+          'SELECT id FROM users WHERE id = $1',
+          [userId]
         );
         
         if (userResult.rows.length > 0) {
-          const userId = userResult.rows[0].id;
-          
           // Add to event_attendees table
           await client.query(
             'INSERT INTO event_attendees (event_id, user_id, status) VALUES ($1, $2, $3) ON CONFLICT (event_id, user_id) DO NOTHING',
@@ -259,6 +257,39 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Search users
+app.get('/users/search', async (req, res) => {
+  const { q } = req.query;
+  
+  if (!q || q.length < 2) {
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+  }
+  
+  try {
+    const result = await client.query(`
+      SELECT id, username, full_name, email
+      FROM users 
+      WHERE 
+        LOWER(username) LIKE LOWER($1) OR 
+        LOWER(full_name) LIKE LOWER($1) OR
+        LOWER(email) LIKE LOWER($1)
+      ORDER BY 
+        CASE 
+          WHEN LOWER(username) = LOWER($1) THEN 1
+          WHEN LOWER(full_name) = LOWER($1) THEN 2
+          ELSE 3
+        END,
+        username
+      LIMIT 20
+    `, [`%${q}%`]);
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Search users error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 // Get user by ID
 app.get('/users/:id', async (req, res) => {
   const { id } = req.params;
@@ -295,6 +326,271 @@ app.get('/users/:id/friends', async (req, res) => {
     
     res.json(result.rows);
   } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Send friend request
+app.post('/users/:id/friends', async (req, res) => {
+  const { id } = req.params;
+  const { friendId } = req.body;
+  
+  if (!friendId) {
+    return res.status(400).json({ error: 'friendId is required' });
+  }
+  
+  if (id === friendId) {
+    return res.status(400).json({ error: 'Cannot send friend request to yourself' });
+  }
+  
+  try {
+    // Check if both users exist
+    const [userResult, friendResult] = await Promise.all([
+      client.query('SELECT id FROM users WHERE id = $1', [id]),
+      client.query('SELECT id FROM users WHERE id = $1', [friendId])
+    ]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    if (friendResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Friend not found' });
+    }
+    
+    // Check if friendship already exists
+    const existingFriendship = await client.query(`
+      SELECT * FROM friends 
+      WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+    `, [id, friendId]);
+    
+    if (existingFriendship.rows.length > 0) {
+      const friendship = existingFriendship.rows[0];
+      if (friendship.status === 'accepted') {
+        return res.status(409).json({ error: 'Already friends' });
+      } else if (friendship.status === 'pending') {
+        return res.status(409).json({ error: 'Friend request already sent' });
+      }
+    }
+    
+    // Create friend request
+    const result = await client.query(`
+      INSERT INTO friends (user_id, friend_id, status) 
+      VALUES ($1, $2, 'pending')
+      RETURNING *
+    `, [id, friendId]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Friend request sent successfully',
+      friendship: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Send friend request error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Accept friend request
+app.put('/users/:id/friends/:friendId', async (req, res) => {
+  const { id, friendId } = req.params;
+  const { action } = req.body; // 'accept' or 'decline'
+  
+  if (!['accept', 'decline'].includes(action)) {
+    return res.status(400).json({ error: 'action must be accept or decline' });
+  }
+  
+  try {
+    // Check if friend request exists
+    const friendshipResult = await client.query(`
+      SELECT * FROM friends 
+      WHERE friend_id = $1 AND user_id = $2 AND status = 'pending'
+    `, [id, friendId]);
+    
+    if (friendshipResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Friend request not found' });
+    }
+    
+    const newStatus = action === 'accept' ? 'accepted' : 'declined';
+    
+    // Update friendship status
+    const result = await client.query(`
+      UPDATE friends 
+      SET status = $1 
+      WHERE friend_id = $2 AND user_id = $3
+      RETURNING *
+    `, [newStatus, id, friendId]);
+    
+    res.json({
+      success: true,
+      message: `Friend request ${action}ed successfully`,
+      friendship: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Update friendship error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Remove friend
+app.delete('/users/:id/friends/:friendId', async (req, res) => {
+  const { id, friendId } = req.params;
+  
+  try {
+    // Delete friendship (both directions)
+    const result = await client.query(`
+      DELETE FROM friends 
+      WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+      RETURNING *
+    `, [id, friendId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Friendship not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Friend removed successfully'
+    });
+  } catch (err) {
+    console.error('Remove friend error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get pending friend requests (received)
+app.get('/users/:id/friend-requests', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        u.id, u.username, u.full_name, u.email,
+        f.created_at as request_date
+      FROM users u
+      INNER JOIN friends f ON f.user_id = u.id
+      WHERE f.friend_id = $1 AND f.status = 'pending'
+      ORDER BY f.created_at DESC
+    `, [id]);
+    
+    res.json({
+      success: true,
+      friend_requests: result.rows
+    });
+  } catch (err) {
+    console.error('Get friend requests error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Follow a user
+app.post('/users/:id/follow', async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+  
+  if (id === userId) {
+    return res.status(400).json({ error: 'Cannot follow yourself' });
+  }
+  
+  try {
+    // Check if already following
+    const existingFollow = await client.query(`
+      SELECT * FROM follows WHERE follower_id = $1 AND following_id = $2
+    `, [id, userId]);
+    
+    if (existingFollow.rows.length > 0) {
+      return res.status(409).json({ error: 'Already following this user' });
+    }
+    
+    // Create follow relationship
+    const result = await client.query(`
+      INSERT INTO follows (follower_id, following_id) 
+      VALUES ($1, $2)
+      RETURNING *
+    `, [id, userId]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Now following user',
+      follow: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Follow user error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Unfollow a user
+app.delete('/users/:id/follow/:userId', async (req, res) => {
+  const { id, userId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      DELETE FROM follows 
+      WHERE follower_id = $1 AND following_id = $2
+      RETURNING *
+    `, [id, userId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Follow relationship not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Unfollowed successfully'
+    });
+  } catch (err) {
+    console.error('Unfollow user error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get users that the current user is following
+app.get('/users/:id/following', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        u.id, u.username, u.full_name, u.email,
+        f.created_at as follow_date
+      FROM users u
+      INNER JOIN follows f ON f.following_id = u.id
+      WHERE f.follower_id = $1
+      ORDER BY f.created_at DESC
+    `, [id]);
+    
+    res.json({
+      success: true,
+      following: result.rows
+    });
+  } catch (err) {
+    console.error('Get following error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get users that are following the current user
+app.get('/users/:id/followers', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        u.id, u.username, u.full_name, u.email,
+        f.created_at as follow_date
+      FROM users u
+      INNER JOIN follows f ON f.follower_id = u.id
+      WHERE f.following_id = $1
+      ORDER BY f.created_at DESC
+    `, [id]);
+    
+    res.json({
+      success: true,
+      followers: result.rows
+    });
+  } catch (err) {
+    console.error('Get followers error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
@@ -365,7 +661,7 @@ app.put('/users/:id/profile', async (req, res) => {
 // Update user account settings
 app.put('/users/:id/account', async (req, res) => {
   const { id } = req.params;
-  const { email, password } = req.body;
+  const { email, password, phone_number } = req.body;
   
   try {
     let query = 'UPDATE users SET updated_at = NOW()';
@@ -381,6 +677,12 @@ app.put('/users/:id/account', async (req, res) => {
     if (password) {
       query += `, password_hash = $${paramIndex}`;
       params.push(password); // In production, hash this password
+      paramIndex++;
+    }
+    
+    if (phone_number) {
+      query += `, phone_number = $${paramIndex}`;
+      params.push(phone_number);
       paramIndex++;
     }
     
@@ -413,32 +715,67 @@ app.put('/users/:id/preferences', async (req, res) => {
   } = req.body;
   
   try {
-    // For now, we'll store preferences as JSON in a new column
-    // You might want to add these columns to your users table
-    const preferences = {
-      push_notifications: push_notifications || false,
-      email_notifications: email_notifications || false,
-      sms_notifications: sms_notifications || false,
-      theme: theme || 'light'
-    };
-    
-    // For demo purposes, we'll update a text field with JSON
-    // In production, you'd add preference columns to your users table
+    // Update the actual notification preference columns in the users table
     const result = await client.query(`
       UPDATE users 
-      SET updated_at = NOW()
-      WHERE id = $1
+      SET 
+        push_notifications_enabled = COALESCE($1, push_notifications_enabled),
+        email_notifications_enabled = COALESCE($2, email_notifications_enabled),
+        sms_notifications_enabled = COALESCE($3, sms_notifications_enabled),
+        updated_at = NOW()
+      WHERE id = $4
       RETURNING *
+    `, [push_notifications, email_notifications, sms_notifications, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const user = result.rows[0];
+    
+    res.json({
+      success: true,
+      message: 'Preferences updated successfully',
+      preferences: {
+        push_notifications: user.push_notifications_enabled,
+        email_notifications: user.email_notifications_enabled,
+        sms_notifications: user.sms_notifications_enabled,
+        theme: theme || 'light' // Theme is not stored in DB, so we return the requested theme
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get user preferences
+app.get('/users/:id/preferences', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        push_notifications_enabled,
+        email_notifications_enabled,
+        sms_notifications_enabled
+      FROM users 
+      WHERE id = $1
     `, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     
+    const user = result.rows[0];
+    
     res.json({
       success: true,
-      message: 'Preferences updated successfully',
-      preferences: preferences
+      preferences: {
+        push_notifications: user.push_notifications_enabled,
+        email_notifications: user.email_notifications_enabled,
+        sms_notifications: user.sms_notifications_enabled,
+        theme: 'light' // Default theme since it's not stored in DB
+      }
     });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
@@ -461,31 +798,52 @@ app.get('/events/:id', async (req, res) => {
     if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     const event = eventResult.rows[0];
 
-
-    const invitedResult = await client.query('SELECT user_id FROM event_attendees WHERE event_id = $1', [id]);
-    const invited_ids = invitedResult.rows.map(row => row.user_id);
+    // Get attendee counts from event_attendees table
+    const invitedResult = await client.query(
+      "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'invited'",
+      [id]
+    );
+    const invited_count = parseInt(invitedResult.rows[0].count);
 
     const acceptedResult = await client.query(
+      "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'accepted'",
+      [id]
+    );
+    const accepted_count = parseInt(acceptedResult.rows[0].count);
+
+    const declinedResult = await client.query(
+      "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'declined'",
+      [id]
+    );
+    const declined_count = parseInt(declinedResult.rows[0].count);
+
+    // Get user IDs for each status
+    const invitedUsersResult = await client.query(
+      "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'invited'",
+      [id]
+    );
+    const invited_ids = invitedUsersResult.rows.map(row => row.user_id);
+
+    const acceptedUsersResult = await client.query(
       "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'accepted'",
       [id]
     );
-    const accepted_ids = acceptedResult.rows.map(row => row.user_id);
+    const accepted_ids = acceptedUsersResult.rows.map(row => row.user_id);
 
-    const declinedResult = await client.query(
+    const declinedUsersResult = await client.query(
       "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'declined'",
       [id]
     );
-    const declined_ids = declinedResult.rows.map(row => row.user_id);
-
+    const declined_ids = declinedUsersResult.rows.map(row => row.user_id);
 
     res.json({
       ...event,
       invited_ids,
-      invited_count: invited_ids.length,
+      invited_count,
       accepted_ids,
-      accepted_count: accepted_ids.length,
+      accepted_count,
       declined_ids,
-      declined_count: declined_ids.length,
+      declined_count,
     });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
@@ -512,6 +870,359 @@ app.put('/events/:id/location', async (req, res) => {
       event: result.rows[0]
     });
   } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Delete event
+app.delete('/events/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    // Delete event (this will cascade delete event_attendees due to foreign key)
+    const result = await client.query(
+      'DELETE FROM events WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Event deleted successfully'
+    });
+  } catch (err) {
+    console.error('Delete event error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// RSVP endpoints
+app.post('/events/:eventId/rsvpd', async (req, res) => {
+  const { eventId } = req.params;
+  const { user_id, status } = req.body;
+  
+  if (!user_id || !status) {
+    return res.status(400).json({ error: 'user_id and status are required' });
+  }
+  
+  if (!['accepted', 'declined', 'pending'].includes(status)) {
+    return res.status(400).json({ error: 'status must be accepted, declined, or pending' });
+  }
+  
+  try {
+    // Check if event exists
+    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [eventId]);
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    // Check if user exists
+    const userResult = await client.query('SELECT id FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Insert or update RSVP
+    const result = await client.query(`
+      INSERT INTO event_attendees (event_id, user_id, status, rsvp_date) 
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (event_id, user_id) 
+      DO UPDATE SET status = $3, rsvp_date = NOW()
+      RETURNING *
+    `, [eventId, user_id, status]);
+    
+    res.json({
+      success: true,
+      message: 'RSVP updated successfully',
+      rsvp: result.rows[0]
+    });
+  } catch (err) {
+    console.error('RSVP error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+app.get('/events/:eventId/rsvpd', async (req, res) => {
+  const { eventId } = req.params;
+  const { user_id } = req.query;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id query parameter is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'SELECT * FROM event_attendees WHERE event_id = $1 AND user_id = $2',
+      [eventId, user_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        rsvp: null,
+        message: 'No RSVP found for this user and event'
+      });
+    }
+    
+    res.json({
+      success: true,
+      rsvp: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Get RSVP error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+app.delete('/events/:eventId/rsvpd', async (req, res) => {
+  const { eventId } = req.params;
+  const { user_id } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'DELETE FROM event_attendees WHERE event_id = $1 AND user_id = $2 RETURNING *',
+      [eventId, user_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'RSVP not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'RSVP removed successfully'
+    });
+  } catch (err) {
+    console.error('Delete RSVP error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Update RSVP status
+app.put('/events/:eventId/rsvpd', async (req, res) => {
+  const { eventId } = req.params;
+  const { user_id, status } = req.body;
+  
+  if (!user_id || !status) {
+    return res.status(400).json({ error: 'user_id and status are required' });
+  }
+  
+  if (!['accepted', 'declined', 'pending'].includes(status)) {
+    return res.status(400).json({ error: 'status must be accepted, declined, or pending' });
+  }
+  
+  try {
+    // Check if event exists
+    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [eventId]);
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    // Check if user exists
+    const userResult = await client.query('SELECT id FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Check if RSVP exists
+    const existingRsvp = await client.query(
+      'SELECT * FROM event_attendees WHERE event_id = $1 AND user_id = $2',
+      [eventId, user_id]
+    );
+    
+    if (existingRsvp.rows.length === 0) {
+      return res.status(404).json({ error: 'RSVP not found. User must have an existing RSVP to update.' });
+    }
+    
+    // Update RSVP status
+    const result = await client.query(`
+      UPDATE event_attendees 
+      SET status = $1, rsvp_date = NOW()
+      WHERE event_id = $2 AND user_id = $3
+      RETURNING *
+    `, [status, eventId, user_id]);
+    
+    res.json({
+      success: true,
+      message: 'RSVP status updated successfully',
+      rsvp: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Update RSVP error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get all RSVPs for an event
+app.get('/events/:eventId/rsvps', async (req, res) => {
+  const { eventId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        ea.*,
+        u.username,
+        u.full_name,
+        u.profile_picture_url
+      FROM event_attendees ea
+      JOIN users u ON ea.user_id = u.id
+      WHERE ea.event_id = $1
+      ORDER BY ea.rsvp_date DESC
+    `, [eventId]);
+    
+    res.json({
+      success: true,
+      rsvps: result.rows
+    });
+  } catch (err) {
+    console.error('Get RSVPs error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Saved events endpoints
+app.post('/users/:id/saved-events', async (req, res) => {
+  const { id } = req.params;
+  const { event_id } = req.body;
+  
+  if (!event_id) {
+    return res.status(400).json({ error: 'event_id is required' });
+  }
+  
+  try {
+    // Check if user exists
+    const userResult = await client.query('SELECT id FROM users WHERE id = $1', [id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Check if event exists
+    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [event_id]);
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    // First, let's create a saved_events table if it doesn't exist
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS saved_events (
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+        saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, event_id)
+      )
+    `);
+    
+    // Insert saved event
+    const result = await client.query(`
+      INSERT INTO saved_events (user_id, event_id) 
+      VALUES ($1, $2)
+      ON CONFLICT (user_id, event_id) DO NOTHING
+      RETURNING *
+    `, [id, event_id]);
+    
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Event already saved',
+        saved: true
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Event saved successfully',
+      saved_event: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Save event error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+app.get('/users/:id/saved-events', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    // First, ensure the saved_events table exists
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS saved_events (
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+        saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, event_id)
+      )
+    `);
+    
+    const result = await client.query(`
+      SELECT 
+        e.*,
+        u.full_name as creator_name,
+        u.profile_picture_url as creator_profile_picture,
+        u.username as creator_username,
+        se.saved_at
+      FROM saved_events se
+      JOIN events e ON se.event_id = e.id
+      LEFT JOIN users u ON e.creator_id = u.id
+      WHERE se.user_id = $1
+      ORDER BY se.saved_at DESC
+    `, [id]);
+    
+    res.json({
+      success: true,
+      saved_events: result.rows
+    });
+  } catch (err) {
+    console.error('Get saved events error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+app.delete('/users/:userId/saved-events/:eventId', async (req, res) => {
+  const { userId, eventId } = req.params;
+  
+  try {
+    const result = await client.query(
+      'DELETE FROM saved_events WHERE user_id = $1 AND event_id = $2 RETURNING *',
+      [id, eventId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Saved event not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Event removed from saved events'
+    });
+  } catch (err) {
+    console.error('Remove saved event error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+app.get('/users/:id/saved-events/:eventId', async (req, res) => {
+  const { id, eventId } = req.params;
+  
+  try {
+    const result = await client.query(
+      'SELECT * FROM saved_events WHERE user_id = $1 AND event_id = $2',
+      [id, eventId]
+    );
+    
+    res.json({
+      success: true,
+      is_saved: result.rows.length > 0,
+      saved_event: result.rows[0] || null
+    });
+  } catch (err) {
+    console.error('Check saved event error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });

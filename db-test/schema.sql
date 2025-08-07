@@ -44,12 +44,7 @@ CREATE TABLE events (
     status VARCHAR(50) DEFAULT 'active',
     capacity INTEGER,
     tags TEXT[],
-    invited_ids UUID[],
-    accepted_ids UUID[],
-    declined_ids UUID[],
-    invited_count INTEGER DEFAULT 0,
-    accepted_count INTEGER DEFAULT 0,
-    declined_count INTEGER DEFAULT 0
+    banner_color VARCHAR(100)
 );
 
 -- Create event_attendees table
@@ -61,13 +56,12 @@ CREATE TABLE event_attendees (
     PRIMARY KEY (event_id, user_id)
 );
 
--- Create friends table to manage user friendships
-CREATE TABLE friends (
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,   -- Foreign key referencing the user
-    friend_id UUID REFERENCES users(id) ON DELETE CASCADE, -- Foreign key referencing the friend
-    status VARCHAR(20) DEFAULT 'pending',                   -- Friendship status (e.g., 'pending', 'accepted')
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,         -- Timestamp for when the friendship was created
-    PRIMARY KEY (user_id, friend_id)                        -- Composite primary key to ensure no duplicate friendships
+-- Create follows table to manage user follow relationships
+CREATE TABLE follows (
+    follower_id UUID REFERENCES users(id) ON DELETE CASCADE,   -- Foreign key referencing the follower
+    following_id UUID REFERENCES users(id) ON DELETE CASCADE,  -- Foreign key referencing the user being followed
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,            -- Timestamp for when the follow was created
+    PRIMARY KEY (follower_id, following_id)                   -- Composite primary key to ensure no duplicate follows
 );
 
 -- Insert sample data into users
