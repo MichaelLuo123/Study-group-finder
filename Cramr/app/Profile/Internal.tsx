@@ -43,12 +43,8 @@ interface Event {
   status: string;
   capacity: number;
   tags: string[];
-  invited_ids: string[];
-  accepted_ids: string[];
-  declined_ids: string[];
-  invited_count: number;
-  accepted_count: number;
-  declined_count: number;
+  rsvped_count: number;
+  rsvped_ids: string[];
   class: string;
   creator_name: string;
   creator_profile_picture: string;
@@ -62,13 +58,13 @@ export default function Internal() {
   // Colors
   const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
   const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.backgroundColor)
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
 
   // User
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // CHANGE THIS TO LOGGED IN USER !!!
 
   // Form state;
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -291,6 +287,12 @@ export default function Internal() {
             </View>
           </View>
 
+          {bio !== null && (<View style={[styles.promptAnswerContainer, {marginTop: 10, backgroundColor: textInputColor}]}>
+            <Text style={[styles.normalText, {color: textColor}]}>
+              {bio}
+            </Text>
+          </View>)}
+
           {prompt1 !== null && (<View style={[styles.promptContainer, {marginTop: 10}]}>
             <Text style={[styles.subheaderBoldText, {color: textColor}]}>{prompt1}</Text>
             {prompt1Answer !== null && (<View style={[styles.promptAnswerContainer, {marginTop: 5, backgroundColor: textInputColor}]}>
@@ -337,11 +339,12 @@ export default function Internal() {
                 location={event.location}
                 date={event.date}
                 time={event.time}
-                numAttendees={event.accepted_count}
+                numAttendees={event.rsvped_count}
                 capacity={event.capacity}
-                acceptedIds={event.accepted_ids}
+                acceptedIds={event.rsvped_ids}
                 light={true}
                 isOwner={true}
+                style={{marginBottom: 10}}
               />
             ))
           )}

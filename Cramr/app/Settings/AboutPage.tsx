@@ -1,47 +1,41 @@
+import { useRouter } from 'expo-router';
 import React from 'react';
 import {
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
-  Image,
+  View
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useFonts } from 'expo-font';
+import { Colors } from '../../constants/Colors';
 
 const AboutPage = () => {
   const router = useRouter();
 
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
-    'Poppins-Bold': require('../../assets/fonts/Poppins/Poppins-Bold.ttf'),
-    'Poppins-SemiBold': require('../../assets/fonts/Poppins/Poppins-SemiBold.ttf'),
-  });
-
-  if (!fontsLoaded) {
-    return null; 
-  }
-
+  // Colors
+  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
+  const textColor = (true ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Image
-            source={require('../../assets/images/Arrow_black.png')}
-            style={styles.backArrowImage}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Image
+              source={require('../../assets/images/Arrow_black.png')}
+              style={styles.backArrowImage}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
 
-        <Text style={styles.heading}>About</Text>
+        <Text style={[styles.heading, { color: textColor }]}>About</Text>
 
-        <Text style={styles.sectionTitle}>Terms of Service</Text>
-        <View style={styles.input}>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Terms of Service</Text>
+        <View style={[styles.input, { backgroundColor: textInputColor }]}>
           <ScrollView>
-            <Text style={styles.text}>
+            <Text style={[styles.text, { color: textColor }]}>
               Terms of Service
               {"\n\n"}
               Effective Date: 01/01/2025
@@ -67,10 +61,10 @@ const AboutPage = () => {
           </ScrollView>
         </View>
 
-        <Text style={styles.sectionTitle}>Privacy Policy</Text>
-        <View style={styles.input}>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Privacy Policy</Text>
+        <View style={[styles.input, { backgroundColor: textInputColor }]}>
           <ScrollView>
-            <Text style={styles.text}>
+            <Text style={[styles.text, { color: textColor }]}>
               Privacy Policy
               {"\n\n"}
               Effective Date: 01/01/2025
@@ -94,7 +88,7 @@ const AboutPage = () => {
               {"\n\n"}
               5. Security: We apply reasonable safeguards but cannot guarantee complete security of transmitted data.
               {"\n\n"}
-              6. Children’s Privacy: Cramer is not intended for users under 13 years old. We do not knowingly collect their data.
+              6. Children's Privacy: Cramer is not intended for users under 13 years old. We do not knowingly collect their data.
               {"\n\n"}
               7. Policy Updates: We may revise this policy from time to time. Major changes will be communicated in-app or via email.
               {"\n\n"}
@@ -108,42 +102,64 @@ const AboutPage = () => {
 };
 
 const styles = StyleSheet.create({
+  // Text
+  headerText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+  },
+  subheaderText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+  },
+  subheaderBoldText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+  },
+  normalText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+  },
+  normalBoldText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+  },
+
+  // Other
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    // backgroundColor moved to inline style
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
   },
   backArrow: {
-    fontSize: 30,
+    fontSize: 25,
     marginBottom: 12,
     fontWeight: '600',
   },
   backButton: {
-    width: 30,
-    height: 30,
-    marginBottom: 12,
+    width: 25,
+    height: 25,
+    marginBottom: 20,
   },
   backArrowImage: {
-    width: 30,
-    height: 30,
+    width: 25,
+    height: 25,
   },
   heading: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
     alignSelf: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     fontFamily: 'Poppins-Bold',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#FFFFFF',
+    borderColor: 'transparent',
     borderRadius: 10,
     padding: 12,
     marginBottom: 20,
     height: 200,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor moved to inline style
     fontFamily: 'Poppins-Regular',
   },
   text: {
@@ -153,12 +169,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     backgroundColor: '#f2f2f2',
-    borderRadius: 8,
-    marginBottom: 12,
+    borderRadius: 10,
+    marginBottom: 10,
     fontFamily: 'Poppins-Regular',
   },
   itemText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
   },
   button: {
@@ -182,8 +198,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
-    color: '#222',
+    marginBottom: 10,
+    // color moved to inline style
     fontFamily: 'Poppins-Regular',
   },
   divider: {

@@ -35,8 +35,10 @@ const AccountPage = () => {
   }
 
   // Colors
+  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
   const textColor = (true ? Colors.light.text : Colors.dark.text)
   const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderTextColor= (true ? Colors.light.placeholderText : Colors.dark.placeholderText)
 
   // First useEffect to fetch all user data
   useEffect(() => {
@@ -140,13 +142,13 @@ const AccountPage = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         {/* Show message if no user is logged in */}
         {!loggedInUser && (
           <View style={styles.messageContainer}>
-            <Text style={styles.messageText}>
+            <Text style={[styles.messageText, { color: textColor }]}>
               Please log in to edit your account
             </Text>
           </View>
@@ -155,7 +157,7 @@ const AccountPage = () => {
         {/* Show loading state */}
         {isLoading && (
           <View style={styles.messageContainer}>
-            <Text style={styles.messageText}>
+            <Text style={[styles.messageText, { color: textColor }]}>
               Loading account...
             </Text>
           </View>
@@ -172,38 +174,47 @@ const AccountPage = () => {
               />
             </TouchableOpacity>
 
-            <Text style={styles.heading}>Account</Text>
+            <Text style={[styles.heading, { color: textColor }]}>Account</Text>
 
-            <Text style={styles.subheading}>Email</Text>
-            <TextInput style={styles.input} placeholder="email@ucsd.edu" 
-              value={email} 
+            <Text style={[styles.subheading, { color: textColor }]}>Email</Text>
+            <TextInput 
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]} 
+              placeholder="email@ucsd.edu" 
+              placeholderTextColor={placeholderTextColor}
+              value={email}
               onChangeText={setEmail}
             />
 
-            <Text style={styles.subheading}>Phone Number</Text>
-            <TextInput style={styles.input} placeholder="(123) 456-7890" 
+            <Text style={[styles.subheading, { color: textColor }]}>Phone Number</Text>
+            <TextInput 
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]} 
+              placeholder="(123) 456-7890"  
+              placeholderTextColor={placeholderTextColor}
               value={phoneNumber}
               onChangeText={setPhoneNumber}
             />
 
-            <Text style={styles.subheading}>Change Password</Text>
+            <Text style={[styles.subheading, { color: textColor }]}>Change Password</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Enter old password"
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+              placeholder="Enter old password."
+              placeholderTextColor={placeholderTextColor}
               secureTextEntry
             />
 
             <TextInput
-              style={styles.input}
-              placeholder="Enter new password"
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+              placeholder="Enter new password."
+              placeholderTextColor={placeholderTextColor}
               secureTextEntry
               value={newPassword}
               onChangeText={setNewPassword}
             />
 
             <TextInput
-              style={styles.input}
-              placeholder="Re-enter new password"
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+              placeholder="Re-enter new password."
+              placeholderTextColor={placeholderTextColor}
               secureTextEntry
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -218,7 +229,7 @@ const AccountPage = () => {
             </TouchableOpacity>
             
             <View style={styles.divider} />
-            <Text style={styles.subheading}>Blocked Accounts</Text>
+            <Text style={[styles.subheading, { color: textColor }]}>Blocked Accounts</Text>
             
             {blockedUsers.map((user) => (
               <View key={user.id} style={[styles.blockedContainer, {backgroundColor: textInputColor, flexDirection: 'row', alignItems: 'center'}]}>
@@ -236,7 +247,7 @@ const AccountPage = () => {
             ))}
 
             <View style={styles.divider} />
-            <Text style={styles.subheading}>Delete Account</Text>
+            <Text style={[styles.subheading, { color: textColor }]}>Delete Account</Text>
 
             <TouchableOpacity style={styles.deleteButton} onPress={() => setModalVisible(true)}>
               <Text style={styles.deleteButtonText}>Delete</Text>
@@ -244,8 +255,8 @@ const AccountPage = () => {
 
             <Modal transparent visible={modalVisible} animationType="fade">
               <View style={styles.modalBackground}>
-                <View style={styles.modalCard}>
-                  <Text style={styles.modalTitle}>Delete account? This action cannot be undone.</Text>
+                <View style={[styles.modalCard, { backgroundColor: textInputColor }]}>
+                  <Text style={[styles.modalTitle, { color: textColor }]}>Delete account? This action cannot be undone.</Text>
                   <View style={styles.modalButtons}>
                     <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
                       <Text style={styles.cancelText}>Cancel</Text>
@@ -290,45 +301,44 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    // backgroundColor moved to inline style
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
   },
   backArrow: {
-    fontSize: 30,
+    fontSize: 25,
     marginBottom: 0,
     fontWeight: '600',
   },
   backButton: {
-    width: 30,
-    height: 30,
+    width: 25,
+    height: 25,
     marginBottom: 12,
   },
   backArrowImage: {
-    width: 30,
-    height: 30,
+    width: 25,
+    height: 25,
   },
   heading: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     alignSelf: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     fontFamily: 'Poppins-Bold',
   },
   subheading: {
-    marginBottom: 8,  
+    marginBottom: 10,  
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#FFFFFF',
+    borderColor: 'transparent',
     borderRadius: 10,
     padding: 12,
-    //   marginTop: 6,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+    // backgroundColor and color moved to inline styles
     fontFamily: 'Poppins-Regular',
   },
   errorText: {
@@ -340,7 +350,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#5CAEF1',
     padding: 12,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 15,
+    marginTop: 15
   },
     saveButtonText: {
       color: '#000000',
@@ -371,7 +382,7 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     },
     modalCard: {
-      backgroundColor: 'white',
+      // backgroundColor moved to inline style
       padding: 24,
       borderRadius: 10,
       width: '70%',
@@ -424,7 +435,7 @@ const styles = StyleSheet.create({
       width: '100%',
       padding: 8,
       marginBottom: 8,
-      borderRadius: 8,
+      borderRadius: 10,
     }
 });
   

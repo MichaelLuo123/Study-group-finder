@@ -19,7 +19,7 @@ interface EventCollapsibleProps {
     acceptedIds: string[];
     light: boolean;
     isOwner: boolean;
-    style: object;
+    style?: object;
 }
 
 const EventCollapsible: React.FC<EventCollapsibleProps> = ({
@@ -44,7 +44,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
 
     const backgroundColor = (light ? Colors.light.background : Colors.dark.background)
     const textColor = (light ? Colors.light.text : Colors.dark.text)
-    const textInputColor = (light ? Colors.light.textInput : Colors.dark.backgroundColor)
+    const textInputColor = (light ? Colors.light.textInput : Colors.dark.textInput)
     const buttonColor = Colors.button
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -160,10 +160,10 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                         {attendee3Profile != null && (
                             <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>)}
                         <Text style={[styles.normalText, {color: textColor ? Colors.light.text : Colors.dark.text}]}>
-                            {numAttendees > 3 && (+numAttendees - 
-                            (attendee1Profile != null ? 1 : 0) -
-                            (attendee2Profile != null ? 1 : 0) -
-                            (attendee3Profile != null ? 1 : 0))}
+                        {numAttendees > 3 && `+${numAttendees - 
+                            (attendee1Profile != null ? 1 : 0) - 
+                            (attendee2Profile != null ? 1 : 0) - 
+                            (attendee3Profile != null ? 1 : 0)}`}
                         </Text>
                     </View>
                     {isOwner && (<TouchableOpacity onPress={() => router.push('')}>

@@ -35,6 +35,7 @@ export default function Profile() {
   const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
   const textColor = (true ? Colors.light.text : Colors.dark.text)
   const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
 
   // User
   const [user, setUser] = useState<User | null>(null);
@@ -209,23 +210,23 @@ export default function Profile() {
           </Text>
             <View style={styles.bannerColorContainer}>
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#AACC96'}, bannerColor === 1 && styles.ring]}
+              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 1 && styles.ring]}
               onPress={() => setBannerColor(1)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#F4BEAE'}, bannerColor === 2 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 2 && styles.ring]} 
               onPress={() => setBannerColor(2)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#52A5CE'}, bannerColor === 3 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 3 && styles.ring]} 
               onPress={() => setBannerColor(3)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#FF7BAC'}, bannerColor === 4 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 4 && styles.ring]} 
               onPress={() => setBannerColor(4)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#D3B6D3'}, bannerColor === 5 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 5 && styles.ring]} 
               onPress={() => setBannerColor(5)} 
             />
             </View>
@@ -323,6 +324,7 @@ export default function Profile() {
             width={125}
             value={isTransfer}
             onChangeSlider={setIsTransfer}
+            lightMode={true}
           />
 
           <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
@@ -364,7 +366,7 @@ export default function Profile() {
             style={[styles.buttonContainer, {marginTop: 20}]}
             onPress={handleSave}
           >
-            <Text style={[styles.bodyText, {color: textColor}]}>Save</Text>
+            <Text style={[styles.subheaderText, {color: textColor}]}>Save</Text>
           </TouchableOpacity>
             </>
           )}
@@ -380,7 +382,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   subheaderText: {
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
   },
   bodyText: {
@@ -430,7 +432,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    height: 40,
+    height: 45,
     borderRadius: 10,
     backgroundColor: '#5CAEF1',
     alignItems: 'center',

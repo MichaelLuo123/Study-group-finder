@@ -63,8 +63,8 @@ export default function External() {
   // Colors
   const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
   const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.backgroundColor)
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
   const buttonColor = Colors.button
   const cancelButtonColor = (true ? Colors.light.cancelButton : Colors.dark.cancelButton)
 
@@ -370,6 +370,12 @@ export default function External() {
             )}
           </View>
 
+          {bio !== null && (<View style={[styles.promptAnswerContainer, {marginTop: 10, backgroundColor: textInputColor}]}>
+              <Text style={[styles.normalText, {color: textColor}]}>
+                {bio}
+              </Text>
+          </View>)}
+
           {prompt1 !== null && (
             <View style={[styles.promptContainer, {marginTop: 10}]}>
               <Text style={[styles.subheaderBoldText, {color: textColor}]}>{prompt1}</Text>
@@ -432,6 +438,7 @@ export default function External() {
                 acceptedIds={event.accepted_ids}
                 light={true}
                 isOwner={false}
+                style={{marginBottom: 10}}
               />
             ))
           )}

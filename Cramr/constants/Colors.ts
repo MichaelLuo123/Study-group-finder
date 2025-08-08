@@ -5,6 +5,8 @@ export const Colors = {
     background: '#f5f5f5',
     textInput: '#ffffff',
     dropdown: '#e5e5e5',
+    track: '#e5e5e5',
+    thumb: '#ffffff',
     slider: '#ffffff',
     sliderBackground: '#e5e5e5',
     cancelButton: '#e5e5e5',
@@ -16,9 +18,12 @@ export const Colors = {
     textInput: '#272727',
     dropdown: '#6e6e6e',
     searchInput: '#6e6e6e',
+    track: '#6e6e6e',
+    thumb: '#272727',
     slider: '#272727',
     sliderBackground: '#6e6e6e',
     cancelButton: '#6e6e6e',
   },
-  button: '#5CAEF1'
+  button: '#5CAEF1',
+  bannerColors: ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 };

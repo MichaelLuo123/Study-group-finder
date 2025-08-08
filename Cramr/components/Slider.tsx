@@ -7,6 +7,7 @@ interface SliderProps {
     leftLabel: string;
     width: number;
     onChangeSlider?: (value: boolean) => void;
+    lightMode: boolean;
     value?: boolean; // Optional initial value
     style?: object; // Optional style prop for customization
 }
@@ -16,12 +17,13 @@ const Slider: React.FC<SliderProps> = ({
     leftLabel, 
     width,
     onChangeSlider: onValueChange, 
+    lightMode,
     value: initialValue = false,
     style={}
 }) => {
-    const sliderBackgroundColor = (true ? Colors.light.sliderBackground : Colors.dark.sliderBackground)
-    const sliderColor = (true ? Colors.light.slider : Colors.dark.slider)
-    const textColor = (true ? Colors.light.text : Colors.dark.text)
+    const sliderBackgroundColor = (lightMode ? Colors.light.sliderBackground : Colors.dark.sliderBackground)
+    const sliderColor = (lightMode ? Colors.light.slider : Colors.dark.slider)
+    const textColor = (lightMode ? Colors.light.text : Colors.dark.text)
 
     const [value, setValue] = useState(initialValue);
     const [slideAnim] = useState(new Animated.Value(initialValue ? 1 : 0));
