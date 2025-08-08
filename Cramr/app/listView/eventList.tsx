@@ -1,6 +1,5 @@
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import * as Location from 'expo-location';
-import type { Filters } from './filter';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,6 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import type { Filters } from './filter';
 
 export default function EventList({ filters }: { filters: Filters | null }) {
   const [events, setEvents] = useState<any[]>([]);
