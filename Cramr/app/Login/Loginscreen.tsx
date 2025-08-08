@@ -1,3 +1,4 @@
+import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -19,11 +20,12 @@ const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const {isDarkMode, toggleDarkMode} = useUser();
     const [errors, setErrors] = useState({ email: '', password: '' });
     const [loginStatus, setLoginStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [loginMessage, setLoginMessage] = useState('');
     const router = useRouter();
+    const { setUser } = useUser();
 
     //refactored to make it look cleaner
     const handleLogin = async () => {
@@ -40,6 +42,12 @@ const LoginScreen = () => {
                 if (result.success) {
                     setLoginStatus('success');
                     setLoginMessage('Login successful!');
+                    // Store user information in context
+                    setUser(result.user);
+                    // Navigate to list view page after successful login
+                    setTimeout(() => {
+                        router.push('/listView');
+                    }, 1000); // Small delay to show success message
                 } else {
                     setLoginStatus('error');
                     setLoginMessage(result.message || 'Login failed.');
@@ -89,7 +97,7 @@ const LoginScreen = () => {
                    <View style={styles.themeToggleContainer}>
                        <TouchableOpacity
                            style={styles.themeToggle}
-                           onPress={() => setIsDarkMode(!isDarkMode)}
+                           onPress={toggleDarkMode}
                        >
                            <Ionicons name={isDarkMode ? "sunny" : "moon"} size={20} color={isDarkMode ? "#fff" : "#000"} />
                        </TouchableOpacity>
