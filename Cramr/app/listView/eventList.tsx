@@ -1,6 +1,6 @@
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import * as Location from 'expo-location';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -12,13 +12,14 @@ import {
 } from 'react-native';
 import type { Filters } from './filter';
 
-export default function EventList({ filters }: { filters: Filters | null }) {
+export default function EventList({ filters, selectedEventId }: { filters: Filters | null, selectedEventId?: string | null }) {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collapsedEvents, setCollapsedEvents] = useState<Set<string>>(new Set());
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -98,6 +99,45 @@ export default function EventList({ filters }: { filters: Filters | null }) {
     return true;
   });
 
+  // Update collapsed events when selectedEventId changes
+  useEffect(() => {
+    if (selectedEventId) {
+      setCollapsedEvents(new Set(
+        events
+          .map(event => event.id)
+          .filter(id => id !== selectedEventId)
+      ));
+    }
+  }, [selectedEventId, events]);
+
+  // Scroll to selected event when selectedEventId changes
+  useEffect(() => {
+    if (selectedEventId && filteredEvents.length > 0) {
+      const eventIndex = filteredEvents.findIndex(event => event.id === selectedEventId);
+      if (eventIndex !== -1) {
+        
+        setTimeout(() => {
+          let scrollPosition = 0;
+          for (let i = 0; i < eventIndex; i++) {
+            const event = filteredEvents[i];
+            const baseHeight = 80;
+            if (!collapsedEvents.has(event.id)) {
+              // Add height for expanded content (adjust these values based on your actual layout)
+              scrollPosition += event.tags?.length ? 40 : 0;
+              scrollPosition += 60; 
+            }
+            scrollPosition += baseHeight; // Add base height
+            scrollPosition += 20; // Margin between events
+          }
+          
+          scrollViewRef.current?.scrollTo({ 
+            y: Math.max(0, scrollPosition - 30), 
+            animated: true 
+          });
+        }, 100); 
+    }
+  }, [selectedEventId, filteredEvents, collapsedEvents]);
+
   // ----------- RENDER LOGIC -----------
   if (loading) {
     return (
@@ -121,6 +161,7 @@ export default function EventList({ filters }: { filters: Filters | null }) {
 
   return (
     <ScrollView 
+      ref={scrollViewRef}
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={true}
       nestedScrollEnabled={true}
