@@ -1,27 +1,31 @@
-import React, { useRef, useState, useEffect } from 'react';
-import {
-    SafeAreaView, 
-    View, 
-    Text, 
-    TextInput, 
-    TouchableOpacity,
-    StyleSheet, 
-    KeyboardAvoidingView, 
-    Platform, 
-    Image
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import { useUser } from '@/contexts/UserContext';
 import { useFonts } from 'expo-font';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { TwoFactorBE } from './TwoFactorBE';
+
 
 const CODE_LENGTH = 6;
 const RESEND_TIME = 60;
+var twoFA: TwoFactorBE;
 
 const TwoFAPage = () => {
     const router = useRouter();
     const [code, setCode] = useState(Array(CODE_LENGTH).fill(''));
     const [timer, setTimer] = useState(RESEND_TIME);
     const [error, setError] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const {isDarkMode, user} = useUser();
 
     const inputs = useRef<TextInput[]>([]);
 
@@ -31,6 +35,10 @@ const TwoFAPage = () => {
     });
 
     useEffect(() => {
+        //load the 2FA backend by generating a key
+        twoFA = new TwoFactorBE();
+        twoFA.sendEmailWithCode(user?.email, user?.full_name) //can't be null because information should pass through in login screen
+
         const interval = setInterval(() => {
         setTimer((prev) => (prev > 0 ? prev - 1 : 0));
         }, 1000);
@@ -70,12 +78,19 @@ const TwoFAPage = () => {
     //passwrod 111111 change for backend
     const handleSubmit = () => {
         const joined = code.join('');
-        if (joined === '111111') {
-        alert('Success!');
-        } else {
-        setError(true);
-        setCode(Array(CODE_LENGTH).fill(''));
-        inputs.current[0]?.focus();
+        // if (joined === '111111') {
+        //     alert('Success!');
+        // } else {
+        //     setError(true);
+        //     setCode(Array(CODE_LENGTH).fill(''));
+        //     inputs.current[0]?.focus();
+        // }
+        if(twoFA.compareOTP(Number(joined)))
+            alert('Success!');
+        else{
+            setError(true);
+            setCode(Array(CODE_LENGTH).fill(''));
+            inputs.current[0]?.focus();
         }
     };
 
@@ -84,6 +99,8 @@ const TwoFAPage = () => {
         setTimer(RESEND_TIME);
         setCode(Array(CODE_LENGTH).fill(''));
         setError(false);
+        twoFA.scrambleCode();
+        twoFA.sendEmailWithCode(user?.email, user?.full_name);
         alert('Verification code resent!');
         inputs.current[0]?.focus();
     };
