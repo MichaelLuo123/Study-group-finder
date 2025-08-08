@@ -34,7 +34,7 @@ export default function Profile() {
   // Colors
   const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
   const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.background : Colors.dark.background)
+  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
 
   // User
   const [user, setUser] = useState<User | null>(null);
@@ -320,6 +320,7 @@ export default function Profile() {
           <Slider
             leftLabel="Yes"
             rightLabel="No"
+            width={125}
             value={isTransfer}
             onChangeSlider={setIsTransfer}
           />
