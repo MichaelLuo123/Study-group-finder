@@ -5,6 +5,7 @@ import { Colors } from '../constants/Colors';
 interface SliderProps {
     rightLabel: string;
     leftLabel: string;
+    width: number;
     onChangeSlider?: (value: boolean) => void;
     value?: boolean; // Optional initial value
     style?: object; // Optional style prop for customization
@@ -13,6 +14,7 @@ interface SliderProps {
 const Slider: React.FC<SliderProps> = ({ 
     rightLabel, 
     leftLabel, 
+    width,
     onChangeSlider: onValueChange, 
     value: initialValue = false,
     style={}
@@ -42,7 +44,7 @@ const Slider: React.FC<SliderProps> = ({
     });
 
     return (
-        <TouchableOpacity style={styles.container} onPress={toggleSlider}>
+        <TouchableOpacity style={[{width: width, height: 40}, style]} onPress={toggleSlider}>
             <View style={[styles.track, { backgroundColor: sliderBackgroundColor }]}>
             <Animated.View 
                 style={[
@@ -66,11 +68,6 @@ const styles = StyleSheet.create({
     bodyText: {
         fontFamily: 'Poppins-Regular',
         fontSize: 14,
-    },
-
-    container: {
-        width: 120,
-        height: 40,
     },
     track: {
         flex: 1,
