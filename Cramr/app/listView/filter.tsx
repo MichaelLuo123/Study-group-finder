@@ -1,22 +1,36 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Button } from 'react-native-paper';
 import Slider from '@react-native-community/slider';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Modal from 'react-native-modal';
+import { Button } from 'react-native-paper';
 
 const noiseLevels = ['Quiet', 'Medium', 'Loud'];
 const locationTypes = ['Library', 'Cafe', 'Outdoor'];
 
-export default function FilterModal({ visible, onClose, onSave }: any) {
+export type Filters = {
+  distance: number;
+  unit: 'mi' | 'km';
+  attendees: number;
+  noise: string | null;
+  location: string | null;
+};
+
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (filters: Filters) => void;
+};
+
+export default function FilterModal({ visible, onClose, onSave }: Props) {
   const [step, setStep] = useState(0);
-  const [distance, setDistance] = useState(1); 
+  const [distance, setDistance] = useState(1);
   const [unit, setUnit] = useState<'mi' | 'km'>('mi');
   const [attendees, setAttendees] = useState(2);
   const [noise, setNoise] = useState<string | null>(null);
   const [location, setLocation] = useState<string | null>(null);
 
-  const next = () => setStep(s => Math.min(s + 1, 4));
-  const prev = () => setStep(s => Math.max(s - 1, 0));
+  const next = () => setStep((s) => Math.min(s + 1, 4));
+  const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const reset = () => {
     setDistance(1);
@@ -28,10 +42,15 @@ export default function FilterModal({ visible, onClose, onSave }: any) {
   };
 
   const handleSave = () => {
-    onSave?.({ distance, unit, attendees, noise, location });
-    onClose?.();
-    setStep(0); // Optionally reset steps after saving
+    onSave({ distance, unit, attendees, noise, location });
+    onClose();
+    setStep(0);
   };
+
+  function nextOrSave() {
+    if (step < 4) next();
+    else handleSave();
+  }
 
   return (
     <Modal
@@ -48,7 +67,9 @@ export default function FilterModal({ visible, onClose, onSave }: any) {
             <>
               <Pressable style={styles.inputBox} onPress={() => setStep(1)}>
                 <Text style={styles.inputLabel}>Distance</Text>
-                <Text style={styles.inputValue}>{distance} {unit}</Text>
+                <Text style={styles.inputValue}>
+                  {distance} {unit}
+                </Text>
               </Pressable>
               <Pressable style={styles.inputBox} onPress={() => setStep(2)}>
                 <Text style={styles.inputLabel}>Number of Attendees</Text>
@@ -68,8 +89,16 @@ export default function FilterModal({ visible, onClose, onSave }: any) {
             <>
               <Text style={styles.inputLabel}>Distance</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 8 }}>
-                <Button mode={unit === 'mi' ? 'contained' : 'outlined'} onPress={() => setUnit('mi')}>Mi</Button>
-                <Button mode={unit === 'km' ? 'contained' : 'outlined'} onPress={() => setUnit('km')} style={{ marginLeft: 8 }}>Km</Button>
+                <Button mode={unit === 'mi' ? 'contained' : 'outlined'} onPress={() => setUnit('mi')}>
+                  Mi
+                </Button>
+                <Button
+                  mode={unit === 'km' ? 'contained' : 'outlined'}
+                  onPress={() => setUnit('km')}
+                  style={{ marginLeft: 8 }}
+                >
+                  Km
+                </Button>
               </View>
               <Slider
                 style={{ width: '100%', height: 40 }}
@@ -81,7 +110,9 @@ export default function FilterModal({ visible, onClose, onSave }: any) {
                 minimumTrackTintColor="#5caef1"
                 maximumTrackTintColor="#eee"
               />
-              <Text style={{ alignSelf: 'center', marginBottom: 24 }}>{`> ${distance} ${unit}`}</Text>
+              <Text style={{ alignSelf: 'center', marginBottom: 24 }}>
+                {`> ${distance} ${unit}`}
+              </Text>
             </>
           )}
           {step === 2 && (
@@ -97,14 +128,16 @@ export default function FilterModal({ visible, onClose, onSave }: any) {
                 minimumTrackTintColor="#5caef1"
                 maximumTrackTintColor="#eee"
               />
-              <Text style={{ alignSelf: 'center', marginBottom: 24 }}>{`> ${attendees} People`}</Text>
+              <Text style={{ alignSelf: 'center', marginBottom: 24 }}>
+                {`> ${attendees} People`}
+              </Text>
             </>
           )}
           {step === 3 && (
             <>
               <Text style={styles.inputLabel}>Noise Level</Text>
               <View style={styles.choiceRow}>
-                {noiseLevels.map(lvl => (
+                {noiseLevels.map((lvl) => (
                   <Pressable
                     key={lvl}
                     onPress={() => setNoise(lvl)}
@@ -124,7 +157,7 @@ export default function FilterModal({ visible, onClose, onSave }: any) {
             <>
               <Text style={styles.inputLabel}>Location Type</Text>
               <View style={styles.choiceRow}>
-                {locationTypes.map(type => (
+                {locationTypes.map((type) => (
                   <Pressable
                     key={type}
                     onPress={() => setLocation(type)}
@@ -162,11 +195,6 @@ export default function FilterModal({ visible, onClose, onSave }: any) {
       </View>
     </Modal>
   );
-
-  function nextOrSave() {
-    if (step < 4) next();
-    else handleSave();
-  }
 }
 
 const styles = StyleSheet.create({

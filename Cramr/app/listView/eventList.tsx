@@ -1,6 +1,6 @@
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import * as Location from 'expo-location';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -10,69 +10,54 @@ import {
   Text,
   View,
 } from 'react-native';
-export default function EventList() {
+import type { Filters } from './filter';
+
+export default function EventList({ filters, selectedEventId }: { filters: Filters | null, selectedEventId?: string | null }) {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collapsedEvents, setCollapsedEvents] = useState<Set<string>>(new Set());
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  
-  type eventFilter = "distance" | "alphabetical" | "subject" | "time";
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     fetchEvents();
-    //replica of the getCurrentLocation function in mapView. If we can import a specific function to reduce redundancy, that would be great.
+
     async function getCurrentLocation() {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if(status != 'granted'){
-        setErrorMsg('Permssion to access location was denied');
+      if (status !== 'granted') {
+        setErrorMsg('Permission to access location was denied');
         return;
       }
-    
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location);
     }
-        
     getCurrentLocation();
   }, []);
 
-    const fetchEvents = async () => {
+  const fetchEvents = async () => {
     try {
       const factory = new PublicStudySessionFactory();
-
       setLoading(true);
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch events');
-      }
+      if (!response.ok) throw new Error('Failed to fetch events');
       const data = await response.json();
-      
-      console.log('Events data:', data); // Debug log to see the actual data
-       
-      // sort the JSON data here (I'm gonna sort by name as a test)
 
-      const eventsWithCoordinates = await Promise.all(data.map(async (event) => {
+      const eventsWithCoordinates = await Promise.all(data.map(async (event: any) => {
         const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
         const coords = await studySession.addressToCoordinates();
         return {
           ...event,
           coordinates: coords.geometry.location
-        }
+        };
       }));
 
-      const sortedData = eventsWithCoordinates.sort((a, b) => {
+      const sortedData = eventsWithCoordinates.sort((a: any, b: any) => {
         const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
         const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
-        return bDistance - aDistance; 
-      })
-
-      // Sort aphabetically
-      // const sortedData = [...data].sort((a, b) => {
-      //   const locA = a.title?.toLowerCase() || '';
-      //   const locB = b.title?.toLowerCase() || '';
-      //   return locA.localeCompare(locB);
-      // });
+        return bDistance - aDistance;
+      });
 
       setEvents(sortedData);
     } catch (err) {
@@ -82,11 +67,11 @@ export default function EventList() {
     }
   };
 
-  const compareDistanceFromLocation = (lat:number, long:number) => {
+  const compareDistanceFromLocation = (lat: number, long: number) => {
     let latDistance = (location?.coords.latitude || 0) - lat;
     let longDistance = (location?.coords.longitude || 0) - long;
     return Math.sqrt(latDistance ** 2 + longDistance ** 2);
-  }
+  };
 
   const toggleEvent = (eventId: string) => {
     setCollapsedEvents(prev => {
@@ -100,6 +85,60 @@ export default function EventList() {
     });
   };
 
+  // ----------- FILTERING LOGIC -----------
+  const filteredEvents = events.filter((event: any) => {
+    if (!filters) return true;
+    // Filter by attendees (event.accepted_count)
+    if (filters.attendees && event.accepted_count > filters.attendees) return false;
+    // Filter by noise (tags)
+    if (filters.noise && !(event.tags && event.tags.includes(filters.noise))) return false;
+    // Filter by location type (tags)
+    if (filters.location && !(event.tags && event.tags.includes(filters.location))) return false;
+    // You could filter by distance as well (uncomment if needed)
+    // if (filters.distance && compareDistanceFromLocation(event.coordinates.lat, event.coordinates.lng) > filters.distance) return false;
+    return true;
+  });
+
+  // Update collapsed events when selectedEventId changes
+  useEffect(() => {
+    if (selectedEventId) {
+      setCollapsedEvents(new Set(
+        events
+          .map(event => event.id)
+          .filter(id => id !== selectedEventId)
+      ));
+    }
+  }, [selectedEventId, events]);
+
+  // Scroll to selected event when selectedEventId changes
+  useEffect(() => {
+    if (selectedEventId && filteredEvents.length > 0) {
+      const eventIndex = filteredEvents.findIndex(event => event.id === selectedEventId);
+      if (eventIndex !== -1) {
+        
+        setTimeout(() => {
+          let scrollPosition = 0;
+          for (let i = 0; i < eventIndex; i++) {
+            const event = filteredEvents[i];
+            const baseHeight = 80;
+            if (!collapsedEvents.has(event.id)) {
+              // Add height for expanded content (adjust these values based on your actual layout)
+              scrollPosition += event.tags?.length ? 40 : 0;
+              scrollPosition += 60; 
+            }
+            scrollPosition += baseHeight; // Add base height
+            scrollPosition += 20; // Margin between events
+          }
+          
+          scrollViewRef.current?.scrollTo({ 
+            y: Math.max(0, scrollPosition - 30), 
+            animated: true 
+          });
+        }, 100); 
+    }
+  }, [selectedEventId, filteredEvents, collapsedEvents]);
+
+  // ----------- RENDER LOGIC -----------
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -122,6 +161,7 @@ export default function EventList() {
 
   return (
     <ScrollView 
+      ref={scrollViewRef}
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={true}
       nestedScrollEnabled={true}
@@ -130,45 +170,35 @@ export default function EventList() {
       alwaysBounceVertical={false}
       scrollEnabled={true}
     >
-             {events.map((event: any) => {
-         const isCollapsed = collapsedEvents.has(event.id);
-         
-         // Debug log for each event being rendered
-         console.log('Rendering event:', {
-           id: event.id,
-           title: event.title,
-           creator_id: event.creator_id,
-           creator_name: event.creator_name,
-           creator_profile_picture: event.creator_profile_picture,
-           hasProfilePicture: !!event.creator_profile_picture
-         });
-        
+      {filteredEvents.map((event: any) => {
+        const isCollapsed = collapsedEvents.has(event.id);
+
         return (
           <View key={event.id} style={styles.card}>
             {/* Title Header - Clickable */}
-                         <Pressable 
-               style={[styles.header, { backgroundColor: '#f0f0f0' }]}
-               onPress={() => toggleEvent(event.id)}
-             >
-               <View style={styles.headerLeft}>
-                 <View style={styles.titleContainer}>
-                   <Text style={styles.title}>{event.title}</Text>
-                   <Text style={styles.creatorName}>
-                     by {event.creator_name || 'Unknown User'}
-                   </Text>
-                 </View>
-               </View>
-               <View style={styles.headerRight}>
-                                   {/* Creator Profile Picture */}
-                  {event.creator_profile_picture && (
-                    <Image 
-                      source={{ uri: event.creator_profile_picture }} 
-                      style={styles.profilePicture}
-                    />
-                  )}
-                 <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
-               </View>
-             </Pressable>
+            <Pressable 
+              style={[styles.header, { backgroundColor: '#f0f0f0' }]}
+              onPress={() => toggleEvent(event.id)}
+            >
+              <View style={styles.headerLeft}>
+                <View style={styles.titleContainer}>
+                  <Text style={styles.title}>{event.title}</Text>
+                  <Text style={styles.creatorName}>
+                    by {event.creator_name || 'Unknown User'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.headerRight}>
+                {/* Creator Profile Picture */}
+                {event.creator_profile_picture && (
+                  <Image 
+                    source={{ uri: event.creator_profile_picture }} 
+                    style={styles.profilePicture}
+                  />
+                )}
+                <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
+              </View>
+            </Pressable>
 
             {/* Collapsible Content */}
             {!isCollapsed && (
@@ -224,9 +254,8 @@ export default function EventList() {
           </View>
         );
       })}
-      
-      {/* Extra space that scales with number of events */}
-      <View style={[styles.extraSpace, { height: Math.max(events.length * 75 + 160, 300) }]} />
+      {/* Extra space */}
+      <View style={[styles.extraSpace, { height: Math.max(filteredEvents.length * 75 + 160, 300) }]} />
     </ScrollView>
   );
 }
@@ -383,7 +412,5 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
   },
-  extraSpace: {
-    
-  },
+  extraSpace: {},
 });

@@ -17,14 +17,14 @@ interface Friend {
   email: string;
 }
 
-interface FriendsDropdownProps {
+interface FollowersDropdownProps {
   selectedFriends: string[];
   onFriendsChange: (friends: string[]) => void;
   placeholder?: string;
   theme: any;
 }
 
-const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
+const FollowersDropdown: React.FC<FollowersDropdownProps> = ({
   selectedFriends,
   onFriendsChange,
   placeholder = "Select friends to invite...",
@@ -49,13 +49,13 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
 
     setLoading(true);
     try {
-      console.log('Fetching friends for user:', currentUserId);
+      console.log('Fetching following for user:', currentUserId);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
       let response;
       try {
-        response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/friends`, {
+        response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/following`, {
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -73,15 +73,15 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Friends data:', data);
-        setFriends(data);
+        console.log('Following data:', data);
+        setFriends(data.following || []);
       } else {
         console.log('API error:', response.status, response.statusText);
-        Alert.alert('Error', `Failed to load friends: ${response.status}`);
+        Alert.alert('Error', `Failed to load following: ${response.status}`);
       }
     } catch (error) {
       console.log('Network error:', error);
-      Alert.alert('Error', 'Network error while loading friends');
+              Alert.alert('Error', 'Network error while loading following');
     } finally {
       setLoading(false);
     }
@@ -104,7 +104,7 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
     if (selectedNames.length <= 2) {
       return selectedNames.join(', ');
     }
-    return `${selectedNames.length} friends selected`;
+    return `${selectedNames.length} people selected`;
   };
 
   const renderFriendItem = ({ item }: { item: Friend }) => {
@@ -161,7 +161,7 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
           ]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.textColor }]}>
-                Select Friends to Invite
+                Select People to Invite
               </Text>
               <TouchableOpacity
                 onPress={() => setIsVisible(false)}
@@ -173,12 +173,12 @@ const FriendsDropdown: React.FC<FriendsDropdownProps> = ({
 
             {loading ? (
               <Text style={[styles.loadingText, { color: theme.textColor }]}>
-                Loading friends...
+                Loading following...
               </Text>
             ) : friends.length === 0 ? (
-              <Text style={[styles.noFriendsText, { color: theme.textColor }]}>
-                No friends found. Add some friends first!
-              </Text>
+                      <Text style={[styles.noFriendsText, { color: theme.textColor }]}>
+          No following found. Follow some people first!
+        </Text>
             ) : (
               <FlatList
                 data={friends}
@@ -304,4 +304,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FriendsDropdown; 
+export default FollowersDropdown; 
