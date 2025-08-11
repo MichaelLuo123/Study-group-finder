@@ -1,10 +1,11 @@
+import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation, useRouter } from 'expo-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { Dimensions, Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import Animated, {
   useAnimatedGestureHandler,
@@ -21,6 +22,21 @@ const HEADER_HEIGHT = 100;
 const NAVBAR_HEIGHT = 80; 
 const BOTTOM_SHEET_MAX_HEIGHT = screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT; 
 
+// Custom star marker component
+const StarMarker = ({ color, remainingCapacity }: { color: string, remainingCapacity: number }) => {
+  return (
+    <View style={styles.starContainer}>
+      <Image 
+        source={require('../../assets/images/Star.png')} 
+        style={[styles.starImage, { tintColor: color === 'transparent' ? 'white' : color }]}
+      />
+      <View style={styles.textContainer}>
+        <Text style={styles.starText}>{remainingCapacity}</Text>
+      </View>
+    </View>
+  );
+};
+
 export default function MapScreen() {
   const theme = useTheme();
   const navigation = useNavigation();
@@ -29,6 +45,8 @@ export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState('map');
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const translateY = useSharedValue(-100);
 
   useLayoutEffect(() => {
@@ -116,7 +134,7 @@ export default function MapScreen() {
     async function getCurrentLocation() {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if(status != 'granted'){
-        setErrorMsg('Permssion to access location was denied');
+        setErrorMsg('Permission to access location was denied');
         return;
       }
 
@@ -125,6 +143,40 @@ export default function MapScreen() {
     }
     
     getCurrentLocation();
+  }, []);
+
+  // Fetch events and their coordinates
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const factory = new PublicStudySessionFactory();
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+        if (!response.ok) throw new Error('Failed to fetch events');
+        const data = await response.json();
+
+        const eventsWithCoordinates = await Promise.all(data.map(async (event: any) => {
+          console.log('Processing event:', event);
+          const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
+          const coords = await studySession.addressToCoordinates();
+          console.log('Event coordinates:', coords);
+          const processedEvent = {
+            ...event,
+            coordinates: coords.geometry.location,
+            remainingCapacity: event.capacity - (event.accepted_count || 0),
+            bannerColor: event.banner_color || 'transparent' // Default color if none provided
+          };
+          console.log('Processed event:', processedEvent);
+          return processedEvent;
+        }));
+
+        console.log('All events:', eventsWithCoordinates);
+        setEvents(eventsWithCoordinates);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+      }
+    };
+
+    fetchEvents();
   }, []);
 
   
@@ -143,7 +195,33 @@ export default function MapScreen() {
             latitudeDelta: 0.0922,
             longitudeDelta: 0.0421
           } : undefined}
-        />
+        >
+          {events.map((event, index) => {
+            // Check if coordinates are valid
+            if (!event.coordinates?.lat || !event.coordinates?.lng) {
+              console.log('Invalid coordinates for event:', event);
+              return null;
+            }
+            
+            console.log('Rendering marker for event:', event.id, 'at', event.coordinates);
+            return (
+              <Marker
+                key={event.id}
+                coordinate={{
+                  latitude: event.coordinates.lat,
+                  longitude: event.coordinates.lng
+                }}
+                onPress={() => setSelectedEventId(event.id)}
+                zIndex={index + 1}
+              >
+                <StarMarker 
+                  color={event.bannerColor}
+                  remainingCapacity={event.remainingCapacity}
+                />
+              </Marker>
+            );
+          })}
+        </MapView>
       </View>
 
       {/* Draggable Bottom Sheet */}
@@ -175,7 +253,7 @@ export default function MapScreen() {
 
           {/* Event List - Only visible when expanded */}
           <View style={styles.eventListContainer}>
-            <EventList />
+            <EventList filters={null} selectedEventId={selectedEventId} />
           </View>
         </Animated.View>
       </PanGestureHandler>
@@ -243,6 +321,31 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
+  starContainer: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  starImage: {
+    width: 35,
+    height: 35,
+    position: 'absolute',
+  },
+  textContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  starText: {
+    color: 'black',
+    fontSize: 7,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
   map: {
     width: '100%',
     height: '100%'

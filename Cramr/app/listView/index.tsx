@@ -56,7 +56,7 @@ export default function HomeScreen() {
       if (page === 'listView') router.push('/listView');
       if (page === 'map') router.push('/Map/map');
       if (page === 'addEvent') router.push('/CreateEvent/createevent');
-      if (page === 'profile') router.push('/Profile/ProfilePage');
+      if (page === 'profile') router.push('/Profile/Internal');
     }
   };
 
