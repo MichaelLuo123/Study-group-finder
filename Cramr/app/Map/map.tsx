@@ -57,7 +57,7 @@ export default function MapScreen() {
         // router.push('/bookmarks');
       } 
       if (page === 'profile') {
-        router.push('/Profile/ProfilePage');
+        router.push('/Profile/Internal');
       }
     }
   };
