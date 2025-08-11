@@ -51,16 +51,16 @@ const PasswordRecoveryScreen = () => {
                         color={isDarkMode ? '#FFFFFF' : '#111827'} 
                     />
                 </TouchableOpacity>
-                <Text style={styles.title}>Reset Password</Text>
             </View>
 
             <View style={styles.card}>
+                <Text style={styles.cardTitle}>Reset Password</Text>
                 <Text style={styles.description}>
-                    Enter your school email address and we'll send you instructions to reset your password.
+                    Enter your email address to reset your password.
                 </Text>
 
                 <View style={styles.fieldContainer}>
-                    <Text style={styles.label}>School Email</Text>
+                    <Text style={styles.label}>Email address</Text>
                     <View style={styles.inputContainer}>
                         <Ionicons 
                             name="mail-outline" 
@@ -129,6 +129,13 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         elevation: 5,
         borderWidth: 1,
         borderColor: isDarkMode ? '#4B5563' : '#E5E7EB',
+    },
+    cardTitle: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: isDarkMode ? '#FFFFFF' : '#111827',
+        textAlign: 'center',
+        marginBottom: 16,
     },
     description: {
         fontSize: 16,
