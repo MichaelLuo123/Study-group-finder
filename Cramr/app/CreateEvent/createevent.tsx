@@ -137,8 +137,8 @@ const CreateEventScreen = () => {
         // Already on addEvent page, no navigation needed
       } else if (page === 'bookmarks') {
         // router.push('/bookmarks');
-      } else if (page === 'profile') {
-        router.push('/Profile/ProfilePage');
+      } else       if (page === 'profile') {
+        router.push('/Profile/Internal');
       }
     }
   };

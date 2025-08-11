@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import EventCollapsible from '../../components/EventCollapsible';
 import { Colors } from '../../constants/Colors';
 
@@ -98,7 +98,7 @@ export default function External() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}`);
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
         
         if (response.ok) {
           const userData = await response.json();
@@ -222,11 +222,28 @@ export default function External() {
     setIsBlockCheck(true);
   }
 
-  const handleBlock = () => {
-    // Add your block logic here
-    console.log('Block user');
-    setIsMoreModalVisible(false);
-    setIsBlockCheck(false);
+  const handleBlock = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/block`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ blockedId: profileId })
+      });
+      
+      if (response.ok) {
+        Alert.alert('Success', 'User blocked successfully!');
+        setIsMoreModalVisible(false);
+        setIsBlockCheck(false);
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Error', errorData.error || 'Failed to block user');
+      }
+    } catch (error) {
+      console.error('Block error:', error);
+      Alert.alert('Error', 'Network error occurred');
+    }
   };
 
   const handleCancelBlock = () => {
@@ -271,9 +288,34 @@ export default function External() {
     checkFollowingStatus();
   }, [followingIds, profileId]);
 
-  const handleFollow = () => {
-    setIsFollowing(true);
-    // Add your follow API logic here
+  const handleFollow = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/follow`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: profileId })
+      });
+      
+      if (response.ok) {
+        setIsFollowing(true);
+        // Refresh user data to update follower count
+        const userResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setFollowers(userData.followers);
+          setFollowing(userData.following);
+          setFollowersIds(userData.follower_ids);
+          setFollowingIds(userData.following_ids);
+        }
+      } else {
+        Alert.alert('Error', 'Failed to follow user');
+      }
+    } catch (error) {
+      console.error('Follow error:', error);
+      Alert.alert('Error', 'Network error occurred');
+    }
   }
   
   const handleUnfollowCheck = () => {
@@ -284,10 +326,34 @@ export default function External() {
     setIsFollowModalVisible(false);
   }
   
-  const handleUnfollow = () => {
-    setIsFollowing(false);
-    setIsFollowModalVisible(false);
-    // Add your unfollow API logic here
+  const handleUnfollow = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/follow/${profileId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        setIsFollowing(false);
+        setIsFollowModalVisible(false);
+        // Refresh user data to update follower count
+        const userResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setFollowers(userData.followers);
+          setFollowing(userData.following);
+          setFollowersIds(userData.follower_ids);
+          setFollowingIds(userData.following_ids);
+        }
+      } else {
+        Alert.alert('Error', 'Failed to unfollow user');
+      }
+    } catch (error) {
+      console.error('Unfollow error:', error);
+      Alert.alert('Error', 'Network error occurred');
+    }
   }
 
   return (
@@ -501,7 +567,7 @@ export default function External() {
               <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, {backgroundColor: backgroundColor, padding: 15}]}>
                   <Text style={[styles.normalText, {color: textColor, textAlign: 'center', marginTop: 10}]}>
-                    Remove {username} from Followers?
+                    Remove {username} as a follower?
                   </Text>
                   
                   <View style={{flexDirection: 'row', gap: 10, width: '100%', marginTop: 20}}>

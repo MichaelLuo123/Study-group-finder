@@ -326,178 +326,62 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
-// Get user's friends
-app.get('/users/:id/friends', async (req, res) => {
+// Get user by ID with follow counts
+app.get('/users/:id/profile', async (req, res) => {
   const { id } = req.params;
   
   try {
-    // Get accepted friends (both directions)
-    const result = await client.query(`
-      SELECT u.id, u.username, u.full_name, u.email
-      FROM users u
-      INNER JOIN friends f ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
-      WHERE f.status = 'accepted'
-      ORDER BY u.full_name
-    `, [id]);
-    
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Database error', details: err.message });
-  }
-});
-
-// Send friend request
-app.post('/users/:id/friends', async (req, res) => {
-  const { id } = req.params;
-  const { friendId } = req.body;
-  
-  if (!friendId) {
-    return res.status(400).json({ error: 'friendId is required' });
-  }
-  
-  if (id === friendId) {
-    return res.status(400).json({ error: 'Cannot send friend request to yourself' });
-  }
-  
-  try {
-    // Check if both users exist
-    const [userResult, friendResult] = await Promise.all([
-      client.query('SELECT id FROM users WHERE id = $1', [id]),
-      client.query('SELECT id FROM users WHERE id = $1', [friendId])
-    ]);
+    // Get user data
+    const userResult = await client.query(
+      'SELECT * FROM users WHERE id = $1',
+      [id]
+    );
     
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    if (friendResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Friend not found' });
-    }
+    const user = userResult.rows[0];
     
-    // Check if friendship already exists
-    const existingFriendship = await client.query(`
-      SELECT * FROM friends 
-      WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
-    `, [id, friendId]);
+    // Get follower count
+    const followerResult = await client.query(
+      'SELECT COUNT(*) as count FROM follows WHERE following_id = $1',
+      [id]
+    );
     
-    if (existingFriendship.rows.length > 0) {
-      const friendship = existingFriendship.rows[0];
-      if (friendship.status === 'accepted') {
-        return res.status(409).json({ error: 'Already friends' });
-      } else if (friendship.status === 'pending') {
-        return res.status(409).json({ error: 'Friend request already sent' });
-      }
-    }
+    // Get following count
+    const followingResult = await client.query(
+      'SELECT COUNT(*) as count FROM follows WHERE follower_id = $1',
+      [id]
+    );
     
-    // Create friend request
-    const result = await client.query(`
-      INSERT INTO friends (user_id, friend_id, status) 
-      VALUES ($1, $2, 'pending')
-      RETURNING *
-    `, [id, friendId]);
+    // Get follower IDs
+    const followerIdsResult = await client.query(
+      'SELECT follower_id FROM follows WHERE following_id = $1',
+      [id]
+    );
     
-    res.status(201).json({
-      success: true,
-      message: 'Friend request sent successfully',
-      friendship: result.rows[0]
-    });
+    // Get following IDs
+    const followingIdsResult = await client.query(
+      'SELECT following_id FROM follows WHERE follower_id = $1',
+      [id]
+    );
+    
+    const response = {
+      ...user,
+      followers: parseInt(followerResult.rows[0].count),
+      following: parseInt(followingResult.rows[0].count),
+      follower_ids: followerIdsResult.rows.map(row => row.follower_id),
+      following_ids: followingIdsResult.rows.map(row => row.following_id)
+    };
+    
+    res.json(response);
   } catch (err) {
-    console.error('Send friend request error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
-// Accept friend request
-app.put('/users/:id/friends/:friendId', async (req, res) => {
-  const { id, friendId } = req.params;
-  const { action } = req.body; // 'accept' or 'decline'
-  
-  if (!['accept', 'decline'].includes(action)) {
-    return res.status(400).json({ error: 'action must be accept or decline' });
-  }
-  
-  try {
-    // Check if friend request exists
-    const friendshipResult = await client.query(`
-      SELECT * FROM friends 
-      WHERE friend_id = $1 AND user_id = $2 AND status = 'pending'
-    `, [id, friendId]);
-    
-    if (friendshipResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Friend request not found' });
-    }
-    
-    const newStatus = action === 'accept' ? 'accepted' : 'declined';
-    
-    // Update friendship status
-    const result = await client.query(`
-      UPDATE friends 
-      SET status = $1 
-      WHERE friend_id = $2 AND user_id = $3
-      RETURNING *
-    `, [newStatus, id, friendId]);
-    
-    res.json({
-      success: true,
-      message: `Friend request ${action}ed successfully`,
-      friendship: result.rows[0]
-    });
-  } catch (err) {
-    console.error('Update friendship error:', err);
-    res.status(500).json({ error: 'Database error', details: err.message });
-  }
-});
 
-// Remove friend
-app.delete('/users/:id/friends/:friendId', async (req, res) => {
-  const { id, friendId } = req.params;
-  
-  try {
-    // Delete friendship (both directions)
-    const result = await client.query(`
-      DELETE FROM friends 
-      WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
-      RETURNING *
-    `, [id, friendId]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Friendship not found' });
-    }
-    
-    res.json({
-      success: true,
-      message: 'Friend removed successfully'
-    });
-  } catch (err) {
-    console.error('Remove friend error:', err);
-    res.status(500).json({ error: 'Database error', details: err.message });
-  }
-});
-
-// Get pending friend requests (received)
-app.get('/users/:id/friend-requests', async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    const result = await client.query(`
-      SELECT 
-        u.id, u.username, u.full_name, u.email,
-        f.created_at as request_date
-      FROM users u
-      INNER JOIN friends f ON f.user_id = u.id
-      WHERE f.friend_id = $1 AND f.status = 'pending'
-      ORDER BY f.created_at DESC
-    `, [id]);
-    
-    res.json({
-      success: true,
-      friend_requests: result.rows
-    });
-  } catch (err) {
-    console.error('Get friend requests error:', err);
-    res.status(500).json({ error: 'Database error', details: err.message });
-  }
-});
 
 // Follow a user
 app.post('/users/:id/follow', async (req, res) => {
@@ -607,6 +491,114 @@ app.get('/users/:id/followers', async (req, res) => {
     });
   } catch (err) {
     console.error('Get followers error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+
+// Block a user
+app.post('/users/:id/block', async (req, res) => {
+  const { id } = req.params;
+  const { blockedId } = req.body;
+  
+  if (id === blockedId) {
+    return res.status(400).json({ error: 'Cannot block yourself' });
+  }
+  
+  try {
+    // Check if already blocked
+    const existingBlock = await client.query(`
+      SELECT * FROM blocks WHERE blocker_id = $1 AND blocked_id = $2
+    `, [id, blockedId]);
+    
+    if (existingBlock.rows.length > 0) {
+      return res.status(409).json({ error: 'Already blocked!' });
+    }
+    
+    // Create block relationship
+    const result = await client.query(`
+      INSERT INTO blocks (blocker_id, blocked_id) 
+      VALUES ($1, $2)
+      RETURNING *
+    `, [id, blockedId]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Blocked successfully!',
+      follow: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Blocking user error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+//Unblock a user
+app.delete('/users/:id/blocks/:blockedId', async (req, res) => {
+  const { id, blockedId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      DELETE FROM blocks 
+      WHERE blocker_id = $1 AND blocked_id = $2
+      RETURNING *
+    `, [id, blockedId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Block relationship not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Unblocked Successfully!'
+    });
+  } catch (err) {
+    console.error('Unblock user error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+//Get blocked users
+app.get('/users/:id/blocks', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        u.id, u.username, u.full_name, u.email,
+        b.created_at as block_date
+      FROM users u
+      INNER JOIN blocks b ON b.blocked_id = u.id
+      WHERE b.blocker_id = $1
+      ORDER BY b.created_at DESC
+    `, [id]);
+    
+    res.json({
+      success: true,
+      blocked_users: result.rows
+    });
+  } catch (err) {
+    console.error('Getting blocked users error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+//Check if blocked
+app.get('/users/:id/blocks/check/:userId', async (req, res) => {
+  const { id, userId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT * FROM blocks 
+      WHERE blocker_id = $1 AND blocked_id = $2
+    `, [id, userId]);
+    
+    res.json({
+      success: true,
+      is_blocked: result.rows.length > 0
+    });
+  } catch (err) {
+    console.error('Check blocked status error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
@@ -1256,18 +1248,14 @@ app.post('/admin/delete-old-entries', async (req, res) => {
       'DELETE FROM event_attendees WHERE rsvp_date < NOW() - INTERVAL \'60 days\''
     );
     
-    // Delete old pending friendship requests (older than 30 days)
-    const friendsResult = await client.query(
-      'DELETE FROM friends WHERE status = \'pending\' AND created_at < NOW() - INTERVAL \'30 days\''
-    );
+
     
     res.json({
       success: true,
       message: 'Old entries deleted successfully',
       deleted: {
         events: eventsResult.rowCount,
-        attendees: attendeesResult.rowCount,
-        friends: friendsResult.rowCount
+        attendees: attendeesResult.rowCount
       }
     });
   } catch (err) {
