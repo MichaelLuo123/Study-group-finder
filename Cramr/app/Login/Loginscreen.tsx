@@ -153,6 +153,14 @@ const LoginScreen = () => {
                            </View>
                            {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
                        </View>
+                       
+                       {/* Forgot Password Link */}
+                       <TouchableOpacity 
+                           style={styles.forgotPasswordContainer}
+                           onPress={() => router.push('/Login/passwordrecovery')}
+                       >
+                           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                       </TouchableOpacity>
                    </View>
 
 
@@ -306,6 +314,16 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
        fontSize: 12,
        marginTop: 4,
        marginLeft: 4,
+   },
+   forgotPasswordContainer: {
+       alignItems: 'center',
+       marginBottom: 16,
+   },
+   forgotPasswordText: {
+       fontSize: 14,
+       color: '#3B82F6',
+       fontWeight: '500',
+       textDecorationLine: 'underline',
    },
 });
 
