@@ -135,8 +135,10 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
             animated: true 
           });
         }, 100); 
+      }
     }
   }, [selectedEventId, filteredEvents, collapsedEvents]);
+
 
   // ----------- RENDER LOGIC -----------
   if (loading) {
