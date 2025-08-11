@@ -36,7 +36,7 @@ const TwoFAPage = () => {
     useEffect(() => {
         //load the 2FA backend by generating a key
         twoFA = new TwoFactorBE();
-        if(user)
+        if(user != null)
             twoFA.sendEmailWithCode(user?.email, user?.full_name) //can't be null because information should pass through in login screen
 
         const interval = setInterval(() => {
@@ -100,7 +100,7 @@ const TwoFAPage = () => {
         setCode(Array(CODE_LENGTH).fill(''));
         setError(false);
         twoFA.scrambleCode();
-        if(user)
+        if(user != null)
             twoFA.sendEmailWithCode(user?.email, user?.full_name);
         alert('Verification code resent!');
         inputs.current[0]?.focus();
