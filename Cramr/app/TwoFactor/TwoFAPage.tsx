@@ -13,11 +13,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { TwoFactorBE } from './TwoFactorBE';
+// import { TwoFactorBE } from './TwoFactorBE';
 
 const CODE_LENGTH = 6;
 const RESEND_TIME = 60;
-var twoFA: TwoFactorBE;
+// var twoFA: TwoFactorBE;
 
 const TwoFAPage = () => {
     const router = useRouter();
@@ -35,9 +35,9 @@ const TwoFAPage = () => {
 
     useEffect(() => {
         //load the 2FA backend by generating a key
-        twoFA = new TwoFactorBE();
-        if(user != null)
-            twoFA.sendEmailWithCode(user?.email, user?.full_name) //can't be null because information should pass through in login screen
+        // twoFA = new TwoFactorBE();
+        // if(user != null)
+        //     twoFA.sendEmailWithCode(user?.email, user?.full_name) //can't be null because information should pass through in login screen
 
         const interval = setInterval(() => {
         setTimer((prev) => (prev > 0 ? prev - 1 : 0));
@@ -78,20 +78,20 @@ const TwoFAPage = () => {
     //passwrod 111111 change for backend
     const handleSubmit = () => {
         const joined = code.join('');
-        // if (joined === '111111') {
-        //     alert('Success!');
-        // } else {
-        //     setError(true);
-        //     setCode(Array(CODE_LENGTH).fill(''));
-        //     inputs.current[0]?.focus();
-        // }
-        if(twoFA.compareOTP(Number(joined)))
+        if (joined === '111111') {
             alert('Success!');
-        else{
+        } else {
             setError(true);
             setCode(Array(CODE_LENGTH).fill(''));
             inputs.current[0]?.focus();
         }
+        // if(twoFA.compareOTP(Number(joined)))
+        //     alert('Success!');
+        // else{
+        //     setError(true);
+        //     setCode(Array(CODE_LENGTH).fill(''));
+        //     inputs.current[0]?.focus();
+        // }
     };
 
     //for backend ;)
