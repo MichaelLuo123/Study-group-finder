@@ -57,6 +57,9 @@ const EventViewScreen = () => {
       if (page === 'listView') {
         router.push('/listView');
       }
+      if (page === 'profile') {
+        router.push('/Profile/Internal');
+      }
     }
   };
 

@@ -139,6 +139,51 @@ const AccountPage = () => {
     }
   };
 
+  const handleUnblock = async (userId: string) => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser?.id}/blocks/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        alert('User unblocked successfully!');
+        // Refresh the blocked users list by refetching user data
+        const fetchUserData = async () => {
+          if (!loggedInUser?.id) {
+            return;
+          }
+          
+          setIsLoading(true);
+          try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
+            if (response.ok) {
+              const data = await response.json();
+              setEmail(data.email || '');
+              setPhoneNumber(data.phone_number || '');
+              setBlockedIds(data.blocked_ids || []);
+            } else {
+              console.error('Failed to fetch user data:', await response.text());
+            }
+          } catch (err) {
+            console.error('Error fetching user data:', err);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        fetchUserData();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to unblock user');
+      }
+    } catch (error) {
+      console.error('Unblock error:', error);
+      alert('Network error occurred');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -229,7 +274,7 @@ const AccountPage = () => {
                 <Text style={[styles.normalText, { color: textColor, marginLeft: 12}]}>
                   {user.username}
                 </Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => handleUnblock(user.id)}>
                     <Text style={[styles.normalBoldText, { color: '#E36062', marginLeft: 150}]}> ✕ </Text>
                 </TouchableOpacity>
               </View>
