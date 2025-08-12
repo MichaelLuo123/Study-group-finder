@@ -13,11 +13,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-// import { TwoFactorBE } from './TwoFactorBE';
+import { TwoFactorBE } from './TwoFactorBE';
 
 const CODE_LENGTH = 6;
 const RESEND_TIME = 60;
-// var twoFA: TwoFactorBE;
+var twoFA: TwoFactorBE;
 
 const TwoFAPage = () => {
     const router = useRouter();
@@ -25,7 +25,7 @@ const TwoFAPage = () => {
     const [timer, setTimer] = useState(RESEND_TIME);
     const [error, setError] = useState(false);
     const {isDarkMode, user} = useUser(); //figure out how we can access the username realname if it matches but not 
-
+    
     const inputs = useRef<TextInput[]>([]);
 
     const [fontsLoaded] = useFonts({
@@ -36,8 +36,8 @@ const TwoFAPage = () => {
     useEffect(() => {
         //load the 2FA backend by generating a key
         // twoFA = new TwoFactorBE();
-        // if(user != null)
-        //     twoFA.sendEmailWithCode(user?.email, user?.full_name) //can't be null because information should pass through in login screen
+        if(user != null)
+            twoFA.sendEmailWithCode(user?.email, user?.full_name) //can't be null rbecause information should pass through in login screen
 
         const interval = setInterval(() => {
         setTimer((prev) => (prev > 0 ? prev - 1 : 0));
