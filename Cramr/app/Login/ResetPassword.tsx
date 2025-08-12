@@ -1,6 +1,6 @@
 import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
     SafeAreaView,
@@ -12,49 +12,92 @@ import {
     View
 } from 'react-native';
 
-const PasswordRecoveryScreen = () => {
-    const [email, setEmail] = useState('');
+const ResetPasswordScreen = () => {
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' }); // 'success', 'error', 'info'
+    const [errors, setErrors] = useState({
+        newPassword: '',
+        confirmPassword: ''
+    });
     const { isDarkMode } = useUser();
     const router = useRouter();
+    const { token } = useLocalSearchParams();
+
+    // Validates password using the same logic as signup screen
+    const validatePassword = (pwd: string) => {
+        const errors: string[] = [];
+        if (pwd.length < 8) errors.push('At least 8 characters');
+        if (!/[A-Z]/.test(pwd)) errors.push('At least 1 capital letter');
+        if (!/[^A-Za-z0-9]/.test(pwd)) errors.push('At least 1 special character');
+        return errors;
+    };
 
     const handleResetPassword = async () => {
-        if (!email.trim()) {
-            setMessage({ text: 'Please enter your email address', type: 'error' });
+        let newErrors = { newPassword: '', confirmPassword: '' };
+        let hasError = false;
+
+        if (!newPassword.trim()) {
+            newErrors.newPassword = 'Please enter a new password';
+            hasError = true;
+        } else {
+            const pwdErrors = validatePassword(newPassword);
+            if (pwdErrors.length > 0) {
+                newErrors.newPassword = 'Password must have: ' + pwdErrors.join(', ');
+                hasError = true;
+            }
+        }
+
+        if (!confirmPassword.trim()) {
+            newErrors.confirmPassword = 'Please confirm your password';
+            hasError = true;
+        } else if (newPassword !== confirmPassword) {
+            newErrors.confirmPassword = 'Passwords do not match';
+            hasError = true;
+        }
+
+        setErrors(newErrors);
+
+        if (hasError) {
             return;
         }
 
-        if (!email.endsWith('.edu')) {
-            setMessage({ text: 'Please use a valid .edu email address', type: 'error' });
+        if (!token) {
+            setMessage({ text: 'Invalid reset token', type: 'error' });
             return;
         }
 
         setIsLoading(true);
-        setMessage({ text: 'Sending password reset request...', type: 'info' });
+        setMessage({ text: 'Changing your password...', type: 'info' });
 
         try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/auth/reset-password`, {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/auth/reset-password/confirm`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ 
+                    token, 
+                    newPassword 
+                })
             });
 
             const result = await response.json();
 
             if (result.success) {
                 setMessage({ 
-                    text: 'Password reset instructions have been sent to your email. Please check your inbox.', 
+                    text: 'Your password has been changed successfully! You can now log in with your new password.', 
                     type: 'success' 
                 });
-               
+                
                 setTimeout(() => {
                     setMessage({ text: '', type: '' });
-                    router.back();
+                    router.push('/Login/Loginscreen');
                 }, 2000);
             } else {
                 setMessage({ 
-                    text: result.message || 'Failed to send reset email. Please try again.', 
+                    text: result.message || 'Failed to change password. Please try again.', 
                     type: 'error' 
                 });
             }
@@ -103,36 +146,85 @@ const PasswordRecoveryScreen = () => {
             </View>
 
             <View style={styles.card}>
-                <Text style={styles.cardTitle}>Reset Password</Text>
+                <Text style={styles.cardTitle}>Set New Password</Text>
                 <Text style={styles.description}>
-                    Enter your email address to reset your password.
+                    Enter your new password below.
                 </Text>
 
                 <View style={styles.fieldContainer}>
-                    <Text style={styles.label}>Email address</Text>
-                    <View style={styles.inputContainer}>
+                    <Text style={styles.label}>New Password</Text>
+                    <View style={[styles.inputContainer, errors.newPassword ? styles.inputError : null]}>
                         <Ionicons 
-                            name="mail-outline" 
+                            name="lock-closed-outline" 
                             size={16} 
                             color="#9CA3AF" 
                             style={styles.inputIcon} 
                         />
                         <TextInput
-                            style={styles.input}
-                            value={email}
-                            onChangeText={(text) => {
-                                setEmail(text);
-                               
+                            style={[styles.input, styles.passwordInput]}
+                            value={newPassword}
+                            onChangeText={text => {
+                                setNewPassword(text);
+                                if (errors.newPassword) setErrors({ ...errors, newPassword: '' });
+                                
                                 if (message.type === 'error') {
                                     setMessage({ text: '', type: '' });
                                 }
                             }}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            placeholder="your.email@school.edu"
+                            secureTextEntry={!showNewPassword}
+                            placeholder="Enter new password"
                             placeholderTextColor="#9CA3AF"
                         />
+                        <TouchableOpacity 
+                            style={styles.eyeIcon} 
+                            onPress={() => setShowNewPassword(!showNewPassword)}
+                        >
+                            <Ionicons 
+                                name={showNewPassword ? "eye-off-outline" : "eye-outline"} 
+                                size={16} 
+                                color="#9CA3AF" 
+                            />
+                        </TouchableOpacity>
                     </View>
+                    {errors.newPassword ? <Text style={styles.errorText}>{errors.newPassword}</Text> : null}
+                </View>
+
+                <View style={styles.fieldContainer}>
+                    <Text style={styles.label}>Confirm New Password</Text>
+                    <View style={[styles.inputContainer, errors.confirmPassword ? styles.inputError : null]}>
+                        <Ionicons 
+                            name="lock-closed-outline" 
+                            size={16} 
+                            color="#9CA3AF" 
+                            style={styles.inputIcon} 
+                        />
+                        <TextInput
+                            style={[styles.input, styles.passwordInput]}
+                            value={confirmPassword}
+                            onChangeText={text => {
+                                setConfirmPassword(text);
+                                if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
+                                
+                                if (message.type === 'error') {
+                                    setMessage({ text: '', type: '' });
+                                }
+                            }}
+                            secureTextEntry={!showConfirmPassword}
+                            placeholder="Confirm new password"
+                            placeholderTextColor="#9CA3AF"
+                        />
+                        <TouchableOpacity 
+                            style={styles.eyeIcon} 
+                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                            <Ionicons 
+                                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
+                                size={16} 
+                                color="#9CA3AF" 
+                            />
+                        </TouchableOpacity>
+                    </View>
+                    {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
                 </View>
 
                 <TouchableOpacity 
@@ -141,7 +233,7 @@ const PasswordRecoveryScreen = () => {
                     disabled={isLoading}
                 >
                     <Text style={styles.resetButtonText}>
-                        {isLoading ? 'Sending...' : 'Reset Password'}
+                        {isLoading ? 'Changing Password...' : 'Change Password'}
                     </Text>
                 </TouchableOpacity>
 
@@ -186,11 +278,6 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     backButton: {
         padding: 8,
         marginRight: 16,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: isDarkMode ? '#FFFFFF' : '#111827',
     },
     card: {
         backgroundColor: isDarkMode ? '#374151' : '#FFFFFF',
@@ -237,9 +324,12 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         backgroundColor: isDarkMode ? '#4B5563' : '#F3F4F6',
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: isDarkMode ? '#6B7280' : '#D1D5DB',
+        borderColor: isDarkMode ? '#6B5563' : '#D1D5DB',
         paddingHorizontal: 12,
         paddingVertical: 12,
+    },
+    inputError: {
+        borderColor: '#EF4444',
     },
     inputIcon: {
         marginRight: 8,
@@ -248,6 +338,20 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         flex: 1,
         fontSize: 16,
         color: isDarkMode ? '#FFFFFF' : '#111827',
+    },
+    passwordInput: {
+        paddingRight: 40,
+    },
+    eyeIcon: {
+        position: 'absolute',
+        right: 12,
+        padding: 4,
+    },
+    errorText: {
+        color: '#EF4444',
+        fontSize: 12,
+        marginTop: 4,
+        marginLeft: 4,
     },
     resetButton: {
         backgroundColor: '#3B82F6',
@@ -293,4 +397,4 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     },
 });
 
-export default PasswordRecoveryScreen;
+export default ResetPasswordScreen;
