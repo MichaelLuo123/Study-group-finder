@@ -1,8 +1,8 @@
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Image,
   SafeAreaView, ScrollView, StyleSheet,
   Switch,
   Text,
@@ -38,7 +38,8 @@ const PreferencesPage = () => {
     return null; 
   }
 
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const { user: loggedInUser } = useUser();
+  const userId = loggedInUser?.id;
 
   useEffect(() => {
     const fetchPreferences = async () => {
@@ -66,9 +67,10 @@ const PreferencesPage = () => {
         push_notifications_enabled: switch1,
         email_notifications_enabled: switch2,
         sms_notifications_enabled: switch3,
+        theme: (isDarkMode === false && "light") || (isDarkMode === true && "dark")
       };
   
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/notifications`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/preferences`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -94,19 +96,11 @@ const PreferencesPage = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Back Button */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-    <Image
-      source={
-        isDarkMode
-          ? require('../../assets/images/arrow_white.png')
-          : require('../../assets/images/Arrow_black.png')
-      }
-      style={styles.backArrowImage}
-      resizeMode="contain"
-    />
-  </TouchableOpacity>
-
-        
+        <ArrowLeft 
+          size={24} 
+          color={textColor}
+          onPress={() => router.back()}
+        />
 
         <Text style={styles.heading}>Preferences</Text>
 
@@ -151,6 +145,7 @@ const PreferencesPage = () => {
           onChangeSlider={toggleDarkMode}
           style={{marginTop: 10, marginBottom: 10}}
           lightMode={!isDarkMode}
+          value={isDarkMode}
         />
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSavePreferences}>

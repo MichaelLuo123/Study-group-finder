@@ -21,20 +21,19 @@ interface FollowersDropdownProps {
   selectedFriends: string[];
   onFriendsChange: (friends: string[]) => void;
   theme: any;
+  isDarkMode: boolean;
 }
 
 const FollowersDropdown: React.FC<FollowersDropdownProps> = ({
   selectedFriends,
   onFriendsChange,
-  theme
+  theme,
+  isDarkMode,
 }) => {
   const { user: loggedInUser } = useUser();
   const currentUserId = loggedInUser?.id;
 
-  const {isDarkMode, toggleDarkMode} = useUser();
-
   // Consistent color usage from Colors.ts
-  const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
   const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
   const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
   const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;

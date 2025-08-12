@@ -149,14 +149,6 @@ const LoginScreen = () => {
                            </View>
                            {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
                        </View>
-                       
-                       {/* Forgot Password Link */}
-                       <TouchableOpacity 
-                           style={styles.forgotPasswordContainer}
-                           onPress={() => router.push('/Login/passwordrecovery')}
-                       >
-                           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                       </TouchableOpacity>
                    </View>
 
 
@@ -171,7 +163,7 @@ const LoginScreen = () => {
                    )}
 
                     <View style={styles.loginLinkContainer}>
-                        <TouchableOpacity onPress={() => router.push('/SignUp/signupscreen')}>
+                        <TouchableOpacity onPress={() => router.push('/Login/passwordrecovery')}>
                             <Text style={styles.signInText}>Forgot password?</Text>
                         </TouchableOpacity>
                     </View>

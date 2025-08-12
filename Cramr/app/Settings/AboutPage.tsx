@@ -1,34 +1,34 @@
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
 import {
-  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import { useUser } from '../../contexts/UserContext';
+
 
 const AboutPage = () => {
   const router = useRouter();
 
   // Colors
-  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
-  const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Image
-              source={require('../../assets/images/Arrow_black.png')}
-              style={styles.backArrowImage}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
+        <ArrowLeft 
+          size={24} 
+          color={textColor}
+          onPress={() => router.back()}
+        />
 
         <Text style={[styles.heading, { color: textColor }]}>About</Text>
 

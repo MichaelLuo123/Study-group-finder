@@ -1,6 +1,6 @@
 import { useUser } from '@/contexts/UserContext';
-import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Image,
@@ -22,23 +22,13 @@ const AccountPage = () => {
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const { user: loggedInUser } = useUser(); // <-- Re-enabled the correct way to get the user object
-
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
-    'Poppins-Bold': require('../../assets/fonts/Poppins/Poppins-Bold.ttf'),
-    'Poppins-SemiBold': require('../../assets/fonts/Poppins/Poppins-SemiBold.ttf'),
-  });
-
-  // This conditional return must come after all hooks
-  if (!fontsLoaded) {
-    return null; 
-  }
+  const {isDarkMode, toggleDarkMode} = useUser();
 
   // Colors
-  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
-  const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
-  const placeholderTextColor= (true ? Colors.light.placeholderText : Colors.dark.placeholderText)
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderTextColor= (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
 
   // First useEffect to fetch all user data
   useEffect(() => {
@@ -212,10 +202,10 @@ const AccountPage = () => {
         {loggedInUser && !isLoading && (
           <>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Image
-                source={require('../../assets/images/Arrow_black.png')}
-                style={styles.backArrowImage}
-                resizeMode="contain"
+              <ArrowLeft 
+                size={24} 
+                color={textColor}
+                onPress={() => router.back()}
               />
             </TouchableOpacity>
 
@@ -270,7 +260,7 @@ const AccountPage = () => {
             )}
 
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Save</Text>
+              <Text style={[styles.saveButtonText, {color: textColor}]}>Save</Text>
             </TouchableOpacity>
             
             <View style={styles.divider} />
@@ -295,7 +285,7 @@ const AccountPage = () => {
             <Text style={[styles.subheading, { color: textColor }]}>Delete Account</Text>
 
             <TouchableOpacity style={styles.deleteButton} onPress={() => setModalVisible(true)}>
-              <Text style={styles.deleteButtonText}>Delete</Text>
+              <Text style={[styles.deleteButtonText, {color: textColor}]}>Delete</Text>
             </TouchableOpacity>
 
             <Modal transparent visible={modalVisible} animationType="fade">

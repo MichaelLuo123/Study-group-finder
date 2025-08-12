@@ -18,7 +18,7 @@ const Slider: React.FC<SliderProps> = ({
     width,
     onChangeSlider: onValueChange, 
     lightMode,
-    value: initialValue = false,
+    value: initialValue,
     style={}
 }) => {
     const sliderBackgroundColor = (lightMode ? Colors.light.sliderBackground : Colors.dark.sliderBackground)

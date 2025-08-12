@@ -384,6 +384,7 @@ const CreateEventScreen = () => {
             selectedFriends={selectedFriends}
             onFriendsChange={setSelectedFriends}
             theme={theme}
+            isDarkMode={isDarkMode}
           />
 
           <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Description </Text>

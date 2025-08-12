@@ -1,10 +1,10 @@
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
+import { Bell, Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import EventCollapsible from '../../components/EventCollapsible';
 import { Colors } from '../../constants/Colors';
-
 
 // Define user interface
 interface User {
@@ -56,9 +56,10 @@ export default function Internal() {
   const { user: loggedInUser } = useUser();
 
   // Colors
-  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
-  const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const bannerColors = Colors.bannerColors
 
   // User
@@ -201,7 +202,7 @@ export default function Internal() {
   };
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
       <ScrollView>
         <View style={[styles.container, {backgroundColor: backgroundColor}]}>
           
@@ -233,11 +234,10 @@ export default function Internal() {
             
             <View style={styles.notificationsAndSettingsButtonContainer}>
               <TouchableOpacity onPress={() => router.push('')}>
-                <Image source={require('../../assets/images/bell.png')} style={styles.iconContainer} />
+                <Bell size={24} color={textColor} style={styles.iconContainer} />
               </TouchableOpacity>
-
               <TouchableOpacity onPress={() => router.push('/Settings/SettingsFrontPage')}>
-                <Image source={require('../../assets/images/settings.png')} style={styles.iconContainer} />
+                <Settings size={24} color={textColor} style={styles.iconContainer} />
               </TouchableOpacity>
             </View>
           </View>
@@ -250,13 +250,15 @@ export default function Internal() {
             <View style={styles.rightOfBannerContainer}>
               <Text style={[styles.headerText, {color: textColor}]}>{name}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>@{username}</Text>
-              <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>
+              <TouchableOpacity onPress={() => router.push('/Follow/follow')}>
+                <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>
                 <Text style={[styles.subheaderBoldText, {color: textColor}]}>{followers}</Text> Followers
                 <View style={styles.dotContainer}>
                   <View style={[styles.dot, {backgroundColor: textColor}]} />
                 </View>
                 <Text style={[styles.subheaderBoldText, {color: textColor}]}>{following}</Text> Following
-              </Text>
+                </Text>
+              </TouchableOpacity>
               <View style={[styles.tagContainer, {marginTop: 3}]}>
                 <View style={[styles.tag, {backgroundColor: textInputColor}]}>
                   <Text style={[styles.normalText, {color: textColor}]}>
@@ -345,6 +347,7 @@ export default function Internal() {
                 light={true}
                 isOwner={true}
                 style={{marginBottom: 10}}
+                isDarkMode={isDarkMode}
               />
             ))
           )}

@@ -1,7 +1,8 @@
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Dropdown from '../../components/Dropdown';
 import ImageUpload from '../../components/ImageUpload';
 import Slider from '../../components/Slider';
@@ -32,9 +33,10 @@ export default function Profile() {
   const router = useRouter();
 
   // Colors
-  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
-  const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const bannerColors = Colors.bannerColors
 
   // User
@@ -164,7 +166,7 @@ export default function Profile() {
   };
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{flex:1, backgroundColor: backgroundColor}}>
       <ScrollView>
         <View style={[styles.container, {backgroundColor: backgroundColor}]}>
           
@@ -189,9 +191,11 @@ export default function Profile() {
           {/* Show profile content only if user is logged in and not loading */}
           {loggedInUser && !isLoading && (
             <>
-              <TouchableOpacity onPress={() => router.back()}>
-                <Image source={require('../../assets/images/Arrow_black.png')} style={styles.iconContainer} />
-              </TouchableOpacity>
+              <ArrowLeft 
+                size={24} 
+                color={textColor}
+                onPress={() => router.back()}
+              />
 
               <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: 10}]}>
                 Profile
@@ -203,6 +207,7 @@ export default function Profile() {
           <ImageUpload 
             value={profilePicture}
             onChangeImage={setProfilePicture}
+            isDarkMode={isDarkMode}
           />
 
           <Text style={[styles.subheaderText, {color: textColor , marginTop: 10, marginBottom: 5}]}>
@@ -235,7 +240,7 @@ export default function Profile() {
             Name 
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your name."
             value={name}
             onChangeText={setName}
@@ -249,7 +254,7 @@ export default function Profile() {
             Username
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your username."
             value={username}
             onChangeText={setUsername}
@@ -263,7 +268,7 @@ export default function Profile() {
             School
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your school."
             value={school}
             onChangeText={setSchool}
@@ -277,7 +282,7 @@ export default function Profile() {
             Major
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your major."
             value={major}
             onChangeText={setMajor}
@@ -291,7 +296,7 @@ export default function Profile() {
             Class Level
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your class level."
             value={classLevel}
             onChangeText={setClassLevel}
@@ -305,7 +310,7 @@ export default function Profile() {
             Pronouns
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your pronouns."
             value={pronouns}
             onChangeText={setPronouns}
@@ -324,14 +329,14 @@ export default function Profile() {
             width={125}
             value={isTransfer}
             onChangeSlider={setIsTransfer}
-            lightMode={true}
+            lightMode={!isDarkMode}
           />
 
           <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
             Bio
           </Text>
           <TextInput
-            style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter bio."
             value={bio}
             onChangeText={setBio}
@@ -360,6 +365,7 @@ export default function Profile() {
             onChangeOption3={setPrompt3}
             option3Answer={prompt3Answer}
             onChangeOption3Answer={setPrompt3Answer}
+            isDarkMode={isDarkMode}
           />
 
           <TouchableOpacity 
@@ -395,7 +401,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 20,
-    height: 2000,
+    height: 1600,
   },
   iconContainer: {
     width: 25,
