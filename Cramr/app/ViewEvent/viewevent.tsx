@@ -39,6 +39,8 @@ interface Event {
 }
 
 const EventViewScreen = () => {
+
+  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
   
   const {isDarkMode, toggleDarkMode} = useUser();
   const [comment, setComment] = useState('');
@@ -57,8 +59,13 @@ const EventViewScreen = () => {
       if (page === 'listView') {
         router.push('/listView');
       }
+      if (page === 'profile') {
+        router.push('/Profile/Internal');
+      }
     }
   };
+
+  const [busy, setBusy] = useState<boolean>(false);
 
 //mock event for testing purposes
   // const mockEvent: Event = {
@@ -97,24 +104,111 @@ const EventViewScreen = () => {
   //       console.log('Error:', error);
   //       setLoading(false);
   //   });
-  useEffect(() => {
+  const fetchEvent = async () => {
     if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
       console.error('Backend URL not configured');
       setLoading(false);
       return;
     }
-
-    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`)
-      .then(res => res.json())
-      .then(data => {
-        setEvent(data);
-        setLoading(false);
+  
+    try {
+      console.log(`Fetching event data for eventId: ${eventId}...`); // Log start
+  
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`);
+      console.log('Response status:', res.status);
+  
+      const data = await res.json();
+      console.log('Fetched event data:', data);
+  
+      setEvent(data);
+    } catch (error) {
+      console.error('Failed to fetch event:', error);
+    } finally {
+      setLoading(false);
+      console.log('Finished fetching event data');
+    }
+  };
+  
+  useEffect(() => {
+    fetchEvent();
+  }, [eventId]);
+  
+  useEffect(() => {
+    if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
+      console.warn('Backend URL not configured - skipping RSVP and saved status fetch');
+      return;
+    }
+  
+    console.log(`Checking RSVP status for userId: ${userId} and eventId: ${eventId}...`);
+    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd?user_id=${userId}`)
+      .then(res => {
+        console.log('RSVP fetch response status:', res.status);
+        return res.json();
       })
-      .catch((error) => {
-        console.error('Failed to fetch event:', error);
-        setLoading(false);
+      .then(data => {
+        console.log('RSVP status data:', data);
+        setIsRSVPed(Boolean(data.rsvp && data.rsvp.status === 'accepted'));
+      })
+      .catch(err => {
+        console.error('Failed to fetch RSVP status:', err);
       });
-  }, [eventId]); 
+  
+    console.log(`Checking saved status for userId: ${userId} and eventId: ${eventId}...`);
+    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`)
+      .then(res => {
+        console.log('Saved events fetch response status:', res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log('Saved status data:', data);
+        setIsSaved(Boolean(data.is_saved));
+      })
+      .catch(err => {
+        console.error('Failed to fetch saved status:', err);
+      });
+  }, [eventId, userId]);
+
+
+  // useEffect(() => {
+  //   if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
+  //     console.error('Backend URL not configured');
+  //     setLoading(false);
+  //     return;
+  //   }
+
+  //   fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`)
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setEvent(data);
+  //       setLoading(false);
+  //     })
+  //     .catch((error) => {
+  //       console.error('Failed to fetch event:', error);
+  //       setLoading(false);
+  //     });
+  // }, [eventId]); 
+
+
+
+  //my stuff
+
+  // useEffect(() => {
+  //   // Fetch current RSVP status
+  //   fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd?user_id=${userId}`)
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setIsRSVPed(data.rsvp?.status === 'accepted');
+  //     })
+  //     .catch(console.error);
+  //    // Fetch save status
+  //   fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`)
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setIsSaved(data.is_saved);
+  //     })
+  //     .catch(console.error);
+  // }, [eventId, userId]);
+ 
 
   // //Mock event input, comment out later
   //   setTimeout(() => {
@@ -124,13 +218,98 @@ const EventViewScreen = () => {
   // }, []);
 
   //this is redundent. Consider deleting this
+  const toggleRSVP = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (isRSVPed) {
+        // cancel RSVP
+        const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId }),
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to delete RSVP: ${txt}`);
+        }
+        setIsRSVPed(false);
+      } else {
+        // RSVP/accept
+        const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, status: 'accepted' }),
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to post RSVP: ${txt}`);
+        }
+        setIsRSVPed(true);
+      }
+
+      // after change, re-fetch event so counts reflect DB 
+      await fetchEvent();
+    } catch (err) {
+      console.error('RSVP toggle error:', err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleSave = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      console.log('toggleSave called', { isSaved, userId, eventId });
+      if (isSaved) {
+        console.log(`DELETE /users/${userId}/saved-events/${eventId}`);
+        const res = await fetch(
+          `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`,
+          { method: 'DELETE' }
+        );
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to unsave event: ${txt}`);
+        }
+        setIsSaved(false);
+      } else {
+        console.log(`POST /users/${userId}/saved-events with event_id: ${eventId}`);
+        const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event_id: eventId }),
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to save event: ${txt}`);
+        }
+        setIsSaved(true);
+      }
+    } catch (err) {
+      console.error('Save toggle error:', err);
+    } finally {
+      setBusy(false);
+    }
+  };
+  
+  
+ 
+  const handleRSVP = () => {
+    toggleRSVP();
+  };
+
+  const handleSaveEvent = () => {
+    toggleSave();
+  };
+
   const toggleTheme = () => {
     toggleDarkMode();
   };
 
-  const handleRSVP = () => {
-    setIsRSVPed(!isRSVPed);
-  };
+  // const handleRSVP = () => {
+  //   setIsRSVPed(!isRSVPed);
+  // };
 
   const handlePostComment = () => {
     if (comment.trim()) {
@@ -139,9 +318,9 @@ const EventViewScreen = () => {
     }
   };
 
-  const handleSaveEvent = () => {
-    setIsSaved(!isSaved);
-  };
+  // const handleSaveEvent = () => {
+  //   setIsSaved(!isSaved);
+  // };
 
   const theme = isDarkMode ? darkTheme : lightTheme;
 

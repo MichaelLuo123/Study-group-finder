@@ -64,6 +64,14 @@ CREATE TABLE follows (
     PRIMARY KEY (follower_id, following_id)                   -- Composite primary key to ensure no duplicate follows
 );
 
+-- Create blocks table to manage user blocks relationships
+CREATE TABLE blocks (
+    blocker_id UUID REFERENCES users(id) ON DELETE CASCADE,   -- Foreign key referencing the blocker
+    blocked_id UUID REFERENCES users(id) ON DELETE CASCADE,  -- Foreign key referencing the user being blocked
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,          -- Timestamp for when the block was created
+    PRIMARY KEY (blocker_id, blocked_id)                    -- Composite primary key to ensure no duplicate blocks
+);
+
 -- Insert sample data into users
 -- INSERT INTO users (username, password_hash, email, full_name, major, year, bio, profile_picture_url)
 -- VALUES 

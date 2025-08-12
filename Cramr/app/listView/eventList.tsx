@@ -1,8 +1,11 @@
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
+
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -12,7 +15,12 @@ import {
 } from 'react-native';
 import type { Filters } from './filter';
 
+
 export default function EventList({ filters, selectedEventId }: { filters: Filters | null, selectedEventId?: string | null }) {
+
+
+  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +28,100 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const [busyEventId, setBusyEventId] = useState<string | null>(null);
+  const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
+
+  const fetchEvents = async () => {
+    try {
+      console.log('Fetching events from backend...');
+      setLoading(true);
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+      console.log('Events fetch response status:', response.status);
+      if (!response.ok) throw new Error('Failed to fetch events');
+      const data = await response.json();
+      console.log('Raw events data:', data);
+
+      const factory = new PublicStudySessionFactory();
+
+      const eventsWithDetails = await Promise.all(
+        data.map(async (event: any) => {
+          console.log(`Processing event ${event.id}:`, {
+            title: event.title,
+            accepted_count: event.accepted_count,
+            accepted_ids: event.accepted_ids,
+            type: typeof event.accepted_count
+          });
+          
+          const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
+          const coords = await studySession.addressToCoordinates();
+
+          let isRSVPed = false;
+          let isSaved = false;
+          
+          try {
+            const rsvpRes = await fetch(
+              `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd?user_id=${userId}`
+            );
+            console.log(`RSVP status fetch for event ${event.id} status:`, rsvpRes.status);
+            if (rsvpRes.ok) {
+              const rsvpData = await rsvpRes.json();
+              isRSVPed = Boolean(rsvpData.rsvp && rsvpData.rsvp.status === 'accepted');
+            }
+          } catch (e) {
+            console.warn('Failed to fetch RSVP status:', e);
+            isRSVPed = false;
+          }
+
+          try {
+            const savedRes = await fetch(
+              `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${event.id}`
+            );
+            if (savedRes.ok) {
+              const savedData = await savedRes.json();
+              isSaved = Boolean(savedData.is_saved);
+            }
+          } catch (e) {
+            console.warn('Failed to fetch saved status:', e);
+            isSaved = false;
+          }
+
+          const finalEvent = {
+            ...event,
+            coordinates: coords.geometry.location,
+            isRSVPed,
+            isSaved,
+          };
+          
+          console.log(`Final event ${event.id} data:`, {
+            title: finalEvent.title,
+            accepted_count: finalEvent.accepted_count,
+            accepted_ids: finalEvent.accepted_ids,
+            isRSVPed: finalEvent.isRSVPed,
+            isSaved: finalEvent.isSaved
+          });
+          
+          return finalEvent;
+        })
+      );
+
+      // Sort events by distance ascending (closest first)
+      const sortedData = eventsWithDetails.sort((a: any, b: any) => {
+        const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
+        const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
+        return aDistance - bDistance;
+      });
+
+      setEvents(sortedData);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch events');
+    } finally {
+      setLoading(false);
+      console.log('Finished fetching events');
+    }
+  };
 
   useEffect(() => {
     fetchEvents();
@@ -36,36 +138,168 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
     getCurrentLocation();
   }, []);
 
-  const fetchEvents = async () => {
+  
+
+  // ADDED: Function to RSVP/un-RSVP
+  const toggleRSVP = async (eventId: string, currentStatus: boolean) => {
+    if (busyEventId) return; // Prevent multiple requests at once
+    setBusyEventId(eventId);
+
     try {
-      const factory = new PublicStudySessionFactory();
-      setLoading(true);
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-      if (!response.ok) throw new Error('Failed to fetch events');
-      const data = await response.json();
-
-      const eventsWithCoordinates = await Promise.all(data.map(async (event: any) => {
-        const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
-        const coords = await studySession.addressToCoordinates();
-        return {
-          ...event,
-          coordinates: coords.geometry.location
-        };
-      }));
-
-      const sortedData = eventsWithCoordinates.sort((a: any, b: any) => {
-        const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
-        const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
-        return bDistance - aDistance;
-      });
-
-      setEvents(sortedData);
+      if (currentStatus) {
+        console.log(`Cancelling RSVP for event ${eventId}...`);
+        const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId }),
+        });
+        console.log('Cancel RSVP response status:', res.status);
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to cancel RSVP: ${txt}`);
+        }
+        
+        // Update local state immediately for instant feedback
+        setEvents(prevEvents => {
+          const currentEvent = prevEvents.find(e => e.id === eventId);
+          const newCount = Math.max(0, (currentEvent?.accepted_count || 0) - 1);
+          console.log(`Updating local state: RSVP cancelled, count from ${currentEvent?.accepted_count} to ${newCount}`);
+          
+          return prevEvents.map(event => 
+            event.id === eventId 
+              ? { 
+                  ...event, 
+                  isRSVPed: false,
+                  accepted_count: newCount
+                }
+              : event
+          );
+        });
+        
+        Alert.alert('RSVP Cancelled', 'You have been removed from the attendance list.');
+        
+        // Small delay before database refresh to allow local state to be visible
+        setTimeout(async () => {
+          console.log('Refreshing from database...');
+          await fetchEvents();
+        }, 100);
+      } else {
+        console.log(`RSVPing for event ${eventId}...`);
+        const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, status: 'accepted' }),
+        });
+        console.log('RSVP response status:', res.status);
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to RSVP: ${txt}`);
+        }
+        
+        // Update local state immediately for instant feedback
+        setEvents(prevEvents => {
+          const currentEvent = prevEvents.find(e => e.id === eventId);
+          const newCount = (currentEvent?.accepted_count || 0) + 1;
+          console.log(`Updating local state: RSVP accepted, count from ${currentEvent?.accepted_count} to ${newCount}`);
+          
+          return prevEvents.map(event => 
+            event.id === eventId 
+              ? { 
+                  ...event, 
+                  isRSVPed: true,
+                  accepted_count: newCount
+                }
+              : event
+          );
+        });
+        
+        Alert.alert('RSVP Successful', 'You are now attending this event.');
+        
+        // Small delay before database refresh to allow local state to be visible
+        setTimeout(async () => {
+          console.log('Refreshing from database...');
+          await fetchEvents();
+        }, 100);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch events');
+      console.error('RSVP toggle error:', err);
+      Alert.alert('Error', err instanceof Error ? err.message : 'Unexpected error');
     } finally {
-      setLoading(false);
+      setBusyEventId(null);
     }
   };
+
+  // ADDED: Function to save/unsave events
+  const toggleSave = async (eventId: string, currentStatus: boolean) => {
+    if (busyEventId) return; // Prevent multiple requests at once
+    setBusyEventId(eventId);
+
+    try {
+      if (currentStatus) {
+        console.log(`Unsaving event ${eventId}...`);
+        const res = await fetch(
+          `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`,
+          { method: 'DELETE' }
+        );
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to unsave event: ${txt}`);
+        }
+        
+        // Update local state immediately for instant feedback
+        setEvents(prevEvents => 
+          prevEvents.map(event => 
+            event.id === eventId 
+              ? { ...event, isSaved: false }
+              : event
+          )
+        );
+        
+        Alert.alert('Event Unsaved', 'Event has been removed from your saved events.');
+        
+        // Small delay before database refresh to allow local state to be visible
+        setTimeout(async () => {
+          console.log('Refreshing from database...');
+          await fetchEvents();
+        }, 100);
+      } else {
+        console.log(`Saving event ${eventId}...`);
+        const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event_id: eventId }),
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to save event: ${txt}`);
+        }
+        
+        // Update local state immediately for instant feedback
+        setEvents(prevEvents => 
+          prevEvents.map(event => 
+            event.id === eventId 
+              ? { ...event, isSaved: true }
+              : event
+          )
+        );
+        
+        Alert.alert('Event Saved', 'Event has been added to your saved events.');
+        
+        // Small delay before database refresh to allow local state to be visible
+        setTimeout(async () => {
+          console.log('Refreshing from database...');
+          await fetchEvents();
+        }, 100);
+      }
+    } catch (err) {
+      console.error('Save toggle error:', err);
+      Alert.alert('Error', err instanceof Error ? err.message : 'Unexpected error');
+    } finally {
+      setBusyEventId(null);
+    }
+  };
+  
+  
 
   const compareDistanceFromLocation = (lat: number, long: number) => {
     let latDistance = (location?.coords.latitude || 0) - lat;
@@ -242,14 +476,44 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
                   </>
                 )}
 
+                {/* Debug logging for count display */}
+                {(() => {
+                  console.log(`Rendering event ${event.id} footer:`, {
+                    title: event.title,
+                    accepted_count: event.accepted_count,
+                    accepted_ids: event.accepted_ids,
+                    display_count: event.accepted_count || 0
+                  });
+                  return null;
+                })()}
+
                 {/* Footer */}
                 <View style={styles.footer}>
                   <Text style={styles.count}>
                     {event.accepted_count || 0}/{event.capacity || '∞'} 👥
                   </Text>
-                  <Pressable style={styles.rsvpButton}>
-                    <Text style={{ color: 'white' }}>RSVP</Text>
-                  </Pressable>
+                  <View style={styles.buttonContainer}>
+                    <Pressable
+                      style={styles.saveButton}
+                      onPress={() => toggleSave(event.id, event.isSaved)}
+                      disabled={busyEventId === event.id}
+                    >
+                      <Ionicons 
+                        name={event.isSaved ? "bookmark" : "bookmark-outline"} 
+                        size={20} 
+                        color={event.isSaved ? "#000000" : "#666666"} 
+                      />
+                    </Pressable>
+                    <Pressable
+                      style={styles.rsvpButton}
+                      onPress={() => toggleRSVP(event.id, event.isRSVPed)}
+                      disabled={busyEventId === event.id}
+                    >
+                      <Text style={{ color: 'white' }}>
+                        {event.isRSVPed ? 'Cancel RSVP' : 'RSVP'}
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               </>
             )}
@@ -395,6 +659,18 @@ const styles = StyleSheet.create({
   },
   count: {
     fontSize: 13,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  saveButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderRadius: 22,
   },
   attendees: {
     flexDirection: 'row',

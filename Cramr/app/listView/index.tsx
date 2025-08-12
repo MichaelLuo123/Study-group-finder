@@ -167,7 +167,7 @@ export default function HomeScreen() {
 
   // Navigate to user profile
   const navigateToProfile = (userId: string) => {
-    router.push(`/Profile/ProfilePage?userId=${userId}`);
+    router.push(`/Profile/External?userId=${userId}`);
   };
 
   return (
