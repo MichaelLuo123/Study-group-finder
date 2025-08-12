@@ -1,8 +1,9 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import EventCollapsible from '../../components/EventCollapsible';
 import { Colors } from '../../constants/Colors';
+import { useUser } from '../../contexts/UserContext';
 
 // Define user interface
 interface User {
@@ -57,6 +58,15 @@ interface Event {
 
 export default function External() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const profileId = params.userId as string || '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // Default fallback
+  const { user: loggedInUser } = useUser();
+
+  // Debug logging
+  console.log('URL params:', params);
+  console.log('profileId from URL:', params.userId);
+  console.log('Final profileId being used:', profileId);
+  console.log('Logged in user:', loggedInUser);
 
   const userId = 'a430f1d2-aa88-4977-9796-700f5a5b2a3c'
 
@@ -70,7 +80,6 @@ export default function External() {
 
   // User
   const [user, setUser] = useState<User | null>(null);
-  const profileId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
 
   // Form state
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -98,10 +107,16 @@ export default function External() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
+        console.log('Fetching user data for profileId:', profileId);
+        console.log('API URL:', `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
+        
         const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
+        
+        console.log('Response status:', response.status);
         
         if (response.ok) {
           const userData = await response.json();
+          console.log('User data received:', userData);
           setUser(userData);
           
           // Populate form fields with database data
@@ -126,7 +141,9 @@ export default function External() {
           setFollowersIds(userData.follower_ids);
           setFollowingIds(userData.following_ids);
         } else {
-          console.error('Failed to fetch user data');
+          console.error('Failed to fetch user data. Status:', response.status);
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -217,6 +234,26 @@ export default function External() {
 
   // Block logic
   const [isBlockCheck, setIsBlockCheck] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  
+  // Check if user is blocked
+  useEffect(() => {
+    const checkBlockStatus = async () => {
+      if (loggedInUser?.id && profileId) {
+        try {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}/blocks/check/${profileId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setIsBlocked(data.is_blocked);
+          }
+        } catch (error) {
+          console.error('Error checking block status:', error);
+        }
+      }
+    };
+    
+    checkBlockStatus();
+  }, [loggedInUser?.id, profileId]);
   
   const handleBlockCheck = () => {
     setIsBlockCheck(true);
@@ -224,7 +261,10 @@ export default function External() {
 
   const handleBlock = async () => {
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/block`, {
+      // Use the logged-in user's ID (you'll need to get this from your auth context or state)
+      const loggedInUserId = loggedInUser?.id || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c'; // TODO: Replace with actual logged-in user ID
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUserId}/block`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,7 +273,8 @@ export default function External() {
       });
       
       if (response.ok) {
-        Alert.alert('Success', 'User blocked successfully!');
+        Alert.alert('Success', 'User blocked!');
+        setIsBlocked(true);
         setIsMoreModalVisible(false);
         setIsBlockCheck(false);
       } else {
@@ -242,6 +283,32 @@ export default function External() {
       }
     } catch (error) {
       console.error('Block error:', error);
+      Alert.alert('Error', 'Network error occurred');
+    }
+  };
+
+  const handleUnblock = async () => {
+    try {
+      const loggedInUserId = loggedInUser?.id || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c';
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUserId}/blocks/${profileId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        Alert.alert('Success', 'User unblocked!');
+        setIsBlocked(false);
+        setIsMoreModalVisible(false);
+        setIsBlockCheck(false);
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Error', errorData.error || 'Failed to unblock user');
+      }
+    } catch (error) {
+      console.error('Unblock error:', error);
       Alert.alert('Error', 'Network error occurred');
     }
   };
@@ -290,7 +357,9 @@ export default function External() {
 
   const handleFollow = async () => {
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/follow`, {
+      const loggedInUserId = loggedInUser?.id || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c';
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUserId}/follow`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -328,7 +397,9 @@ export default function External() {
   
   const handleUnfollow = async () => {
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/follow/${profileId}`, {
+      const loggedInUserId = loggedInUser?.id || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c';
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUserId}/follow/${profileId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -513,9 +584,11 @@ export default function External() {
                 <View style={[styles.modalContent, {backgroundColor: backgroundColor}]}>
                   <TouchableOpacity
                     style={[styles.modalButton, styles.blockButton]}
-                    onPress={handleBlockCheck}
+                    onPress={isBlocked ? handleUnblock : handleBlockCheck}
                   >
-                    <Text style={[styles.normalText, {color: '#E36062'}]}>Block</Text>
+                    <Text style={[styles.normalText, {color: '#E36062'}]}>
+                      {isBlocked ? 'Unblock' : 'Block'}
+                    </Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
@@ -541,7 +614,7 @@ export default function External() {
               <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, {backgroundColor: backgroundColor, padding: 15}]}>
                   <Text style={[styles.normalText, {color: textColor, textAlign: 'center', marginTop: 10}]}>
-                    Block {username}?
+                    {isBlocked ? `Unblock ${username}?` : `Block ${username}?`}
                   </Text>
                   
                   <View style={{flexDirection: 'row', gap: 10, width: '100%', marginTop: 20}}>
@@ -554,9 +627,11 @@ export default function External() {
                     
                     <TouchableOpacity
                       style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
-                      onPress={handleBlock}
+                      onPress={isBlocked ? handleUnblock : handleBlock}
                     >
-                      <Text style={[styles.normalText, {color: textColor}]}>Block</Text>
+                      <Text style={[styles.normalText, {color: textColor}]}>
+                        {isBlocked ? 'Unblock' : 'Block'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
