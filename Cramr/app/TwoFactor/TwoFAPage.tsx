@@ -24,7 +24,7 @@ const TwoFAPage = () => {
     const [code, setCode] = useState(Array(CODE_LENGTH).fill(''));
     const [timer, setTimer] = useState(RESEND_TIME);
     const [error, setError] = useState(false);
-    const {isDarkMode, user} = useUser(); //figure out how we can access the username realname if it matches but not 
+    const {isDarkMode, user} = useUser(); //figure out how we can access the username realname if it matches but not allow the user full access to the program;
     
     const inputs = useRef<TextInput[]>([]);
 
@@ -35,7 +35,7 @@ const TwoFAPage = () => {
 
     useEffect(() => {
         //load the 2FA backend by generating a key
-        // twoFA = new TwoFactorBE();
+        twoFA = new TwoFactorBE();
         if(user != null)
             twoFA.sendEmailWithCode(user?.email, user?.full_name) //can't be null rbecause information should pass through in login screen
 
