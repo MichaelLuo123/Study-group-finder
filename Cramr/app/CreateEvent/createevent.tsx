@@ -10,6 +10,22 @@ import FollowersDropdown from '../../components/FollowersDropdown';
 import { Colors } from '../../constants/Colors';
 
 const CreateEventScreen = () => {
+  // Predefined study session tags
+  const studyTags = [
+    'Pomodoro',
+    'Music',
+    'Quiet',
+    'Group Study',
+    'Flash Cards',
+    'Note Taking',
+    'Reading',
+    'Research',
+    'Exam Prep',
+    'Discussion',
+    'Problem Sets',
+    'Collaborative'
+  ];
+
   // State for theme
   const {isDarkMode, toggleDarkMode} = useUser();
   
@@ -27,7 +43,7 @@ const CreateEventScreen = () => {
   const [studyRoom, setStudyRoom] = useState('');
   const [classField, setClassField] = useState('');
   const [date, setDate] = useState(new Date());
-  const [tags, setTags] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); // Changed from tags string to selectedTags array
   const [capacity, setCapacity] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -48,6 +64,17 @@ const CreateEventScreen = () => {
     cardBackground: isDarkMode ? '#2d2d2d' : '#ffffff',
     navBackground: isDarkMode ? '#2d2d2d' : '#ffffff',
     navBorder: isDarkMode ? '#4a5568' : '#e0e0e0',
+  };
+
+  // Function to handle tag selection
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => {
+      if (prev.includes(tag)) {
+        return prev.filter(t => t !== tag);
+      } else {
+        return [...prev, tag];
+      }
+    });
   };
 
   const handleSubmit = async () => {
@@ -91,7 +118,7 @@ const CreateEventScreen = () => {
       location,
       class: classField,
       date: date.toISOString(),
-      tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
+      tags: selectedTags, // Now using selectedTags array directly
       capacity: Number(capacity),
       invitePeople: selectedFriends,
       creator_id: loggedInUser.id,
@@ -126,7 +153,7 @@ const CreateEventScreen = () => {
         setDescription('');
         setLocation('');
         setClassField('');
-        setTags('');
+        setSelectedTags([]); // Clear selected tags
         setCapacity('');
         setSelectedFriends([]);
         setDate(new Date());
@@ -155,7 +182,7 @@ const CreateEventScreen = () => {
       } else if (page === 'bookmarks') {
         // router.push('/bookmarks');
       } else if (page === 'profile') {
-        router.push('/Profile/ProfilePage');
+        router.push('/Profile/Internal');
       }
     }
   };
@@ -226,33 +253,61 @@ const CreateEventScreen = () => {
             style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
           />
 
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Tags </Text>
-          <TextInput
-            placeholder="Tags (comma separated)"
-            placeholderTextColor={placeholderColor}
-            value={tags}
-            onChangeText={setTags}
-            style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
-          />
+          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 10 }]}> Tags </Text>
+          <View style={styles.tagsContainer}>
+            {studyTags.map((tag) => (
+              <TouchableOpacity
+                key={tag}
+                style={[
+                  styles.tagButton,
+                  {
+                    borderColor: selectedTags.includes(tag) ? textColor : 'transparent',
+                    backgroundColor: textInputColor
+                  }
+                ]}
+                onPress={() => toggleTag(tag)}
+              >
+                <Text
+                  style={[
+                    styles.tagText,
+                    {
+                      color: textColor
+                    }
+                  ]}
+                >
+                  {tag}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           
           <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Class </Text>
-          <TextInput
-            placeholder="Enter class here."
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', width: 130}}>
+            <TextInput
+            placeholder="CSE"
             placeholderTextColor={placeholderColor}
             value={classField}
             onChangeText={setClassField}
-            style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 150 }]}
-          />
+            style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 75 }]}
+            />
+            <TextInput
+            placeholder="100"
+            placeholderTextColor={placeholderColor}
+            value={classField}
+            onChangeText={setClassField}
+            style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 50 }]}
+            />
+          </View>
 
           <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Capacity </Text>
           <View style={{ flexDirection: "row", justifyContent: 'space-between', alignItems: 'center', width: 100 }}>
             <TextInput
-              placeholder="Ex.: 5"
+              placeholder="5"
               placeholderTextColor={placeholderColor}
               value={capacity}
               onChangeText={setCapacity}
               keyboardType="numeric"
-              style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 55 }]}
+              style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 50 }]}
             />
             <Text style={[styles.normalText, { color: textColor, marginLeft: 5, marginBottom: 13 }]}> people </Text>
           </View>
@@ -328,7 +383,6 @@ const CreateEventScreen = () => {
           <FollowersDropdown
             selectedFriends={selectedFriends}
             onFriendsChange={setSelectedFriends}
-            placeholder="Select people to invite"
             theme={theme}
           />
 
@@ -493,6 +547,24 @@ const styles = StyleSheet.create({
   textArea: {
     height: 80,
     textAlignVertical: 'top',
+  },
+  // New tag styles
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 15,
+    gap: 8,
+  },
+  tagButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 5,
+  },
+  tagText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
   },
   dateTimeRow: {
     flexDirection: 'row',

@@ -1,112 +1,114 @@
 import { useUser } from '@/contexts/UserContext';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState, } from 'react';
 import {
-  Alert,
   FlatList,
-  Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Colors } from '../constants/Colors';
 
 interface Friend {
   id: string;
   username: string;
   full_name: string;
-  email: string;
 }
 
 interface FollowersDropdownProps {
   selectedFriends: string[];
   onFriendsChange: (friends: string[]) => void;
-  placeholder?: string;
   theme: any;
 }
 
 const FollowersDropdown: React.FC<FollowersDropdownProps> = ({
   selectedFriends,
   onFriendsChange,
-  placeholder = "Select friends to invite...",
   theme
 }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [loading, setLoading] = useState(false);
   const { user: loggedInUser } = useUser();
+  const currentUserId = loggedInUser?.id;
 
-  const currentUserId = loggedInUser?.id; // Use the logged-in user's ID
+  const {isDarkMode, toggleDarkMode} = useUser();
 
+  // Consistent color usage from Colors.ts
+  const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
+  const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
+  const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
+  const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
+
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Load friends when component starts
   useEffect(() => {
-    fetchFriends();
-  }, [currentUserId]);
+    loadFriends();
+  }, []);
 
-  const fetchFriends = async () => {
-    if (!currentUserId) {
-      setFriends([]);
-      return;
-    }
-
+  const loadFriends = async () => {
     setLoading(true);
     try {
-      console.log('Fetching following for user:', currentUserId);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      let response;
-      try {
-        response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/following`, {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        console.log('Response status:', response.status);
-      } catch (error: any) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-          console.log('Request timed out');
-          Alert.alert('Error', 'Request timed out. API might be down.');
-          setFriends([]);
-          return;
-        }
-        throw error;
-      }
+      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/following`);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Following data:', data);
         setFriends(data.following || []);
-      } else {
-        console.log('API error:', response.status, response.statusText);
-        Alert.alert('Error', `Failed to load following: ${response.status}`);
       }
     } catch (error) {
-      console.log('Network error:', error);
-              Alert.alert('Error', 'Network error while loading following');
+      console.log('Error loading friends:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Filter friends based on search
+  const getFilteredFriends = () => {
+    if (!searchQuery) return [];
+    
+    return friends.filter(friend => {
+      const name = (friend.full_name || friend.username).toLowerCase();
+      const matchesSearch = name.includes(searchQuery.toLowerCase());
+      const notAlreadySelected = !selectedFriends.includes(friend.id);
+      
+      return matchesSearch && notAlreadySelected;
+    });
+  };
+
+  // Get selected friends for display
+  const getSelectedFriends = () => {
+    return friends.filter(friend => selectedFriends.includes(friend.id));
+  };
+
+  // Add or remove friend from selection
   const toggleFriend = (friendId: string) => {
-    const newSelected = selectedFriends.includes(friendId)
-      ? selectedFriends.filter(id => id !== friendId)
-      : [...selectedFriends, friendId];
-    onFriendsChange(newSelected);
-  };
-
-  const getSelectedFriendsText = () => {
-    if (selectedFriends.length === 0) return placeholder;
-    
-    const selectedNames = friends
-      .filter(friend => selectedFriends.includes(friend.id))
-      .map(friend => friend.full_name || friend.username);
-    
-    if (selectedNames.length <= 2) {
-      return selectedNames.join(', ');
+    if (selectedFriends.includes(friendId)) {
+      // Remove friend
+      const newSelection = selectedFriends.filter(id => id !== friendId);
+      onFriendsChange(newSelection);
+    } else {
+      // Add friend
+      onFriendsChange([...selectedFriends, friendId]);
     }
-    return `${selectedNames.length} people selected`;
   };
 
+  // Render a selected friend tag
+  const renderSelectedTag = (friend: Friend) => (
+    <TouchableOpacity
+      key={friend.id}
+      style={[styles.selectedTag, { backgroundColor: textInputColor }]}
+      onPress={() => toggleFriend(friend.id)}
+    >
+      <Text style={[styles.tagText, { color: textColor }]}>
+        {friend.full_name || friend.username}
+      </Text>
+      <Ionicons name="close" size={14} color={'#E36062'} />
+    </TouchableOpacity>
+  );
+
+  // Render a friend in search results
   const renderFriendItem = ({ item }: { item: Friend }) => {
     const isSelected = selectedFriends.includes(item.id);
     
@@ -119,189 +121,148 @@ const FollowersDropdown: React.FC<FollowersDropdownProps> = ({
         ]}
         onPress={() => toggleFriend(item.id)}
       >
-        <View style={styles.friendInfo}>
-          <Text style={[styles.friendName, { color: theme.textColor }]}>
-            {item.full_name || item.username}
+        <View style={{flexDirection:'column', justifyContent:'space-between'}}>
+          <Text style={[styles.friendName, { 
+          color: textColor 
+          }]}>
+            {item.full_name}
           </Text>
-          <Text style={[styles.friendUsername, { color: theme.placeholderColor }]}>
+          <Text style={[styles.friendUsername, { 
+            color: textColor 
+          }]}>
             @{item.username}
           </Text>
         </View>
-        {isSelected && (
-          <Text style={[styles.checkmark, { color: theme.rsvpText }]}>✓</Text>
-        )}
       </TouchableOpacity>
     );
   };
 
+  const selectedFriends_display = getSelectedFriends();
+  const filteredFriends = getFilteredFriends();
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={[
-          styles.dropdownButton,
-          { backgroundColor: theme.inputBackground, borderColor: theme.placeholderColor }
-        ]}
-        onPress={() => setIsVisible(true)}
-      >
-        <Text style={[styles.dropdownText, { color: theme.textColor }]}>
-          {getSelectedFriendsText()}
-        </Text>
-      </TouchableOpacity>
-
-      <Modal
-        visible={isVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setIsVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            { backgroundColor: theme.cardBackground }
-          ]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.textColor }]}>
-                Select People to Invite
-              </Text>
-              <TouchableOpacity
-                onPress={() => setIsVisible(false)}
-                style={styles.closeButton}
-              >
-                <Text style={[styles.closeButtonText, { color: theme.textColor }]}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            {loading ? (
-              <Text style={[styles.loadingText, { color: theme.textColor }]}>
-                Loading following...
-              </Text>
-            ) : friends.length === 0 ? (
-                      <Text style={[styles.noFriendsText, { color: theme.textColor }]}>
-          No following found. Follow some people first!
-        </Text>
-            ) : (
-              <FlatList
-                data={friends}
-                renderItem={renderFriendItem}
-                keyExtractor={(item) => item.id}
-                style={styles.friendsList}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
-
-            <TouchableOpacity
-              style={[styles.doneButton, { backgroundColor: theme.rsvpBackground }]}
-              onPress={() => setIsVisible(false)}
-            >
-              <Text style={[styles.doneButtonText, { color: theme.rsvpText }]}>
-                Done
-              </Text>
-            </TouchableOpacity>
-          </View>
+      {/* Show selected friends as tags */}
+      {selectedFriends_display.length > 0 && (
+        <View style={styles.selectedContainer}>
+          {selectedFriends_display.map(renderSelectedTag)}
         </View>
-      </Modal>
+      )}
+
+      {/* Search box */}
+      <View style={[styles.searchBox, { backgroundColor: textInputColor}]}>
+        <Ionicons name="search" size={18} color={textColor} />
+        <TextInput
+          style={[styles.searchInput, { color: textColor }]}
+          placeholder="Search friends to invite..."
+          placeholderTextColor={theme.placeholderColor}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      {/* Show search results */}
+      {loading && (
+        <Text style={[styles.message, { color: textColor }]}>
+          Loading...
+        </Text>
+      )}
+      
+      {!loading && friends.length === 0 && (
+        <Text style={[styles.message, { color: placeholderColor }]}>
+          No friends found. Follow some people first!
+        </Text>
+      )}
+      
+      {!loading && searchQuery && filteredFriends.length === 0 && friends.length > 0 && (
+        <Text style={[styles.message, { color: theme.placeholderColor }]}>
+          No friends match "{searchQuery}"
+        </Text>
+      )}
+      
+      {!loading && searchQuery && filteredFriends.length > 0 && (
+        <FlatList
+          data={filteredFriends}
+          renderItem={renderFriendItem}
+          keyExtractor={item => item.id}
+          style={styles.resultsList}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  dropdownButton: {
+  
+  // Selected friends tags
+  selectedContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 48,
+    flexWrap: 'wrap',
+    marginBottom: 12,
+    gap: 8,
   },
-  dropdownText: {
-    flex: 1,
-    fontSize: 16,
-  },
-  arrow: {
-    fontSize: 12,
-    marginLeft: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '90%',
-    maxHeight: '80%',
-    borderRadius: 12,
-    padding: 20,
-  },
-  modalHeader: {
+  selectedTag: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  tagText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
   },
-  closeButton: {
-    padding: 8,
+  
+  // Search box
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    gap: 10,
   },
-  closeButtonText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
   },
-  loadingText: {
-    textAlign: 'center',
-    fontSize: 16,
-    padding: 20,
-  },
-  noFriendsText: {
-    textAlign: 'center',
-    fontSize: 16,
-    padding: 20,
-    fontStyle: 'italic',
-  },
-  friendsList: {
-    maxHeight: 300,
+  
+  // Search results
+  resultsList: {
+    maxHeight: 200,
   },
   friendItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 6,
     borderRadius: 8,
   },
-  friendInfo: {
-    flex: 1,
-  },
   friendName: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
   },
   friendUsername: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+  },
+  
+  // Messages
+  message: {
+    textAlign: 'center',
     fontSize: 14,
-    marginTop: 2,
-  },
-  checkmark: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  doneButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  doneButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    padding: 16,
+    fontFamily: 'Poppins-Regular',
+    fontStyle: 'italic',
   },
 });
 
-export default FollowersDropdown; 
+export default FollowersDropdown
