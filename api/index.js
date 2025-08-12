@@ -338,12 +338,161 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Password reset request
+app.post('/auth/reset-password', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+  
+  try {
+    // Check if user exists
+    const userResult = await client.query(
+      'SELECT id, username, email FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'No account found with this email address' });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Generate reset token
+    const resetToken = uuidv4();
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+    
+    // Store reset token in database
+    await client.query(
+      'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
+      [resetToken, resetTokenExpiry, user.id]
+    );
+    
+    // Create reset link
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/Login/ResetPassword?token=${resetToken}`;
+    
+    // Send email with reset link
+    const data = {
+      Messages: [
+        {
+          From: {
+            Email: "tylervo.2002@gmail.com",
+            Name: "Cramr Team" 
+          },
+          To: [
+            {
+              Email: user.email,
+              Name: user.username
+            },
+          ],
+          Subject: "Password Reset Request",
+          TextPart: `Hello ${user.username},\n\nYou have requested to reset your password. Click the link below to set a new password:\n\n${resetLink}\n\nThis link will expire in 1 hour. If you did not request a password reset, please ignore this email.\n\nThank you,\nThe Cramr Team`
+        }
+      ]
+    };
+    
+    const result = await mailjet
+      .post('send', { version: 'v3.1' })
+      .request(data);
+    
+    const { Status } = result.body.Messages[0];
+    
+    if (Status === 'success') {
+      res.json({
+        success: true,
+        message: 'Password reset email sent successfully'
+      });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to send reset email' });
+    }
+  } catch (err) {
+    console.error('Password reset error:', err);
+    res.status(500).json({ success: false, message: 'Failed to process password reset request' });
+  }
+});
+
+// Password reset confirmation
+app.post('/auth/reset-password/confirm', async (req, res) => {
+  const { token, newPassword } = req.body;
+  
+  if (!token || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Token and new password are required' });
+  }
+  
+ 
+  if (newPassword.length < 8) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Password must be at least 8 characters long',
+      details: 'Please ensure your password meets all requirements: at least 8 characters, 1 capital letter, and 1 special character'
+    });
+  }
+  
+  // Check for capital letter
+  if (!/[A-Z]/.test(newPassword)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Password must contain at least 1 capital letter',
+      details: 'Please ensure your password meets all requirements: at least 8 characters, 1 capital letter, and 1 special character'
+    });
+  }
+  
+  // Check for special character
+  if (!/[^A-Za-z0-9]/.test(newPassword)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Password must contain at least 1 special character',
+      details: 'Please ensure your password meets all requirements: at least 8 characters, 1 capital letter, and 1 special character'
+    });
+  }
+  
+  try {
+    // Find user with valid reset token
+    const userResult = await client.query(
+      'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
+      [token]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired reset token',
+        details: 'The password reset link has expired or is invalid. Please request a new password reset from the login page.',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Hash new password using the same method as signup
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    
+    // Update password and clear reset token
+    await client.query(
+      'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL, updated_at = NOW() WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Password reset successfully!',
+      details: 'Your new password has been saved. You can now log in with your new password.',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Password reset confirmation error:', err);
+    res.status(500).json({ success: false, message: 'Failed to reset password' });
+  }
+});
+
 // Search users
 app.get('/users/search', async (req, res) => {
   const { q } = req.query;
   
   if (!q || q.length < 2) {
-    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' })
   }
   
   try {

@@ -27,7 +27,9 @@ CREATE TABLE users (
     phone_number VARCHAR(20),
     push_notifications_enabled BOOLEAN DEFAULT true,
     email_notifications_enabled BOOLEAN DEFAULT true,
-    sms_notifications_enabled BOOLEAN DEFAULT false
+    sms_notifications_enabled BOOLEAN DEFAULT false,
+    reset_token VARCHAR(255),
+    reset_token_expiry TIMESTAMP
 );
 
 -- Create events table
