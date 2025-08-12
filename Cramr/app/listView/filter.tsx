@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Button } from 'react-native-paper';
 import Slider from '@react-native-community/slider';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Modal from 'react-native-modal';
+import { Button } from 'react-native-paper';
 
 const noiseLevels = ['Quiet', 'Medium', 'Loud'];
 const locationTypes = ['Library', 'Cafe', 'Outdoor'];

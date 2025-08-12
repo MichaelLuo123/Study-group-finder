@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Modal,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -32,14 +33,15 @@ interface User {
 
 const FollowList = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'following' | 'followers' | 'add'>('following');
+  const [activeTab, setActiveTab] = useState<'following' | 'followers'>('following');
   const [searchQuery, setSearchQuery] = useState('');
-  const [addFriendSearchQuery, setAddFriendSearchQuery] = useState('');
   const [following, setFollowing] = useState<Friend[]>([]);
   const [followers, setFollowers] = useState<Friend[]>([]);
-  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [unfollowModalVisible, setUnfollowModalVisible] = useState(false);
+  const [userToUnfollow, setUserToUnfollow] = useState<Friend | null>(null);
+  const [removeFollowerModalVisible, setRemoveFollowerModalVisible] = useState(false);
+  const [userToRemoveFollower, setUserToRemoveFollower] = useState<Friend | null>(null);
 
   // TODO: Replace with actual user ID from authentication
   const currentUserId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
@@ -90,35 +92,7 @@ const FollowList = () => {
     }
   };
 
-  const searchUsers = async (query: string) => {
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
 
-    setSearchLoading(true);
-    try {
-      // TODO: Replace with actual search endpoint
-      const response = await fetch(`http://132.249.242.182:8080/users/search?q=${encodeURIComponent(query)}`);
-      if (response.ok) {
-        const data = await response.json();
-        // Filter out current user and people already following
-        const filteredData = data.filter((user: User) => 
-          user.id !== currentUserId && 
-          !following.some(followingUser => followingUser.id === user.id)
-        );
-        setSearchResults(filteredData);
-      } else {
-        console.log('Failed to search users');
-        setSearchResults([]);
-      }
-    } catch (error) {
-      console.log('Network error:', error);
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
 
   const followUser = async (userId: string) => {
     try {
@@ -132,12 +106,55 @@ const FollowList = () => {
 
       if (response.ok) {
         Alert.alert('Success', 'Now following!');
-        // Remove from search results
-        setSearchResults(searchResults.filter(user => user.id !== userId));
         // Refresh following list
         fetchFollowing();
       } else {
         Alert.alert('Error', 'Failed to follow user');
+      }
+    } catch (error) {
+      console.log('Network error:', error);
+      Alert.alert('Error', 'Network error occurred');
+    }
+  };
+
+  const handleUnfollowCheck = (user: Friend) => {
+    console.log('Setting user to unfollow:', user);
+    setUserToUnfollow(user);
+    setUnfollowModalVisible(true);
+  };
+
+  const handleCancelUnfollow = () => {
+    setUnfollowModalVisible(false);
+    setUserToUnfollow(null);
+  };
+
+  const handleRemoveFollowerCheck = (user: Friend) => {
+    setUserToRemoveFollower(user);
+    setRemoveFollowerModalVisible(true);
+  };
+
+  const handleCancelRemoveFollower = () => {
+    setRemoveFollowerModalVisible(false);
+    setUserToRemoveFollower(null);
+  };
+
+  const removeFollower = async (userId: string) => {
+    try {
+      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/followers/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        Alert.alert('Success', 'Follower removed successfully!');
+        // Update UI
+        setFollowers(followers.filter(user => user.id !== userId));
+        setRemoveFollowerModalVisible(false);
+        setUserToRemoveFollower(null);
+      } else {
+        Alert.alert('Error', 'Failed to remove follower');
       }
     } catch (error) {
       console.log('Network error:', error);
@@ -158,6 +175,8 @@ const FollowList = () => {
         Alert.alert('Success', 'Unfollowed successfully!');
         // Update UI
         setFollowing(following.filter(user => user.id !== userId));
+        setUnfollowModalVisible(false);
+        setUserToUnfollow(null);
       } else {
         Alert.alert('Error', 'Failed to unfollow user');
       }
@@ -191,46 +210,38 @@ const FollowList = () => {
       
       <TouchableOpacity
         style={styles.removeButton}
-        onPress={() => unfollowUser(item.id)}
+        onPress={() => handleUnfollowCheck(item)}
       >
         <Ionicons name="close" size={20} color="#FF4444" />
       </TouchableOpacity>
     </View>
   );
 
-  const renderSearchResultItem = ({ item }: { item: User }) => {
-    // Check if this user is already being followed
-    const isFollowing = following.some(user => user.id === item.id);
-    
-    return (
-      <View style={styles.searchResultContainer}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {item.full_name?.charAt(0) || item.username?.charAt(0) || '?'}
-            </Text>
-          </View>
+  const renderFollowerItem = ({ item }: { item: Friend }) => (
+    <View style={styles.friendContainer}>
+      <View style={styles.avatarContainer}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {item.full_name?.charAt(0) || item.username?.charAt(0) || '?'}
+          </Text>
         </View>
-        
-        <View style={styles.friendInfo}>
-          <Text style={styles.friendName}>{item.full_name || 'Unknown'}</Text>
-          <Text style={styles.friendUsername}>@{item.username}</Text>
-          {isFollowing && (
-            <Text style={styles.followingText}>Following</Text>
-          )}
-        </View>
-        
-        {!isFollowing && (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => followUser(item.id)}
-          >
-            <Ionicons name="add" size={20} color="#007AFF" />
-          </TouchableOpacity>
-        )}
       </View>
-    );
-  };
+      
+      <View style={styles.friendInfo}>
+        <Text style={styles.friendName}>{item.full_name || 'Unknown'}</Text>
+        <Text style={styles.friendUsername}>@{item.username}</Text>
+      </View>
+      
+      <TouchableOpacity
+        style={styles.removeButton}
+        onPress={() => handleRemoveFollowerCheck(item)}
+      >
+        <Ionicons name="close" size={20} color="#FF4444" />
+      </TouchableOpacity>
+    </View>
+  );
+
+
 
 
 
@@ -277,63 +288,15 @@ const FollowList = () => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'add' && styles.activeTab]}
-          onPress={() => setActiveTab('add')}
-        >
-          <Ionicons 
-            name="add-circle" 
-            size={16} 
-            color={activeTab === 'add' ? '#fff' : '#666'} 
-            style={styles.tabIcon}
-          />
-          <Text style={[styles.tabText, activeTab === 'add' && styles.activeTabText]}>
-            Add
-          </Text>
-        </TouchableOpacity>
+
       </View>
 
-      {activeTab === 'add' ? (
-        <>
-          {/* Add Friends Search Bar */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search for users to add..."
-              placeholderTextColor="#999"
-              value={addFriendSearchQuery}
-              onChangeText={(text) => {
-                setAddFriendSearchQuery(text);
-                searchUsers(text);
-              }}
-            />
-          </View>
-
-          {/* Search Results */}
-          <FlatList
-            data={searchResults}
-            renderItem={renderSearchResultItem}
-            keyExtractor={(item) => item.id}
-            style={styles.friendsList}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  {searchLoading ? 'Searching...' : 
-                   addFriendSearchQuery.length < 2 ? 'Type at least 2 characters to search' :
-                   'No users found'}
-                </Text>
-              </View>
-            }
-          />
-        </>
-      ) : activeTab === 'followers' ? (
+      {activeTab === 'followers' ? (
         <>
           {/* Followers List */}
           <FlatList
             data={followers}
-            renderItem={renderFollowingItem}
+            renderItem={renderFollowerItem}
             keyExtractor={(item) => item.id}
             style={styles.friendsList}
             showsVerticalScrollIndicator={false}
@@ -377,6 +340,70 @@ const FollowList = () => {
           />
         </>
       )}
+
+      {/* Unfollow Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={unfollowModalVisible}
+        onRequestClose={handleCancelUnfollow}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Unfollow {userToUnfollow?.full_name || userToUnfollow?.username || 'this user'}?
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={handleCancelUnfollow}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={() => userToUnfollow && unfollowUser(userToUnfollow.id)}
+              >
+                <Text style={styles.modalConfirmText}>Unfollow</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Remove Follower Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={removeFollowerModalVisible}
+        onRequestClose={handleCancelRemoveFollower}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Remove {userToRemoveFollower?.full_name || userToRemoveFollower?.username || 'this user'} as a follower?
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={handleCancelRemoveFollower}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={() => userToRemoveFollower && removeFollower(userToRemoveFollower.id)}
+              >
+                <Text style={styles.modalConfirmText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -583,6 +610,54 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: '#FFE8E8',
     borderRadius: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    margin: 20,
+    minWidth: 300,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#FF4444',
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 
