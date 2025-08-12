@@ -97,7 +97,7 @@ app.get('/health', (req, res) => {
 // Get all events
 app.get('/events', async (req, res) => {
   try {
-    console.log('Fetching events with creator info...');
+    console.log('Fetching events with creator info and attendee counts...');
     const result = await client.query(`
       SELECT 
         e.*,
@@ -109,9 +109,74 @@ app.get('/events', async (req, res) => {
       ORDER BY e.created_at DESC
     `);
     
-    console.log('Query result:', result.rows);
+    // Add attendee counts and IDs for each event
+    console.log(`Processing ${result.rows.length} events to add attendee data...`);
+    
+    const eventsWithAttendees = await Promise.all(
+      result.rows.map(async (event, index) => {
+        console.log(`Processing event ${index + 1}/${result.rows.length}: ${event.id} - ${event.title}`);
+        // Get attendee counts from event_attendees table
+        const invitedResult = await client.query(
+          "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'invited'",
+          [event.id]
+        );
+        const invited_count = parseInt(invitedResult.rows[0].count);
+
+        const acceptedResult = await client.query(
+          "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'accepted'",
+          [event.id]
+        );
+        const accepted_count = parseInt(acceptedResult.rows[0].count);
+
+        const declinedResult = await client.query(
+          "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'declined'",
+          [event.id]
+        );
+        const declined_count = parseInt(declinedResult.rows[0].count);
+
+        // Get user IDs for each status
+        const invitedUsersResult = await client.query(
+          "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'invited'",
+          [event.id]
+        );
+        const invited_ids = invitedUsersResult.rows.map(row => row.user_id);
+
+        const acceptedUsersResult = await client.query(
+          "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'accepted'",
+          [event.id]
+        );
+        const accepted_ids = acceptedUsersResult.rows.map(row => row.user_id);
+
+        const declinedUsersResult = await client.query(
+          "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'declined'",
+          [event.id]
+        );
+        const declined_ids = declinedUsersResult.rows.map(row => row.user_id);
+
+        const eventWithAttendees = {
+          ...event,
+          invited_ids,
+          invited_count,
+          accepted_ids,
+          accepted_count,
+          declined_ids,
+          declined_count,
+        };
+        
+        console.log(`Event ${event.id} attendee data:`, {
+          invited_count,
+          accepted_count,
+          declined_count,
+          accepted_ids
+        });
+        
+        return eventWithAttendees;
+      })
+    );
+    
+    console.log('Events with attendee data:', eventsWithAttendees);
    
-    res.json(result.rows);
+    res.json(eventsWithAttendees);
   } catch (err) {
     console.error('Database error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
@@ -122,7 +187,22 @@ app.get('/events', async (req, res) => {
 app.post('/events', async (req, res) => {
   const { title, description, location, class: classField, date, tags, capacity, invitePeople, creator_id } = req.body;
   
+  // Validate required fields
+  if (!title || !creator_id) {
+    return res.status(400).json({ error: 'Missing required fields: title and creator_id are required' });
+  }
+
   try {
+    // Verify that the creator_id exists in the users table
+    const creatorCheck = await client.query(
+      'SELECT id FROM users WHERE id = $1',
+      [creator_id]
+    );
+    
+    if (creatorCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid creator_id: user not found' });
+    }
+
     // First create the event
     const result = await client.query(
       'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, creator_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
@@ -156,6 +236,7 @@ app.post('/events', async (req, res) => {
       event: result.rows[0]
     });
   } catch (err) {
+    console.error('Error creating event:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
@@ -836,6 +917,14 @@ app.get('/events/:id', async (req, res) => {
     );
     const declined_ids = declinedUsersResult.rows.map(row => row.user_id);
 
+    // Get saved event user IDs
+    const savedUsersResult = await client.query(
+      "SELECT user_id FROM saved_events WHERE event_id = $1",
+      [id]
+    );
+    const saved_ids = savedUsersResult.rows.map(row => row.user_id);
+    const saved_count = saved_ids.length;
+
     res.json({
       ...event,
       invited_ids,
@@ -844,6 +933,8 @@ app.get('/events/:id', async (req, res) => {
       accepted_count,
       declined_ids,
       declined_count,
+      saved_ids,
+      saved_count,
     });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
@@ -1110,6 +1201,7 @@ app.post('/users/:id/saved-events', async (req, res) => {
     }
     
     // First, let's create a saved_events table if it doesn't exist
+    console.log('Creating saved_events table if it doesn\'t exist...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS saved_events (
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -1118,6 +1210,7 @@ app.post('/users/:id/saved-events', async (req, res) => {
         PRIMARY KEY (user_id, event_id)
       )
     `);
+    console.log('saved_events table ready');
     
     // Insert saved event
     const result = await client.query(`
@@ -1184,19 +1277,32 @@ app.get('/users/:id/saved-events', async (req, res) => {
   }
 });
 
-app.delete('/users/:userId/saved-events/:eventId', async (req, res) => {
-  const { userId, eventId } = req.params;
-  
+app.delete('/users/:id/saved-events/:eventId', async (req, res) => {
+  const { id, eventId } = req.params;
+
   try {
-    const result = await client.query(
-      'DELETE FROM saved_events WHERE user_id = $1 AND event_id = $2 RETURNING *',
+    console.log('Attempting to delete saved event:', { id, eventId });
+    
+    // First check if the record exists
+    const checkResult = await client.query(
+      'SELECT user_id, event_id FROM saved_events WHERE user_id = $1 AND event_id = $2',
       [id, eventId]
     );
     
-    if (result.rows.length === 0) {
+    if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Saved event not found' });
     }
     
+    console.log('Found record to delete:', checkResult.rows[0]);
+    
+    // Now delete it
+    const deleteResult = await client.query(
+      'DELETE FROM saved_events WHERE user_id = $1 AND event_id = $2',
+      [id, eventId]
+    );
+
+    console.log('Delete result:', deleteResult);
+
     res.json({
       success: true,
       message: 'Event removed from saved events'
@@ -1212,7 +1318,7 @@ app.get('/users/:id/saved-events/:eventId', async (req, res) => {
   
   try {
     const result = await client.query(
-      'SELECT * FROM saved_events WHERE user_id = $1 AND event_id = $2',
+      'SELECT user_id, event_id, saved_at FROM saved_events WHERE user_id = $1 AND event_id = $2',
       [id, eventId]
     );
     
