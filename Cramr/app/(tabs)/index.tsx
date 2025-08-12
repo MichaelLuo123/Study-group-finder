@@ -61,7 +61,7 @@ export default function HomeScreen() {
         <Button title="Go to Create Event" onPress={() => router.push('/CreateEvent/createevent')} />
         <Button title="Go to Settings Page" onPress={() => router.push('/Settings/SettingsFrontPage')} />
         <Button title="Go to Login Page" onPress={() => router.push('/Login/Loginscreen')} />
-        <Button title="Go to 2fa Page" onPress={() => router.push('/Login/2fapage')} />
+        <Button title="Go to 2fa Page" onPress={() => router.push('/TwoFactor/TwoFAPage')} />
         <Button title="Go to Map Page" onPress={() => router.push('/Map/map')} />
         <Button title="Go to Profile Page (Internal)" onPress={() => router.push('/Profile/Internal')} />
         <Button title="Go to Profile Page (External)" onPress={() => router.push('/Profile/External')} />
