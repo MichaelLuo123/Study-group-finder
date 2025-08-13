@@ -31,7 +31,6 @@ const TwoFAPage = () => {
     // Consistent color usage from Colors.ts
     const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
     const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
-    const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
     const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
     const buttonColor = Colors.button;
     
