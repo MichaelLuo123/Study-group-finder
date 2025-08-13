@@ -28,8 +28,8 @@ CREATE TABLE users (
     push_notifications_enabled BOOLEAN DEFAULT true,
     email_notifications_enabled BOOLEAN DEFAULT true,
     sms_notifications_enabled BOOLEAN DEFAULT false,
-    reset_token VARCHAR(255),
-    reset_token_expiry TIMESTAMP
+    verification_code VARCHAR(255), -- Stores 6-digit verification code or temporary reset token
+    verification_code_expiry TIMESTAMP -- Expiry time for verification code (10 min) or reset token (5 min)
 );
 
 -- Create events table

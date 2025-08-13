@@ -14,12 +14,14 @@ import {
 
 const PasswordRecoveryScreen = () => {
     const [email, setEmail] = useState('');
+    const [verificationCode, setVerificationCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isCodeSent, setIsCodeSent] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' }); // 'success', 'error', 'info'
     const { isDarkMode } = useUser();
     const router = useRouter();
 
-    const handleResetPassword = async () => {
+    const handleSendCode = async () => {
         if (!email.trim()) {
             setMessage({ text: 'Please enter your email address', type: 'error' });
             return;
@@ -31,7 +33,7 @@ const PasswordRecoveryScreen = () => {
         }
 
         setIsLoading(true);
-        setMessage({ text: 'Sending password reset request...', type: 'info' });
+        setMessage({ text: 'Sending verification code...', type: 'info' });
 
         try {
             const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/auth/reset-password`, {
@@ -44,17 +46,16 @@ const PasswordRecoveryScreen = () => {
 
             if (result.success) {
                 setMessage({ 
-                    text: 'Password reset instructions have been sent to your email. Please check your inbox.', 
+                    text: 'A 6-digit verification code has been sent to your email. Please check your inbox.', 
                     type: 'success' 
                 });
-               
+                setIsCodeSent(true);
                 setTimeout(() => {
                     setMessage({ text: '', type: '' });
-                    router.back();
-                }, 2000);
+                }, 3000);
             } else {
                 setMessage({ 
-                    text: result.message || 'Failed to send reset email. Please try again.', 
+                    text: result.message || 'Failed to send verification code. Please try again.', 
                     type: 'error' 
                 });
             }
@@ -65,6 +66,95 @@ const PasswordRecoveryScreen = () => {
             });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleVerifyCode = async () => {
+        if (!verificationCode.trim()) {
+            setMessage({ text: 'Please enter the verification code', type: 'error' });
+            return;
+        }
+
+        if (verificationCode.length !== 6) {
+            setMessage({ text: 'Please enter a valid 6-digit code', type: 'error' });
+            return;
+        }
+
+        setIsLoading(true);
+        setMessage({ text: 'Verifying code...', type: 'info' });
+
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/auth/verify-reset-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    email, 
+                    verificationCode 
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setMessage({ 
+                    text: 'Code verified successfully! Redirecting to password reset...', 
+                    type: 'success' 
+                });
+                
+                setTimeout(() => {
+                    router.push({
+                        pathname: '/Login/ResetPassword',
+                        params: { token: result.token }
+                    });
+                }, 1500);
+            } else {
+                setMessage({ 
+                    text: result.message || 'Invalid verification code. Please try again.', 
+                    type: 'error' 
+                });
+            }
+        } catch (error) {
+            setMessage({ 
+                text: 'Network error. Please check your connection and try again.', 
+                type: 'error' 
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResendCode = async () => {
+        setVerificationCode('');
+        setMessage({ text: 'Resending verification code...', type: 'info' });
+        
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setMessage({ 
+                    text: 'New verification code sent! Please check your email.', 
+                    type: 'success' 
+                });
+                setTimeout(() => {
+                    setMessage({ text: '', type: '' });
+                }, 3000);
+            } else {
+                setMessage({ 
+                    text: result.message || 'Failed to resend code. Please try again.', 
+                    type: 'error' 
+                });
+            }
+        } catch (error) {
+            setMessage({ 
+                text: 'Network error. Please check your connection and try again.', 
+                type: 'error' 
+            });
         }
     };
 
@@ -105,43 +195,90 @@ const PasswordRecoveryScreen = () => {
             <View style={styles.card}>
                 <Text style={styles.cardTitle}>Reset Password</Text>
                 <Text style={styles.description}>
-                    Enter your email address to reset your password.
+                    {isCodeSent 
+                        ? 'Enter the 6-digit verification code sent to your email.'
+                        : 'Enter your email address to receive a verification code.'
+                    }
                 </Text>
 
-                <View style={styles.fieldContainer}>
-                    <Text style={styles.label}>Email address</Text>
-                    <View style={styles.inputContainer}>
-                        <Ionicons 
-                            name="mail-outline" 
-                            size={16} 
-                            color="#9CA3AF" 
-                            style={styles.inputIcon} 
-                        />
-                        <TextInput
-                            style={styles.input}
-                            value={email}
-                            onChangeText={(text) => {
-                                setEmail(text);
-                               
-                                if (message.type === 'error') {
-                                    setMessage({ text: '', type: '' });
-                                }
-                            }}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            placeholder="your.email@school.edu"
-                            placeholderTextColor="#9CA3AF"
-                        />
+                {!isCodeSent ? (
+                    // Email input state
+                    <View style={styles.fieldContainer}>
+                        <Text style={styles.label}>Email address</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons 
+                                name="mail-outline" 
+                                size={16} 
+                                color="#9CA3AF" 
+                                style={styles.inputIcon} 
+                            />
+                            <TextInput
+                                style={styles.input}
+                                value={email}
+                                onChangeText={(text) => {
+                                    setEmail(text);
+                                   
+                                    if (message.type === 'error') {
+                                        setMessage({ text: '', type: '' });
+                                    }
+                                }}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                placeholder="your.email@school.edu"
+                                placeholderTextColor="#9CA3AF"
+                                editable={!isLoading}
+                            />
+                        </View>
                     </View>
-                </View>
+                ) : (
+                    // Code verification state
+                    <View style={styles.fieldContainer}>
+                        <Text style={styles.label}>Verification Code</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons 
+                                name="key-outline" 
+                                size={16} 
+                                color="#9CA3AF" 
+                                style={styles.inputIcon} 
+                            />
+                            <TextInput
+                                style={styles.input}
+                                value={verificationCode}
+                                onChangeText={(text) => {
+                                    const numericText = text.replace(/[^0-9]/g, '');
+                                    setVerificationCode(numericText.slice(0, 6));
+                                    
+                                    if (message.type === 'error') {
+                                        setMessage({ text: '', type: '' });
+                                    }
+                                }}
+                                keyboardType="numeric"
+                                placeholder="Enter 6-digit code"
+                                placeholderTextColor="#9CA3AF"
+                                maxLength={6}
+                                editable={!isLoading}
+                            />
+                        </View>
+                        <TouchableOpacity 
+                            style={styles.resendButton} 
+                            onPress={handleResendCode}
+                            disabled={isLoading}
+                        >
+                            <Text style={styles.resendButtonText}>Resend Code</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 <TouchableOpacity 
                     style={[styles.resetButton, isLoading && styles.resetButtonDisabled]} 
-                    onPress={handleResetPassword}
+                    onPress={isCodeSent ? handleVerifyCode : handleSendCode}
                     disabled={isLoading}
                 >
                     <Text style={styles.resetButtonText}>
-                        {isLoading ? 'Sending...' : 'Reset Password'}
+                        {isLoading 
+                            ? (isCodeSent ? 'Verifying...' : 'Sending...') 
+                            : (isCodeSent ? 'Verify Code' : 'Send Code')
+                        }
                     </Text>
                 </TouchableOpacity>
 
@@ -237,7 +374,7 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         backgroundColor: isDarkMode ? '#4B5563' : '#F3F4F6',
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: isDarkMode ? '#6B7280' : '#D1D5DB',
+        borderColor: isDarkMode ? '#6B5563' : '#D1D5DB',
         paddingHorizontal: 12,
         paddingVertical: 12,
     },
@@ -248,6 +385,16 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         flex: 1,
         fontSize: 16,
         color: isDarkMode ? '#FFFFFF' : '#111827',
+    },
+    resendButton: {
+        alignSelf: 'flex-end',
+        marginTop: 8,
+        padding: 8,
+    },
+    resendButtonText: {
+        color: '#3B82F6',
+        fontSize: 14,
+        fontWeight: '500',
     },
     resetButton: {
         backgroundColor: '#3B82F6',
