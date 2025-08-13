@@ -14,16 +14,19 @@ import {
     View
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import { TwoFactorBE } from './TwoFactorBE';
 
 const CODE_LENGTH = 6;
 const RESEND_TIME = 60;
+let twoFA: TwoFactorBE;
 
 const TwoFAPage = () => {
     const router = useRouter();
     const [code, setCode] = useState(Array(CODE_LENGTH).fill(''));
     const [timer, setTimer] = useState(RESEND_TIME);
     const [error, setError] = useState(false);
-    const {isDarkMode, toggleDarkMode} = useUser();
+    
+    const {isDarkMode, user} = useUser(); //figure out how we can access the username realname if it matches but not allow the user full access to the program;
 
     // Consistent color usage from Colors.ts
     const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
@@ -31,7 +34,7 @@ const TwoFAPage = () => {
     const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
     const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
     const buttonColor = Colors.button;
-
+    
     const inputs = useRef<TextInput[]>([]);
 
     const [fontsLoaded] = useFonts({
@@ -40,6 +43,11 @@ const TwoFAPage = () => {
     });
 
     useEffect(() => {
+        //load the 2FA backend by generating a key
+        twoFA = new TwoFactorBE();
+        if(user != null)
+            twoFA.sendEmailWithCode(user?.email, user?.full_name) //can't be null rbecause information should pass through in login screen
+
         const interval = setInterval(() => {
         setTimer((prev) => (prev > 0 ? prev - 1 : 0));
         }, 1000);
@@ -80,12 +88,19 @@ const TwoFAPage = () => {
     const handleSubmit = () => {
         const joined = code.join('');
         if (joined === '111111') {
-        alert('Success!');
+            alert('Success!');
         } else {
-        setError(true);
-        setCode(Array(CODE_LENGTH).fill(''));
-        inputs.current[0]?.focus();
+            setError(true);
+            setCode(Array(CODE_LENGTH).fill(''));
+            inputs.current[0]?.focus();
         }
+        // if(twoFA.compareOTP(Number(joined)))
+        //     alert('Success!');
+        // else{
+        //     setError(true);
+        //     setCode(Array(CODE_LENGTH).fill(''));
+        //     inputs.current[0]?.focus();
+        // }
     };
 
     //for backend ;)
@@ -93,6 +108,9 @@ const TwoFAPage = () => {
         setTimer(RESEND_TIME);
         setCode(Array(CODE_LENGTH).fill(''));
         setError(false);
+        twoFA.scrambleCode();
+        if(user != null)
+            twoFA.sendEmailWithCode(user?.email, user?.full_name);
         alert('Verification code resent!');
         inputs.current[0]?.focus();
     };
