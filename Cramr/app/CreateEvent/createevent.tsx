@@ -134,9 +134,9 @@ const CreateEventScreen = () => {
       } else if (page === 'map') {
         router.push('/Map/map');
       } else if (page === 'addEvent') {
-        // Already on addEvent page, no navigation needed
+
       } else if (page === 'bookmarks') {
-        // router.push('/bookmarks');
+        router.push('/Saved/Saved');
       } else       if (page === 'profile') {
         router.push('/Profile/Internal');
       }
