@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import EventCollapsible from '../../components/EventCollapsible';
@@ -71,12 +72,13 @@ export default function External() {
   const userId = 'a430f1d2-aa88-4977-9796-700f5a5b2a3c'
 
   // Colors
-  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
-  const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.backgroundColor)
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
   const buttonColor = Colors.button
-  const cancelButtonColor = (true ? Colors.light.cancelButton : Colors.dark.cancelButton)
+  const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
 
   // User
   const [user, setUser] = useState<User | null>(null);
@@ -428,13 +430,15 @@ export default function External() {
   }
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
       <ScrollView>
         <View style={[styles.container, {backgroundColor: backgroundColor}]}>
           <View style={styles.topButtonsContainer}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Image source={require('../../assets/images/Arrow_black.png')} style={styles.iconContainer} />
-            </TouchableOpacity>
+            <ArrowLeft 
+              size={24} 
+              color={textColor}
+              onPress={() => router.back()}
+            />
 
             <TouchableOpacity onPress={handlePressMore}>
               <Image source={require('../../assets/images/more.png')} style={styles.iconContainer} />
@@ -507,6 +511,12 @@ export default function External() {
             )}
           </View>
 
+          {bio !== null && (<View style={[styles.promptAnswerContainer, {marginTop: 10, backgroundColor: textInputColor}]}>
+              <Text style={[styles.normalText, {color: textColor}]}>
+                {bio}
+              </Text>
+          </View>)}
+
           {prompt1 !== null && (
             <View style={[styles.promptContainer, {marginTop: 10}]}>
               <Text style={[styles.subheaderBoldText, {color: textColor}]}>{prompt1}</Text>
@@ -567,8 +577,9 @@ export default function External() {
                 numAttendees={event.accepted_count}
                 capacity={event.capacity}
                 acceptedIds={event.accepted_ids}
-                light={true}
+                isDarkMode={isDarkMode}
                 isOwner={false}
+                style={{marginBottom: 10}}
               />
             ))
           )}
