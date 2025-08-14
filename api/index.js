@@ -94,11 +94,40 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Get all events
+// Helper function to get blocked users for a given user
+async function getBlockedUsers(userId) {
+  try {
+    const result = await client.query(`
+      SELECT blocked_id FROM blocks WHERE blocker_id = $1
+    `, [userId]);
+    return result.rows.map(row => row.blocked_id);
+  } catch (err) {
+    console.error('Error getting blocked users:', err);
+    return [];
+  }
+}
+
+// Helper function to get users who have blocked a given user
+async function getUsersWhoBlocked(userId) {
+  try {
+    const result = await client.query(`
+      SELECT blocker_id FROM blocks WHERE blocked_id = $1
+    `, [userId]);
+    return result.rows.map(row => row.blocker_id);
+  } catch (err) {
+    console.error('Error getting users who blocked:', err);
+    return [];
+  }
+}
+
+// Get all events (filtered by blocking)
 app.get('/events', async (req, res) => {
   try {
+    const { userId } = req.query; // Optional: if provided, filter out blocked users
+    
     console.log('Fetching events with creator info...');
-    const result = await client.query(`
+    
+    let query = `
       SELECT 
         e.*,
         u.full_name as creator_name,
@@ -106,8 +135,25 @@ app.get('/events', async (req, res) => {
         u.username as creator_username
       FROM events e
       LEFT JOIN users u ON e.creator_id::uuid = u.id::uuid
-      ORDER BY e.created_at DESC
-    `);
+    `;
+    
+    let params = [];
+    
+    // If userId is provided, filter out events from users they've blocked and events from users who have blocked them
+    if (userId) {
+      const blockedUsers = await getBlockedUsers(userId);
+      const usersWhoBlocked = await getUsersWhoBlocked(userId);
+      const allBlockedIds = [...blockedUsers, ...usersWhoBlocked];
+      
+      if (allBlockedIds.length > 0) {
+        query += ` WHERE e.creator_id NOT IN (${allBlockedIds.map((_, index) => `$${index + 1}`).join(',')})`;
+        params = allBlockedIds;
+      }
+    }
+    
+    query += ` ORDER BY e.created_at DESC`;
+    
+    const result = await client.query(query, params);
     
     console.log('Query result:', result.rows);
    
@@ -393,6 +439,15 @@ app.post('/users/:id/follow', async (req, res) => {
   }
   
   try {
+    // Check if user is blocked or has blocked the target user
+    const blockedUsers = await getBlockedUsers(id);
+    const usersWhoBlocked = await getUsersWhoBlocked(id);
+    const allBlockedIds = [...blockedUsers, ...usersWhoBlocked];
+    
+    if (allBlockedIds.includes(userId)) {
+      return res.status(403).json({ error: 'Cannot follow blocked users' });
+    }
+    
     // Check if already following
     const existingFollow = await client.query(`
       SELECT * FROM follows WHERE follower_id = $1 AND following_id = $2
@@ -522,10 +577,17 @@ app.post('/users/:id/block', async (req, res) => {
       RETURNING *
     `, [id, blockedId]);
     
+    // Remove follow relationships in both directions
+    await client.query(`
+      DELETE FROM follows 
+      WHERE (follower_id = $1 AND following_id = $2) 
+         OR (follower_id = $2 AND following_id = $1)
+    `, [id, blockedId]);
+    
     res.status(201).json({
       success: true,
-      message: 'Blocked successfully!',
-      follow: result.rows[0]
+      message: 'Blocked successfully and removed follow relationships!',
+      block: result.rows[0]
     });
   } catch (err) {
     console.error('Blocking user error:', err);
@@ -922,16 +984,20 @@ app.post('/events/:eventId/rsvpd', async (req, res) => {
   
   try {
     // Check if event exists
-    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [eventId]);
+    const eventResult = await client.query('SELECT id, creator_id FROM events WHERE id = $1', [eventId]);
     if (eventResult.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
+    
+    const event = eventResult.rows[0];
     
     // Check if user exists
     const userResult = await client.query('SELECT id FROM users WHERE id = $1', [user_id]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
+    
+
     
     // Insert or update RSVP
     const result = await client.query(`
