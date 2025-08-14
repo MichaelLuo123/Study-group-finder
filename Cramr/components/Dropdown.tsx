@@ -23,6 +23,7 @@ interface DropdownProps {
     onChangeOption3: (value: string) => void;
     option3Answer: string | null;
     onChangeOption3Answer: (value: string) => void;
+    isDarkMode: boolean;
 }
 
 const Dropdown: React.FC<DropdownProps> = ({ 
@@ -40,11 +41,12 @@ const Dropdown: React.FC<DropdownProps> = ({
     option3,
     onChangeOption3,
     option3Answer,
-    onChangeOption3Answer
+    onChangeOption3Answer,
+    isDarkMode,
 }) => {
-    const dropdownColor = (true ? Colors.light.dropdown : Colors.dark.dropdown)
-    const textColor = (true ? Colors.light.text : Colors.dark.text)
-    const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+    const dropdownColor = (!isDarkMode ? Colors.light.dropdown : Colors.dark.dropdown)
+    const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+    const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
 
@@ -142,7 +144,7 @@ const Dropdown: React.FC<DropdownProps> = ({
                         </TouchableOpacity>
                     </View>
                     <TextInput
-                        style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1 }]}
+                        style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1, color: textColor}]}
                         placeholder="Enter answer to prompt."
                         value={option1Answer || ''}
                         onChangeText={onChangeOption1Answer}
@@ -167,7 +169,7 @@ const Dropdown: React.FC<DropdownProps> = ({
                         </TouchableOpacity>
                     </View>
                     <TextInput
-                        style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1 }]}
+                        style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1,  color: textColor }]}
                         placeholder="Enter answer to prompt."
                         value={option2Answer || ''}
                         onChangeText={onChangeOption2Answer}
@@ -192,7 +194,7 @@ const Dropdown: React.FC<DropdownProps> = ({
                         </TouchableOpacity>
                     </View>
                     <TextInput
-                        style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1 }]}
+                        style={[styles.bodyText, styles.largeTextInputContainer, { backgroundColor: textInputColor, marginTop: 1,  color: textColor}]}
                         placeholder="Enter answer to prompt."
                         value={option3Answer || ''}
                         onChangeText={onChangeOption3Answer}

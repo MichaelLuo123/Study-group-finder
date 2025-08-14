@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Slider from '../../components/Slider';
 import { Colors } from '../../constants/Colors';
+import { useUser } from '../../contexts/UserContext';
 
 interface Event {
     id: string;
@@ -30,9 +31,10 @@ export default function Saved() {
     const router = useRouter();
 
     // Colors
-    const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
-    const textColor = (true ? Colors.light.text : Colors.dark.text)
-    const textInputColor = (true ? Colors.light.textInput : Colors.dark.backgroundColor)
+    const {isDarkMode, toggleDarkMode} = useUser();
+    const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+    const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+    const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
     const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
     const [isSwitch, setIsSwitch] = useState<boolean>(false);
@@ -71,7 +73,7 @@ export default function Saved() {
     }, [userId]);
 
     return (
-        <SafeAreaView>
+        <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
             <ScrollView>
                 <View style={{padding: 20, backgroundColor: backgroundColor}}>
                     <TouchableOpacity onPress={() => router.back()}>
@@ -84,6 +86,7 @@ export default function Saved() {
                             rightLabel='Saved'
                             width={180}
                             onChangeSlider={setIsSwitch}
+                            lightMode={!isDarkMode}
                         />
                     </View>
 
@@ -107,7 +110,7 @@ export default function Saved() {
                                 numAttendees={event.rsvped_count}
                                 capacity={event.capacity}
                                 acceptedIds={event.rsvped_ids}
-                                light={true}
+                                isDarkMode={isDarkMode}
                                 isOwner={false}
                             />
                         )))
@@ -133,8 +136,8 @@ export default function Saved() {
                                 numAttendees={event.rsvped_count}
                                 capacity={event.capacity}
                                 acceptedIds={event.rsvped_ids}
-                                light={true}
                                 isOwner={false}
+                                isDarkMode={isDarkMode}
                                 style={{marginBottom: 10}}
                             />
                         )))

@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { useFonts } from 'expo-font';
+import { useUser } from '../../contexts/UserContext';
 
 import {
   Modal,
@@ -10,64 +11,61 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Image,
+  View
 } from 'react-native';
+import { Colors } from '../../constants/Colors';
 
 const SettingsFrontPage = () => {
+  const router = useRouter();
+
   const [modalVisible, setModalVisible] = useState(false);
 
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
-    'Poppins-Bold': require('../../assets/fonts/Poppins/Poppins-Bold.ttf'),
-    'Poppins-SemiBold': require('../../assets/fonts/Poppins/Poppins-SemiBold.ttf'),
-  });
+  // Colors
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background);
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
 
-  if (!fontsLoaded) {
-    return null; 
-  }
-
-  const router = useRouter();
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
 
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Image
-            source={require('../../assets/images/Arrow_black.png')}
-            style={styles.backArrowImage}
-            resizeMode="contain"
+          <ArrowLeft 
+            size={24} 
+            color={textColor}
+            onPress={() => router.back()}
           />
         </TouchableOpacity>
 
-        <Text style={styles.heading}>Settings</Text>
+        <Text style={[styles.heading, { color: textColor }]}>Settings</Text>
 
         <TouchableOpacity
-        style={styles.item}
+        style={[styles.item, { backgroundColor: textInputColor }]}
         onPress={() => router.push('../Settings/Profile')}
         >
-        <Text style={styles.itemText}>Profile</Text>
+        <Text style={[styles.itemText, { color: textColor }]}>Profile</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-        style={styles.item}
+        style={[styles.item, { backgroundColor: textInputColor }]}
         onPress={() => router.push('../Settings/AccountPage')}
         >
-        <Text style={styles.itemText}>Account</Text>
+        <Text style={[styles.itemText, { color: textColor }]}>Account</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-        style={styles.item}
+        style={[styles.item, { backgroundColor: textInputColor }]}
         onPress={() => router.push('../Settings/PreferencesPage')}
         >
-        <Text style={styles.itemText}>Preferences</Text>
+        <Text style={[styles.itemText, { color: textColor }]}>Preferences</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-        style={styles.item}
+        style={[styles.item, { backgroundColor: textInputColor }]}
         onPress={() => router.push('../Settings/AboutPage')}
         >
-        <Text style={styles.itemText}>About</Text>
+        <Text style={[styles.itemText, { color: textColor }]}>About</Text>
         </TouchableOpacity>
 
 
@@ -75,7 +73,7 @@ const SettingsFrontPage = () => {
           style={styles.signOutButton}
           onPress={() => setModalVisible(true)}
         >
-          <Text style={styles.signOutText}>Sign out</Text>
+          <Text style={[styles.signOutText, { color: textColor }]}>Sign out</Text>
         </TouchableOpacity>
 
         {/* Sign-out Confirmation Modal */}
@@ -86,8 +84,8 @@ const SettingsFrontPage = () => {
           onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalBackground}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Sign out?</Text>
+            <View style={[styles.modalCard, { backgroundColor: textInputColor }]}>
+              <Text style={[styles.modalTitle, { color: textColor }]}>Sign out?</Text>
               <View style={styles.modalButtons}>
                 <Pressable
                   style={[styles.modalButton, styles.cancelButton]}
@@ -116,29 +114,28 @@ const SettingsFrontPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    // backgroundColor moved to inline style
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
   },
   heading: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
     alignSelf: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     fontFamily: 'Poppins-Bold',
   },
   backArrowImage: {
-    width: 30,
-    height: 30,
+    width: 25,
+    height: 25,
   },
   backButton: {
-    width: 30,
-    height: 30,
+    width: 25,
+    height: 25,
     marginBottom: 12,
   },
   item: {
-    backgroundColor: '#f9fafb',
+    // backgroundColor moved to inline style
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 10,
@@ -146,7 +143,7 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: 16,
-    color: '#111827',
+    // color moved to inline style
     fontFamily: 'Poppins-Regular',
   },
   signOutButton: {
@@ -156,7 +153,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   signOutText: {
-    color: '#000000',
+    // color moved to inline style
     fontSize: 16,
     fontWeight: '600',
     // textAlign: 'center',
@@ -169,10 +166,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCard: {
-    backgroundColor: 'white',
-    padding: 24,
+    // backgroundColor moved to inline style
+    padding: 20,
     borderRadius: 16,
-    width: '60%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -180,27 +176,28 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 15,
     textAlign: 'center',
     fontFamily: 'Poppins-Regular',
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 16,
+    gap: 15,
   },
   modalButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 10,
   },
   cancelButton: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#E5E5E5',
+    paddingHorizontal: 15
   },
   confirmButton: {
     backgroundColor: '#5CAEF1',
+    paddingHorizontal: 25
   },
   cancelText: {
     fontSize: 16,
@@ -214,4 +211,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SettingsFrontPage;
+export default SettingsFrontPage
