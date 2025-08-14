@@ -43,7 +43,7 @@
     "node-mailjet": "^6.0.9",
     "prompt-sync": "^4.2.0",
     "react": "^19.0.0",
-    "react-dom": "19.0.0",
+    "react-dom": "^19.0.0",
     "react-native": "0.79.5",
     "react-native-config": "^1.5.5",
     "react-native-dotenv": "^3.4.11",
