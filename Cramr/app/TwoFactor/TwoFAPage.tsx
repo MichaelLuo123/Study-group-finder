@@ -1,9 +1,9 @@
 import { useUser } from '@/contexts/UserContext';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Image,
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
@@ -13,18 +13,26 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { Colors } from '../../constants/Colors';
 import { TwoFactorBE } from './TwoFactorBE';
 
 const CODE_LENGTH = 6;
 const RESEND_TIME = 60;
-var twoFA: TwoFactorBE;
+let twoFA: TwoFactorBE;
 
 const TwoFAPage = () => {
     const router = useRouter();
     const [code, setCode] = useState(Array(CODE_LENGTH).fill(''));
     const [timer, setTimer] = useState(RESEND_TIME);
     const [error, setError] = useState(false);
+    
     const {isDarkMode, user} = useUser(); //figure out how we can access the username realname if it matches but not allow the user full access to the program;
+
+    // Consistent color usage from Colors.ts
+    const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
+    const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
+    const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
+    const buttonColor = Colors.button;
     
     const inputs = useRef<TextInput[]>([]);
 
@@ -75,7 +83,7 @@ const TwoFAPage = () => {
         }
     };
 
-    //passwrod 111111 change for backend
+    //password 111111 change for backend
     const handleSubmit = () => {
         const joined = code.join('');
         if (joined === '111111') {
@@ -108,23 +116,23 @@ const TwoFAPage = () => {
 
     if (!fontsLoaded) return null;
 
-    const styles = getStyles(isDarkMode, error);
-
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor }]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.inner}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Image
-                source={isDarkMode ? require('../../assets/images/arrow_white.png') : require('../../assets/images/Arrow_black.png')}
-                style={styles.backArrow}
-                resizeMode="contain"
-            />
+            <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => router.back()}
+            >
+                <ArrowLeft 
+                    size={24} 
+                    color={textColor}
+                />
             </TouchableOpacity>
 
-            <Text style={styles.title}>Two-Factor Authentication</Text>
-            <Text style={styles.subtitle}>Enter 6-digit code sent to email{"\n"}
-                
-                Name@ucsd.edu</Text>
+            <Text style={[styles.title, { color: textColor }]}>Two-Factor Authentication</Text>
+            <Text style={[styles.subtitle, { color: placeholderColor }]}>
+                Enter 6-digit code sent to email{"\n"}Name@ucsd.edu
+            </Text>
 
             <View style={styles.inputRow}>
             {code.map((digit, idx) => (
@@ -133,7 +141,13 @@ const TwoFAPage = () => {
                 ref={(ref) => {
                     if (ref) inputs.current[idx] = ref;
                 }}
-                style={styles.inputBox}
+                style={[
+                    styles.inputBox, 
+                    {
+                        color: textColor, 
+                        borderColor: textColor
+                    }
+                ]}
                 keyboardType="numeric"
                 maxLength={1}
                 value={digit}
@@ -144,18 +158,22 @@ const TwoFAPage = () => {
             ))}
             </View>
 
-            {error && <Text style={styles.errorText}>Incorrect code! Please try again.</Text>}
+            {error && <Text style={[styles.errorText, { color: '#E36062' }]}>Incorrect code! Please try again.</Text>}
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitText}>Enter</Text>
+            <TouchableOpacity style={[styles.submitButton, { backgroundColor: buttonColor }]} onPress={handleSubmit}>
+                <Text style={[styles.submitText, { color: textColor }]}>Enter</Text>
             </TouchableOpacity>
 
-            <Text style={styles.resendText}>
-            Didn’t receive code?{" "}
+            <Text style={[styles.resendText, { color: textColor }]}>
+            Didn't receive code?{" "}
             {timer > 0 ? (
-                <Text style={styles.countdown}>{`0:${timer.toString().padStart(2, '0')}`}</Text>
+                <Text style={[styles.countdown, { color: placeholderColor }]}>
+                    {`0:${timer.toString().padStart(2, '0')}`}
+                </Text>
             ) : (
-                <Text style={styles.resendLink} onPress={handleResend}>Resend Code</Text>
+                <Text style={[styles.resendLink, { color: buttonColor }]} onPress={handleResend}>
+                    Resend Code
+                </Text>
             )}
             </Text>
         </KeyboardAvoidingView>
@@ -163,96 +181,80 @@ const TwoFAPage = () => {
     );
 };
 
-const getStyles = (isDark: boolean, error: boolean) =>
-    StyleSheet.create({
-        container: {
+const styles = StyleSheet.create({
+    container: {
         flex: 1,
-        backgroundColor: isDark ? '#393939' : '#F5F5F5',
-        padding: 24,
-        },
-        inner: {
+    },
+    inner: {
         flex: 1,
         justifyContent: 'center',
-        },
-        backButton: {
+        padding: 20,
+    },
+    backButton: {
         position: 'absolute',
         top: 20,
-        left: 20,
-        },
-        backArrow: {
-        width: 30,
-        height: 30,
-        },
-        title: {
+        left: 0,
+        padding: 10,
+    },
+    title: {
         fontSize: 24,
         fontFamily: 'Poppins-Bold',
-        color: isDark ? '#fff' : '#000',
         textAlign: 'center',
         marginBottom: 12,
-        },
-        subtitle: {
+    },
+    subtitle: {
         fontSize: 14,
         fontFamily: 'Poppins-Regular',
-        color: isDark ? '#E5E5E5' : '#6E6E6E',
         textAlign: 'center',
         marginBottom: 24,
-        },
-        inputRow: {
+    },
+    inputRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 12,
-        },
-        inputBox: {
+    },
+    inputBox: {
         width: 49,
         height: 78,
         fontSize: 18,
         fontFamily: 'Poppins-Regular',
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: isDark ? '#E5E5E5' : '#6E6E6E',
-        backgroundColor: isDark ? '#6E6E6E' : '#F5F5F5',
-        color: isDark ? '#FFFFFF' : '#000000',
         textAlign: 'center',
         textAlignVertical: 'center',
         includeFontPadding: false,
         padding: 0,
-        },
-        submitButton: {
-        backgroundColor: '#5CAEF1',
+    },
+    submitButton: {
         padding: 12,
         borderRadius: 10,
         alignItems: 'center',
         marginTop: 12,
-        },
-        submitText: {
+    },
+    submitText: {
         fontFamily: 'Poppins-Regular',
-        color: isDark ? '#FFFFFF' : '#000000',
         fontSize: 16,
-        },
-        resendText: {
+    },
+    resendText: {
         fontFamily: 'Poppins-Regular',
         fontSize: 16,
         textAlign: 'center',
         marginTop: 20,
-        color: isDark ? '#FFFFFF' : '#000000',
-        },
-        resendLink: {
-        color: '#5CAEF1',
+    },
+    resendLink: {
         fontSize: 16,
         fontFamily: 'Poppins-Bold',
-        },
-        countdown: {
-        color: isDark ? '#E5E5E5' :'#6E6E6E',
+    },
+    countdown: {
         fontSize: 16,
         fontFamily: 'Poppins-Bold',
-        },
-        errorText: {
-        color: '#E36062',
+    },
+    errorText: {
         textAlign: 'center',
         fontSize: 16,
         marginTop: 6,
         fontFamily: 'Poppins-Regular',
-        },
-    });
+    },
+});
 
 export default TwoFAPage;

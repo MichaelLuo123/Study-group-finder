@@ -49,36 +49,38 @@
 //   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 //   const translateY = useSharedValue(-100);
 
-//   useLayoutEffect(() => {
-//     navigation.setOptions({
-//       headerLeft: () => (
-//         <Image
-//           source={require('../listView/assets/images/finalCramrLogo.png')}
-//           style={styles.logo}
-//           resizeMode="contain"
-//         />
-//       ),
-//       headerTitle: '', 
-//     });
-//   }, [navigation]);
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity onPress={() => router.push('/(tabs)')}>
+          <Image
+          source={require('../listView/assets/images/finalCramrLogo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+          />
+        </TouchableOpacity>
+      ),
+      headerTitle: '', 
+    });
+  }, [navigation]);
 
-//   const handleNavigation = (page: string) => {
-//     if (currentPage !== page) {
-//       setCurrentPage(page);
-//       if (page === 'listView') {
-//         router.push('/listView');
-//       }
-//       if (page === 'addEvent') {
-//         router.push('/CreateEvent/createevent');
-//       } 
-//       if (page === 'bookmarks') {
-//         router.push('/Saved/Saved');
-//       } 
-//       if (page === 'profile') {
-//         router.push('/Profile/Internal');
-//       }
-//     }
-//   };
+  const handleNavigation = (page: string) => {
+    if (currentPage !== page) {
+      setCurrentPage(page);
+      if (page === 'listView') {
+        router.push('/listView');
+      }
+      if (page === 'addEvent') {
+        router.push('/CreateEvent/createevent');
+      } 
+      if (page === 'bookmarks') {
+        router.push('/Saved/Saved');
+      } 
+      if (page === 'profile') {
+        router.push('/Profile/Internal');
+      }
+    }
+  };
 
 //   const gestureHandler = useAnimatedGestureHandler({
 //     onStart: (_, context: any) => {
@@ -320,143 +322,143 @@
 //   );
 // }
 
-// const styles = StyleSheet.create({
-//   starContainer: {
-//     width: 44,
-//     height: 44,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   starImage: {
-//     width: 35,
-//     height: 35,
-//     position: 'absolute',
-//   },
-//   textContainer: {
-//     position: 'absolute',
-//     width: '100%',
-//     height: '100%',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     zIndex: 1,
-//   },
-//   starText: {
-//     color: 'black',
-//     fontSize: 7,
-//     fontWeight: 'bold',
-//     textAlign: 'center',
-//   },
-//   map: {
-//     width: '100%',
-//     height: '100%'
-//   },
-//   container: {
-//     flex: 1,
-//   },
-//   logo: {
-//     height: 100,
-//     width: 100,
-//     marginLeft: 12,
-//   },
-//   mapContainer: {
-//     position: 'absolute',
-//     top: 0,
-//     left: 0,
-//     right: 0,
-//     bottom: 0,
-//     backgroundColor: '#e5e5e5',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   mapPlaceholder: {
-//     textAlign: 'center',
-//     color: '#888',
-//     fontSize: 18,
-//   },
-//   bottomSheet: {
-//     position: 'absolute',
-//     top: HEADER_HEIGHT + (screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT) / 2, 
-//     left: 0,
-//     right: 0,
-//     height: BOTTOM_SHEET_MAX_HEIGHT, 
-//     backgroundColor: 'white',
-//     borderTopLeftRadius: 20,
-//     borderTopRightRadius: 20,
-//     shadowColor: '#000',
-//     shadowOffset: {
-//       width: 0,
-//       height: -2,
-//     },
-//     shadowOpacity: 0.25,
-//     shadowRadius: 3.84,
-//     elevation: 5,
-//     zIndex: 1000, 
-//   },
-//   dragHandle: {
-//     width: 40,
-//     height: 4,
-//     backgroundColor: '#999',
-//     borderRadius: 2,
-//     alignSelf: 'center',
-//     marginTop: 8,
-//     marginBottom: 8,
-//   },
-//   searchRow: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     paddingHorizontal: 16,
-//     paddingBottom: 16,
-//   },
-//   searchInputContainer: {
-//     flex: 1,
-//     backgroundColor: '#e5e5e5',
-//     borderRadius: 25,
-//     marginRight: 8,
-//     justifyContent: 'center',
-//   },
-//   searchInput: {
-//     backgroundColor: 'transparent',
-//     height: 44,
-//     fontSize: 16,
-//     paddingLeft: 0,
-//   },
-//   filterButton: {
-//     backgroundColor: '#e5e5e5',
-//     borderRadius: 25,
-//     width: 44,
-//     height: 44,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   eventListContainer: {
-//     flex: 1,
-//     paddingHorizontal: 16,
-//     paddingBottom: 20, 
-//   },
-//   bottomNav: {
-//     position: 'absolute',
-//     bottom: 0,
-//     left: 0,
-//     right: 0,
-//     flexDirection: 'row',
-//     justifyContent: 'space-around',
-//     alignItems: 'center',
-//     paddingVertical: 12,
-//     paddingHorizontal: 16,
-//     borderTopWidth: 1,
-//     paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
-//     zIndex: 1001, 
-//   },
-//   navButton: {
-//     alignItems: 'center',
-//     padding: 8,
-//   },
-//   activeDot: {
-//     width: 8,
-//     height: 8,
-//     borderRadius: 4,
-//     backgroundColor: '#5caef1',
-//     position: 'absolute',
-//     bottom: -5,
-//   },
-// });
+const styles = StyleSheet.create({
+  starContainer: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  starImage: {
+    width: 35,
+    height: 35,
+    position: 'absolute',
+  },
+  textContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  starText: {
+    color: 'black',
+    fontSize: 7,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  map: {
+    width: '100%',
+    height: '100%'
+  },
+  container: {
+    flex: 1,
+  },
+  logo: {
+    height: 120,
+    width: 120,
+    marginTop: -35
+  },
+  mapContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#e5e5e5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapPlaceholder: {
+    textAlign: 'center',
+    color: '#888',
+    fontSize: 18,
+  },
+  bottomSheet: {
+    position: 'absolute',
+    top: HEADER_HEIGHT + (screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT) / 2, 
+    left: 0,
+    right: 0,
+    height: BOTTOM_SHEET_MAX_HEIGHT, 
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000, 
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#999',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  searchInputContainer: {
+    flex: 1,
+    backgroundColor: '#e5e5e5',
+    borderRadius: 25,
+    marginRight: 8,
+    justifyContent: 'center',
+  },
+  searchInput: {
+    backgroundColor: 'transparent',
+    height: 44,
+    fontSize: 16,
+    paddingLeft: 0,
+  },
+  filterButton: {
+    backgroundColor: '#e5e5e5',
+    borderRadius: 25,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventListContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 20, 
+  },
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
+    zIndex: 1001, 
+  },
+  navButton: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#5caef1',
+    position: 'absolute',
+    bottom: -5,
+  },
+});

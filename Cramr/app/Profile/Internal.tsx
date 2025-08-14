@@ -1,11 +1,11 @@
 import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Bell, Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import EventCollapsible from '../../components/EventCollapsible';
 import { Colors } from '../../constants/Colors';
-
 
 // Define user interface
 interface User {
@@ -44,12 +44,8 @@ interface Event {
   status: string;
   capacity: number;
   tags: string[];
-  invited_ids: string[];
-  accepted_ids: string[];
-  declined_ids: string[];
-  invited_count: number;
-  accepted_count: number;
-  declined_count: number;
+  rsvped_count: number;
+  rsvped_ids: string[];
   class: string;
   creator_name: string;
   creator_profile_picture: string;
@@ -61,15 +57,16 @@ export default function Internal() {
   const { user: loggedInUser } = useUser();
 
   // Colors
-  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
-  const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.background)
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
 
   // User
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // CHANGE THIS TO LOGGED IN USER !!!
 
   // Form state;
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -218,8 +215,8 @@ export default function Internal() {
   };
 
   return (
-    <SafeAreaView>
-      <ScrollView style={{ paddingBottom: 100 }}>
+    <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
+      <ScrollView>
         <View style={[styles.container, {backgroundColor: backgroundColor}]}>
           
           {/* Show message if no user is logged in */}
@@ -249,12 +246,11 @@ export default function Internal() {
             </TouchableOpacity>
             
             <View style={styles.notificationsAndSettingsButtonContainer}>
-              <TouchableOpacity onPress={() => router.push('/Profile/NotificationsPage')}>
-                <Image source={require('../../assets/images/bell.png')} style={styles.iconContainer} />
+              <TouchableOpacity onPress={() => router.push('')}>
+                <Bell size={24} color={textColor} style={styles.iconContainer} />
               </TouchableOpacity>
-
               <TouchableOpacity onPress={() => router.push('/Settings/SettingsFrontPage')}>
-                <Image source={require('../../assets/images/settings.png')} style={styles.iconContainer} />
+                <Settings size={24} color={textColor} style={styles.iconContainer} />
               </TouchableOpacity>
             </View>
           </View>
@@ -267,13 +263,15 @@ export default function Internal() {
             <View style={styles.rightOfBannerContainer}>
               <Text style={[styles.headerText, {color: textColor}]}>{name}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>@{username}</Text>
-              <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>
+              <TouchableOpacity onPress={() => router.push('/Follow/follow')}>
+                <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>
                 <Text style={[styles.subheaderBoldText, {color: textColor}]}>{followers}</Text> Followers
                 <View style={styles.dotContainer}>
                   <View style={[styles.dot, {backgroundColor: textColor}]} />
                 </View>
                 <Text style={[styles.subheaderBoldText, {color: textColor}]}>{following}</Text> Following
-              </Text>
+                </Text>
+              </TouchableOpacity>
               <View style={[styles.tagContainer, {marginTop: 3}]}>
                 <View style={[styles.tag, {backgroundColor: textInputColor}]}>
                   <Text style={[styles.normalText, {color: textColor}]}>
@@ -303,6 +301,12 @@ export default function Internal() {
               </View>
             </View>
           </View>
+
+          {bio !== null && (<View style={[styles.promptAnswerContainer, {marginTop: 10, backgroundColor: textInputColor}]}>
+            <Text style={[styles.normalText, {color: textColor}]}>
+              {bio}
+            </Text>
+          </View>)}
 
           {prompt1 !== null && (<View style={[styles.promptContainer, {marginTop: 10}]}>
             <Text style={[styles.subheaderBoldText, {color: textColor}]}>{prompt1}</Text>
@@ -350,12 +354,13 @@ export default function Internal() {
                 location={event.location}
                 date={event.date}
                 time={event.time}
-                numAttendees={event.accepted_count}
+                numAttendees={event.rsvped_count}
                 capacity={event.capacity}
-                acceptedIds={event.accepted_ids}
+                acceptedIds={event.rsvped_ids}
                 light={true}
                 isOwner={true}
-                style={{}}
+                style={{marginBottom: 10}}
+                isDarkMode={isDarkMode}
               />
             ))
           )}

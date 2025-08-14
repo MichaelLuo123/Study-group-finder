@@ -373,6 +373,7 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
     }
   }, [selectedEventId, filteredEvents, collapsedEvents]);
 
+
   // ----------- RENDER LOGIC -----------
   if (loading) {
     return (
