@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { BookOpen, Calendar, Clock, Edit3, MapPin, Users } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
@@ -17,9 +18,9 @@ interface EventCollapsibleProps {
     numAttendees: number;
     capacity: number;
     acceptedIds: string[];
-    light: boolean;
     isOwner: boolean;
-    style: object;
+    style?: object;
+    isDarkMode: boolean;
 }
 
 const EventCollapsible: React.FC<EventCollapsibleProps> = ({
@@ -36,16 +37,15 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     numAttendees,
     capacity,
     acceptedIds,
-    light,
     isOwner,
     style,
+    isDarkMode,
 }) => {
     const router = useRouter();
 
-    const backgroundColor = (light ? Colors.light.background : Colors.dark.background)
-    const textColor = (light ? Colors.light.text : Colors.dark.text)
-    const textInputColor = (light ? Colors.light.textInput : Colors.dark.backgroundColor)
-    const buttonColor = Colors.button
+    const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
+    const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
+    const buttonColor = Colors.button;
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
 
@@ -78,107 +78,119 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
         fetchAttendeeProfiles();
     }, [acceptedIds]);
 
-    const [ownerProfile, setOwnerProfile] = useState<string>(''); // Changed to string since you're storing profile_picture_url
+    const [ownerProfile, setOwnerProfile] = useState<string>('');
 
     useEffect(() => {
-    const fetchOwnerProfile = async () => {
-        if (!ownerId) return;
-        
-        try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${ownerId}`);
-        if (response.ok) {
-            const userData = await response.json();
-            const profileUrl = userData.profile_picture_url || '';
-            setOwnerProfile(profileUrl); // Fixed: use setOwnerProfile instead of setAttendeeProfiles
-        } else {
-            setOwnerProfile(''); // Handle non-ok responses
-        }
-        } catch (error) {
-        console.error('Error fetching owner profile:', error);
-        setOwnerProfile(''); // Set empty string on error
-        }
-    };
+        const fetchOwnerProfile = async () => {
+            if (!ownerId) return;
+            
+            try {
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${ownerId}`);
+                if (response.ok) {
+                    const userData = await response.json();
+                    const profileUrl = userData.profile_picture_url || '';
+                    setOwnerProfile(profileUrl);
+                } else {
+                    setOwnerProfile('');
+                }
+            } catch (error) {
+                console.error('Error fetching owner profile:', error);
+                setOwnerProfile('');
+            }
+        };
 
-    fetchOwnerProfile();
-    }, [ownerId]); // Added dependency array
+        fetchOwnerProfile();
+    }, [ownerId]);
     
-
     // Extract individual profile pictures for easier use
     const attendee1Profile = attendeeProfiles[0] || null;
     const attendee2Profile = attendeeProfiles[1] || null;
     const attendee3Profile = attendeeProfiles[2] || null;
     
     return (
-        <View style={[styles.eventContainer, {backgroundColor: textInputColor,}, style]}>
+        <View style={[styles.eventContainer, {backgroundColor: textInputColor}, style]}>
             <TouchableOpacity onPress={() => setIsOpen(!isOpen)} style={[styles.bannerContainer, {backgroundColor: bannerColor}]}>
-                <Text style={[styles.normalBoldText, {color: textColor ? Colors.light.text : Colors.dark.text}]}>{title}</Text>
+                {/* Fixed: Apply proper text color for title - use white/light text on colored banner */}
+                <Text style={[styles.normalBoldText, {color: textColor}]}>{title}</Text>
                 <Image source={{uri: ownerProfile}} style={styles.profilePictureContainer}/>
             </TouchableOpacity>
 
             {isOpen && (
                 <View style={[styles.contentContainer]}>
                     <View style={[styles.tagContainer, {marginBottom: 8}]}>
-                        <View style={[styles.tag, {borderColor: textColor}]}>
-                            {tag1 !== null && (<Text style={[styles.normalText, {color: textColor}]}>
-                                {tag1}
-                            </Text>)}
-                        </View>
-                        <View style={[styles.tag, {borderColor: textColor}]}>
-                            {tag2 !== null && (<Text style={[styles.normalText, {color: textColor}]}>
-                                {tag2}
-                            </Text>)}
-                        </View>
-                        <View style={[styles.tag, {borderColor: textColor}]}>
-                            {tag3 !== null && (<Text style={[styles.normalText, {color: textColor}]}>
-                                {tag3}
-                            </Text>)}
-                        </View>
+                        {tag1 !== null && (
+                            <View style={[styles.tag, {borderColor: textColor}]}>
+                                <Text style={[styles.normalText, {color: textColor}]}>
+                                    {tag1}
+                                </Text>
+                            </View>
+                        )}
+                        {tag2 !== null && (
+                            <View style={[styles.tag, {borderColor: textColor}]}>
+                                <Text style={[styles.normalText, {color: textColor}]}>
+                                    {tag2}
+                                </Text>
+                            </View>
+                        )}
+                        {tag3 !== null && (
+                            <View style={[styles.tag, {borderColor: textColor}]}>
+                                <Text style={[styles.normalText, {color: textColor}]}>
+                                    {tag3}
+                                </Text>
+                            </View>
+                        )}
                     </View>
                     <View style={styles.iconTextContainer}>
-                        <Image source={require('../assets/images/book.png')} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor ? Colors.light.text : Colors.dark.text}]}> {eventClass} </Text>
+                        <BookOpen size={20} color={textColor} style={styles.eventIcon}/>
+                        <Text style={[styles.normalText, {color: textColor}]}> {eventClass} </Text>
                     </View>
                     <View style={[styles.iconTextContainer, {marginTop: 3}]}>
-                        <Image source={require('../assets/images/location.png')} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor ? Colors.light.text : Colors.dark.text}]}> {location} </Text>
+                        <MapPin size={20} color={textColor} style={styles.eventIcon}/>
+                        <Text style={[styles.normalText, {color: textColor}]}> {location} </Text>
                     </View>
                     <View style={[styles.iconTextContainer, {marginTop: 3}]}>
-                        <Image source={require('../assets/images/calendar.png')} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor ? Colors.light.text : Colors.dark.text}]}> {date} </Text>
+                        <Calendar size={20} color={textColor} style={styles.eventIcon}/>
+                        <Text style={[styles.normalText, {color: textColor}]}> {date} </Text>
                     </View>
                     <View style={[styles.iconTextContainer, {marginTop: 3}]}>
-                        <Image source={require('../assets/images/clock.png')} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor ? Colors.light.text : Colors.dark.text}]}> {time} </Text>
+                        <Clock size={20} color={textColor} style={styles.eventIcon}/>
+                        <Text style={[styles.normalText, {color: textColor}]}> {time} </Text>
                     </View>
                     <View style={[styles.iconTextContainer, {marginTop: 3}]}>
-                        <Image source={require('../assets/images/person.png')} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor ? Colors.light.text : Colors.dark.text}]}> {numAttendees}/{capacity} </Text>
+                        <Users size={20} color={textColor} style={styles.eventIcon}/>
+                        <Text style={[styles.normalText, {color: textColor}]}> {numAttendees}/{capacity} </Text>
                         {attendee1Profile != null && (
-                            <Image source={{uri: attendee1Profile}} style={styles.smallProfilePictureContainer}/>)}
+                            <Image source={{uri: attendee1Profile}} style={styles.smallProfilePictureContainer}/>
+                        )}
                         {attendee2Profile != null && (
-                            <Image source={{uri: attendee2Profile}} style={styles.smallProfilePictureContainer}/>)}
+                            <Image source={{uri: attendee2Profile}} style={styles.smallProfilePictureContainer}/>
+                        )}
                         {attendee3Profile != null && (
-                            <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>)}
-                        <Text style={[styles.normalText, {color: textColor ? Colors.light.text : Colors.dark.text}]}>
-                            {numAttendees > 3 && (+numAttendees - 
-                            (attendee1Profile != null ? 1 : 0) -
-                            (attendee2Profile != null ? 1 : 0) -
-                            (attendee3Profile != null ? 1 : 0))}
+                            <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>
+                        )}
+                        <Text style={[styles.normalText, {color: textColor}]}>
+                            {numAttendees > 3 && `+${numAttendees - 
+                                (attendee1Profile != null ? 1 : 0) - 
+                                (attendee2Profile != null ? 1 : 0) - 
+                                (attendee3Profile != null ? 1 : 0)}`}
                         </Text>
                     </View>
-                    {isOwner && (<TouchableOpacity onPress={() => router.push('')}>
-                        <View style={[styles.buttonContainer, {backgroundColor: buttonColor}]}>
-                            <Text style={[styles.normalText, {color: textColor}]}> Edit </Text>
-                        </View>
-                    </TouchableOpacity>)}
+                    {isOwner && (
+                        <TouchableOpacity onPress={() => router.push('')}>
+                            <View style={[styles.buttonContainer, {backgroundColor: buttonColor}]}>
+                                <Edit3 size={16} color={textColor} style={{marginRight: 5}}/>
+                                <Text style={[styles.normalText, {color: textColor}]}> Edit </Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
         </View>
-  );
+    );
 };
 
 const styles = StyleSheet.create({
-     // Text
+    // Text
     headerText: {
         fontFamily: 'Poppins-SemiBold',
         fontSize: 18,
@@ -244,8 +256,7 @@ const styles = StyleSheet.create({
         padding: 5,
     },
     eventIcon: {
-        width: 20,
-        height: 20,
+        marginRight: 5,
     },
     iconTextContainer: {
         flexDirection: 'row',
@@ -270,6 +281,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
+        flexDirection: 'row',
         marginTop: 10,
         marginBottom: 5
     }

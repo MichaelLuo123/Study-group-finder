@@ -125,7 +125,7 @@ app.get('/events', async (req, res) => {
   try {
     const { userId } = req.query; // Optional: if provided, filter out blocked users
     
-    console.log('Fetching events with creator info...');
+    console.log('Fetching events with creator info and attendee counts...');
     
     let query = `
       SELECT 
@@ -155,9 +155,74 @@ app.get('/events', async (req, res) => {
     
     const result = await client.query(query, params);
     
-    console.log('Query result:', result.rows);
+    // Add attendee counts and IDs for each event
+    console.log(`Processing ${result.rows.length} events to add attendee data...`);
+    
+    const eventsWithAttendees = await Promise.all(
+      result.rows.map(async (event, index) => {
+        console.log(`Processing event ${index + 1}/${result.rows.length}: ${event.id} - ${event.title}`);
+        // Get attendee counts from event_attendees table
+        const invitedResult = await client.query(
+          "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'invited'",
+          [event.id]
+        );
+        const invited_count = parseInt(invitedResult.rows[0].count);
+
+        const acceptedResult = await client.query(
+          "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'accepted'",
+          [event.id]
+        );
+        const accepted_count = parseInt(acceptedResult.rows[0].count);
+
+        const declinedResult = await client.query(
+          "SELECT COUNT(*) as count FROM event_attendees WHERE event_id = $1 AND status = 'declined'",
+          [event.id]
+        );
+        const declined_count = parseInt(declinedResult.rows[0].count);
+
+        // Get user IDs for each status
+        const invitedUsersResult = await client.query(
+          "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'invited'",
+          [event.id]
+        );
+        const invited_ids = invitedUsersResult.rows.map(row => row.user_id);
+
+        const acceptedUsersResult = await client.query(
+          "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'accepted'",
+          [event.id]
+        );
+        const accepted_ids = acceptedUsersResult.rows.map(row => row.user_id);
+
+        const declinedUsersResult = await client.query(
+          "SELECT user_id FROM event_attendees WHERE event_id = $1 AND status = 'declined'",
+          [event.id]
+        );
+        const declined_ids = declinedUsersResult.rows.map(row => row.user_id);
+
+        const eventWithAttendees = {
+          ...event,
+          invited_ids,
+          invited_count,
+          accepted_ids,
+          accepted_count,
+          declined_ids,
+          declined_count,
+        };
+        
+        console.log(`Event ${event.id} attendee data:`, {
+          invited_count,
+          accepted_count,
+          declined_count,
+          accepted_ids
+        });
+        
+        return eventWithAttendees;
+      })
+    );
+    
+    console.log('Events with attendee data:', eventsWithAttendees);
    
-    res.json(result.rows);
+    res.json(eventsWithAttendees);
   } catch (err) {
     console.error('Database error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
@@ -319,12 +384,205 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Password reset request
+app.post('/auth/reset-password', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+  
+  try {
+    // Check if user exists
+    const userResult = await client.query(
+      'SELECT id, username, email FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'No account found with this email address' });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    
+    // Store verification code and expiry in database
+    await client.query(
+      'UPDATE users SET verification_code = $1, verification_code_expiry = $2 WHERE id = $3',
+      [verificationCode, resetTokenExpiry, user.id]
+    );
+    
+    // Send email with verification code
+    const data = {
+      Messages: [
+        {
+          From: {
+            Email: "tylervo.2002@gmail.com",
+            Name: "Cramr Team" 
+          },
+          To: [
+            {
+              Email: user.email,
+              Name: user.username
+            },
+          ],
+          Subject: "Password Reset Verification Code",
+          TextPart: `Hello ${user.username},\n\nYou have requested to reset your password. Use the following verification code to proceed:\n\n${verificationCode}\n\nThis code will expire in 10 minutes. If you did not request a password reset, please ignore this email.\n\nThank you,\nThe Cramr Team`
+        }
+      ]
+    };
+    
+    const result = await mailjet
+      .post('send', { version: 'v3.1' })
+      .request(data);
+    
+    const { Status } = result.body.Messages[0];
+    
+    if (Status === 'success') {
+      res.json({
+        success: true,
+        message: 'Verification code sent successfully'
+      });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to send verification code' });
+    }
+  } catch (err) {
+    console.error('Password reset error:', err);
+    res.status(500).json({ success: false, message: 'Failed to process password reset request' });
+  }
+});
+
+// Verify reset code
+app.post('/auth/verify-reset-code', async (req, res) => {
+  const { email, verificationCode } = req.body;
+  
+  if (!email || !verificationCode) {
+    return res.status(400).json({ success: false, message: 'Email and verification code are required' });
+  }
+  
+  try {
+    // Find user with valid verification code
+    const userResult = await client.query(
+      'SELECT id FROM users WHERE email = $1 AND verification_code = $2 AND verification_code_expiry > NOW()',
+      [email, verificationCode]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired verification code',
+        details: 'The verification code has expired or is invalid. Please request a new code.',
+        code: 'CODE_EXPIRED'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Generate a temporary token for password reset (valid for 5 minutes)
+    const tempToken = uuidv4();
+    const tempTokenExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    // Store temporary token
+    await client.query(
+      'UPDATE users SET verification_code = $1, verification_code_expiry = $2 WHERE id = $3',
+      [tempToken, tempTokenExpiry, user.id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Verification code verified successfully',
+      token: tempToken
+    });
+  } catch (err) {
+    console.error('Code verification error:', err);
+    res.status(500).json({ success: false, message: 'Failed to verify code' });
+  }
+});
+
+// Password reset confirmation
+app.post('/auth/reset-password/confirm', async (req, res) => {
+  const { token, newPassword } = req.body;
+  
+  if (!token || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Token and new password are required' });
+  }
+  
+ 
+  if (newPassword.length < 8) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Password must be at least 8 characters long',
+      details: 'Please ensure your password meets all requirements: at least 8 characters, 1 capital letter, and 1 special character'
+    });
+  }
+  
+  // Check for capital letter
+  if (!/[A-Z]/.test(newPassword)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Password must contain at least 1 capital letter',
+      details: 'Please ensure your password meets all requirements: at least 8 characters, 1 capital letter, and 1 special character'
+    });
+  }
+  
+  // Check for special character
+  if (!/[^A-Za-z0-9]/.test(newPassword)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Password must contain at least 1 special character',
+      details: 'Please ensure your password meets all requirements: at least 8 characters, 1 capital letter, and 1 special character'
+    });
+  }
+  
+  try {
+    // Find user with valid reset token
+    const userResult = await client.query(
+      'SELECT id FROM users WHERE verification_code = $1 AND verification_code_expiry > NOW()',
+      [token]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired reset token',
+        details: 'The password reset token has expired or is invalid. Please request a new password reset from the login page.',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Hash new password using the same method as signup
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    
+    // Update password and clear verification code
+    await client.query(
+      'UPDATE users SET password_hash = $1, verification_code = NULL, verification_code_expiry = NULL, updated_at = NOW() WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Password reset successfully!',
+      details: 'Your new password has been saved. You can now log in with your new password.',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Password reset confirmation error:', err);
+    res.status(500).json({ success: false, message: 'Failed to reset password' });
+  }
+});
+
 // Search users
 app.get('/users/search', async (req, res) => {
   const { q } = req.query;
   
   if (!q || q.length < 2) {
-    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' })
   }
   
   try {
@@ -906,6 +1164,14 @@ app.get('/events/:id', async (req, res) => {
     );
     const declined_ids = declinedUsersResult.rows.map(row => row.user_id);
 
+    // Get saved event user IDs
+    const savedUsersResult = await client.query(
+      "SELECT user_id FROM saved_events WHERE event_id = $1",
+      [id]
+    );
+    const saved_ids = savedUsersResult.rows.map(row => row.user_id);
+    const saved_count = saved_ids.length;
+
     res.json({
       ...event,
       invited_ids,
@@ -914,6 +1180,8 @@ app.get('/events/:id', async (req, res) => {
       accepted_count,
       declined_ids,
       declined_count,
+      saved_ids,
+      saved_count,
     });
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
@@ -1184,6 +1452,7 @@ app.post('/users/:id/saved-events', async (req, res) => {
     }
     
     // First, let's create a saved_events table if it doesn't exist
+    console.log('Creating saved_events table if it doesn\'t exist...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS saved_events (
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -1192,6 +1461,7 @@ app.post('/users/:id/saved-events', async (req, res) => {
         PRIMARY KEY (user_id, event_id)
       )
     `);
+    console.log('saved_events table ready');
     
     // Insert saved event
     const result = await client.query(`
@@ -1258,19 +1528,32 @@ app.get('/users/:id/saved-events', async (req, res) => {
   }
 });
 
-app.delete('/users/:userId/saved-events/:eventId', async (req, res) => {
-  const { userId, eventId } = req.params;
-  
+app.delete('/users/:id/saved-events/:eventId', async (req, res) => {
+  const { id, eventId } = req.params;
+
   try {
-    const result = await client.query(
-      'DELETE FROM saved_events WHERE user_id = $1 AND event_id = $2 RETURNING *',
+    console.log('Attempting to delete saved event:', { id, eventId });
+    
+    // First check if the record exists
+    const checkResult = await client.query(
+      'SELECT user_id, event_id FROM saved_events WHERE user_id = $1 AND event_id = $2',
       [id, eventId]
     );
     
-    if (result.rows.length === 0) {
+    if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Saved event not found' });
     }
     
+    console.log('Found record to delete:', checkResult.rows[0]);
+    
+    // Now delete it
+    const deleteResult = await client.query(
+      'DELETE FROM saved_events WHERE user_id = $1 AND event_id = $2',
+      [id, eventId]
+    );
+
+    console.log('Delete result:', deleteResult);
+
     res.json({
       success: true,
       message: 'Event removed from saved events'
@@ -1286,7 +1569,7 @@ app.get('/users/:id/saved-events/:eventId', async (req, res) => {
   
   try {
     const result = await client.query(
-      'SELECT * FROM saved_events WHERE user_id = $1 AND event_id = $2',
+      'SELECT user_id, event_id, saved_at FROM saved_events WHERE user_id = $1 AND event_id = $2',
       [id, eventId]
     );
     

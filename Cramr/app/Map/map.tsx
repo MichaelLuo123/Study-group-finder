@@ -8,10 +8,10 @@ import { PanGestureHandler } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import Animated, {
-  useAnimatedGestureHandler,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring
+    useAnimatedGestureHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring
 } from 'react-native-reanimated';
 import { useUser } from '../../contexts/UserContext';
 import EventList from '../listView/eventList';
@@ -52,11 +52,13 @@ export default function MapScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <Image
+        <TouchableOpacity onPress={() => router.push('/(tabs)')}>
+          <Image
           source={require('../listView/assets/images/finalCramrLogo.png')}
           style={styles.logo}
           resizeMode="contain"
-        />
+          />
+        </TouchableOpacity>
       ),
       headerTitle: '', 
     });
@@ -72,7 +74,7 @@ export default function MapScreen() {
         router.push('/CreateEvent/createevent');
       } 
       if (page === 'bookmarks') {
-        // router.push('/bookmarks');
+        router.push('/Saved/Saved');
       } 
       if (page === 'profile') {
         router.push('/Profile/Internal');
@@ -354,9 +356,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logo: {
-    height: 100,
-    width: 100,
-    marginLeft: 12,
+    height: 120,
+    width: 120,
+    marginTop: -35
   },
   mapContainer: {
     position: 'absolute',
