@@ -359,20 +359,17 @@ app.post('/auth/reset-password', async (req, res) => {
     
     const user = userResult.rows[0];
     
-    // Generate reset token
-    const resetToken = uuidv4();
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
     
-    // Store reset token in database
+    // Store verification code and expiry in database
     await client.query(
-      'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
-      [resetToken, resetTokenExpiry, user.id]
+      'UPDATE users SET verification_code = $1, verification_code_expiry = $2 WHERE id = $3',
+      [verificationCode, resetTokenExpiry, user.id]
     );
     
-    // Create reset link
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/Login/ResetPassword?token=${resetToken}`;
-    
-    // Send email with reset link
+    // Send email with verification code
     const data = {
       Messages: [
         {
@@ -386,8 +383,8 @@ app.post('/auth/reset-password', async (req, res) => {
               Name: user.username
             },
           ],
-          Subject: "Password Reset Request",
-          TextPart: `Hello ${user.username},\n\nYou have requested to reset your password. Click the link below to set a new password:\n\n${resetLink}\n\nThis link will expire in 1 hour. If you did not request a password reset, please ignore this email.\n\nThank you,\nThe Cramr Team`
+          Subject: "Password Reset Verification Code",
+          TextPart: `Hello ${user.username},\n\nYou have requested to reset your password. Use the following verification code to proceed:\n\n${verificationCode}\n\nThis code will expire in 10 minutes. If you did not request a password reset, please ignore this email.\n\nThank you,\nThe Cramr Team`
         }
       ]
     };
@@ -401,14 +398,61 @@ app.post('/auth/reset-password', async (req, res) => {
     if (Status === 'success') {
       res.json({
         success: true,
-        message: 'Password reset email sent successfully'
+        message: 'Verification code sent successfully'
       });
     } else {
-      res.status(500).json({ success: false, message: 'Failed to send reset email' });
+      res.status(500).json({ success: false, message: 'Failed to send verification code' });
     }
   } catch (err) {
     console.error('Password reset error:', err);
     res.status(500).json({ success: false, message: 'Failed to process password reset request' });
+  }
+});
+
+// Verify reset code
+app.post('/auth/verify-reset-code', async (req, res) => {
+  const { email, verificationCode } = req.body;
+  
+  if (!email || !verificationCode) {
+    return res.status(400).json({ success: false, message: 'Email and verification code are required' });
+  }
+  
+  try {
+    // Find user with valid verification code
+    const userResult = await client.query(
+      'SELECT id FROM users WHERE email = $1 AND verification_code = $2 AND verification_code_expiry > NOW()',
+      [email, verificationCode]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired verification code',
+        details: 'The verification code has expired or is invalid. Please request a new code.',
+        code: 'CODE_EXPIRED'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Generate a temporary token for password reset (valid for 5 minutes)
+    const tempToken = uuidv4();
+    const tempTokenExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    // Store temporary token
+    await client.query(
+      'UPDATE users SET verification_code = $1, verification_code_expiry = $2 WHERE id = $3',
+      [tempToken, tempTokenExpiry, user.id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Verification code verified successfully',
+      token: tempToken
+    });
+  } catch (err) {
+    console.error('Code verification error:', err);
+    res.status(500).json({ success: false, message: 'Failed to verify code' });
   }
 });
 
@@ -450,7 +494,7 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
   try {
     // Find user with valid reset token
     const userResult = await client.query(
-      'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
+      'SELECT id FROM users WHERE verification_code = $1 AND verification_code_expiry > NOW()',
       [token]
     );
     
@@ -458,7 +502,7 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid or expired reset token',
-        details: 'The password reset link has expired or is invalid. Please request a new password reset from the login page.',
+        details: 'The password reset token has expired or is invalid. Please request a new password reset from the login page.',
         code: 'TOKEN_EXPIRED'
       });
     }
@@ -469,9 +513,9 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     
-    // Update password and clear reset token
+    // Update password and clear verification code
     await client.query(
-      'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL, updated_at = NOW() WHERE id = $2',
+      'UPDATE users SET password_hash = $1, verification_code = NULL, verification_code_expiry = NULL, updated_at = NOW() WHERE id = $2',
       [hashedPassword, user.id]
     );
     
