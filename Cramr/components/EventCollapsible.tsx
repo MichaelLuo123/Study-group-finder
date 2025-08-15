@@ -1,188 +1,208 @@
 import { useRouter } from 'expo-router';
-import { BookOpen, Calendar, Clock, Edit3, MapPin, Users } from 'lucide-react-native';
+import { Bookmark, BookOpen, Calendar, Clock, Edit3, MapPin, Users } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
 
+interface RSVP {
+    event_id: string;
+    user_id: string;
+    status: string;
+    rsvp_date: string;
+    username: string;
+    full_name: string;
+    profile_picture_url: string;
+}
+
 interface EventCollapsibleProps {
+    eventId: string;
+    ownerId: string;
+    ownerProfile: string;
     title: string;
     bannerColor: string;
-    tag1?: string | null,
-    tag2?: string | null,
-    tag3?: string | null,
-    ownerId: string
-    eventClass: string;
+    tag1?: string | null;
+    tag2?: string | null;
+    tag3?: string | null;
+    subject: string;
     location: string;
     date: string;
     time: string;
-    numAttendees: number;
     capacity: number;
-    acceptedIds: string[];
+    rsvpedCount: number;
     isOwner: boolean;
-    style?: object;
+    isSaved: boolean;
+    onSavedChange: (saved: boolean) => void;
+    isRsvped: boolean;
+    onRsvpedChange: (rsvped: boolean) => void;
     isDarkMode: boolean;
+    style?: object;
 }
 
 const EventCollapsible: React.FC<EventCollapsibleProps> = ({
+    eventId,
+    ownerId,
+    ownerProfile,
     title,
     bannerColor,
     tag1,
     tag2,
     tag3,
-    ownerId,
-    eventClass,
+    subject,
     location,
     date,
     time,
-    numAttendees,
     capacity,
-    acceptedIds,
+    rsvpedCount,
     isOwner,
-    style,
+    isSaved,
+    onSavedChange,
+    isRsvped,
+    onRsvpedChange,
     isDarkMode,
+    style,
 }) => {
     const router = useRouter();
 
+    // Colors
     const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
     const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
+     const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton);
     const buttonColor = Colors.button;
 
-    const [isOpen, setIsOpen] = useState<boolean>(false);
-
-    // Add state for attendee profile pictures
-    const [attendeeProfiles, setAttendeeProfiles] = useState<string[]>([]);
-
-    // Fetch profile pictures when component mounts or acceptedIds changes
-    useEffect(() => {
-        const fetchAttendeeProfiles = async () => {
-            if (!acceptedIds || acceptedIds.length === 0) return;
-            
-            try {
-                const firstThreeIds = acceptedIds.slice(0, 3);
-                const profilePromises = firstThreeIds.map(async (userId) => {
-                    const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
-                    if (response.ok) {
-                        const userData = await response.json();
-                        return userData.profile_picture_url || '';
-                    }
-                    return '';
-                });
-                
-                const profiles = await Promise.all(profilePromises);
-                setAttendeeProfiles(profiles.filter(profile => profile !== ''));
-            } catch (error) {
-                console.error('Error fetching attendee profiles:', error);
-            }
-        };
-
-        fetchAttendeeProfiles();
-    }, [acceptedIds]);
-
-    const [ownerProfile, setOwnerProfile] = useState<string>('');
+    const [RSVPs, setRSVPs] = useState<RSVP[]>([]);
 
     useEffect(() => {
-        const fetchOwnerProfile = async () => {
-            if (!ownerId) return;
+        const fetchRSVPs = async () => {
+            if (!eventId) return;
             
             try {
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${ownerId}`);
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvps`);
                 if (response.ok) {
-                    const userData = await response.json();
-                    const profileUrl = userData.profile_picture_url || '';
-                    setOwnerProfile(profileUrl);
+                    const data = await response.json();
+                    setRSVPs(data.rsvps);
                 } else {
-                    setOwnerProfile('');
+                    setRSVPs([]);
                 }
             } catch (error) {
-                console.error('Error fetching owner profile:', error);
-                setOwnerProfile('');
+                console.error('Error fetching RSVPs:', error);
+                setRSVPs([]);
             }
         };
 
-        fetchOwnerProfile();
-    }, [ownerId]);
+        fetchRSVPs();
+    }, [eventId]);
     
     // Extract individual profile pictures for easier use
-    const attendee1Profile = attendeeProfiles[0] || null;
-    const attendee2Profile = attendeeProfiles[1] || null;
-    const attendee3Profile = attendeeProfiles[2] || null;
+    const attendee1Profile = RSVPs && RSVPs[0] && RSVPs[0].profile_picture_url || null;
+    const attendee2Profile = RSVPs && RSVPs[1] && RSVPs[1].profile_picture_url || null;
+    const attendee3Profile = RSVPs && RSVPs[2] && RSVPs[2].profile_picture_url || null;
+
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleRSVPPress = () => {
+        onRsvpedChange(!isRsvped);
+    };
     
     return (
         <View style={[styles.eventContainer, {backgroundColor: textInputColor}, style]}>
             <TouchableOpacity onPress={() => setIsOpen(!isOpen)} style={[styles.bannerContainer, {backgroundColor: bannerColor}]}>
-                {/* Fixed: Apply proper text color for title - use white/light text on colored banner */}
-                <Text style={[styles.normalBoldText, {color: textColor}]}>{title}</Text>
+                {/* Use white text on colored banner for better contrast */}
+                <Text style={[styles.normalBoldText, {color: '#FFFFFF'}]}>{title}</Text>
                 <Image source={{uri: ownerProfile}} style={styles.profilePictureContainer}/>
             </TouchableOpacity>
 
             {isOpen && (
-                <View style={[styles.contentContainer]}>
-                    <View style={[styles.tagContainer, {marginBottom: 8}]}>
-                        {tag1 !== null && (
-                            <View style={[styles.tag, {borderColor: textColor}]}>
-                                <Text style={[styles.normalText, {color: textColor}]}>
-                                    {tag1}
-                                </Text>
+                <View style={styles.contentContainer}>
+                    <View style={[styles.tagContainer, {marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between'}]}>
+                        <View style={{flexDirection: 'row'}}>
+                            {tag1 !== null && (
+                                <View style={[styles.tag, {borderColor: textColor}]}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>
+                                        {tag1}
+                                    </Text>
+                                </View>
+                            )}
+                            {tag2 !== null && (
+                                <View style={[styles.tag, {borderColor: textColor}]}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>
+                                        {tag2}
+                                    </Text>
+                                </View>
+                            )}
+                            {tag3 !== null && (
+                                <View style={[styles.tag, {borderColor: textColor}]}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>
+                                        {tag3}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                        <TouchableOpacity onPress={() => onSavedChange(!isSaved)}>
+                            <Bookmark 
+                                color={textColor} 
+                                fill={isSaved ? textColor : 'none'}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.mainContentContainer}>
+                        <View style={styles.eventDetailsContainer}>
+                            <View style={styles.iconTextContainer}>
+                                <BookOpen size={20} color={textColor} style={styles.eventIcon}/>
+                                <Text style={[styles.normalText, {color: textColor}]}>{subject}</Text>
                             </View>
-                        )}
-                        {tag2 !== null && (
-                            <View style={[styles.tag, {borderColor: textColor}]}>
-                                <Text style={[styles.normalText, {color: textColor}]}>
-                                    {tag2}
-                                </Text>
+                            <View style={[styles.iconTextContainer, {marginTop: 3}]}>
+                                <MapPin size={20} color={textColor} style={styles.eventIcon}/>
+                                <Text style={[styles.normalText, {color: textColor}]}>{location}</Text>
                             </View>
-                        )}
-                        {tag3 !== null && (
-                            <View style={[styles.tag, {borderColor: textColor}]}>
-                                <Text style={[styles.normalText, {color: textColor}]}>
-                                    {tag3}
-                                </Text>
+                            <View style={[styles.iconTextContainer, {marginTop: 3}]}>
+                                <Calendar size={20} color={textColor} style={styles.eventIcon}/>
+                                <Text style={[styles.normalText, {color: textColor}]}>{date}</Text>
                             </View>
-                        )}
-                    </View>
-                    <View style={styles.iconTextContainer}>
-                        <BookOpen size={20} color={textColor} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor}]}> {eventClass} </Text>
-                    </View>
-                    <View style={[styles.iconTextContainer, {marginTop: 3}]}>
-                        <MapPin size={20} color={textColor} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor}]}> {location} </Text>
-                    </View>
-                    <View style={[styles.iconTextContainer, {marginTop: 3}]}>
-                        <Calendar size={20} color={textColor} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor}]}> {date} </Text>
-                    </View>
-                    <View style={[styles.iconTextContainer, {marginTop: 3}]}>
-                        <Clock size={20} color={textColor} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor}]}> {time} </Text>
-                    </View>
-                    <View style={[styles.iconTextContainer, {marginTop: 3}]}>
-                        <Users size={20} color={textColor} style={styles.eventIcon}/>
-                        <Text style={[styles.normalText, {color: textColor}]}> {numAttendees}/{capacity} </Text>
-                        {attendee1Profile != null && (
-                            <Image source={{uri: attendee1Profile}} style={styles.smallProfilePictureContainer}/>
-                        )}
-                        {attendee2Profile != null && (
-                            <Image source={{uri: attendee2Profile}} style={styles.smallProfilePictureContainer}/>
-                        )}
-                        {attendee3Profile != null && (
-                            <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>
-                        )}
-                        <Text style={[styles.normalText, {color: textColor}]}>
-                            {numAttendees > 3 && `+${numAttendees - 
-                                (attendee1Profile != null ? 1 : 0) - 
-                                (attendee2Profile != null ? 1 : 0) - 
-                                (attendee3Profile != null ? 1 : 0)}`}
-                        </Text>
-                    </View>
-                    {isOwner && (
-                        <TouchableOpacity onPress={() => router.push('')}>
-                            <View style={[styles.buttonContainer, {backgroundColor: buttonColor}]}>
-                                <Edit3 size={16} color={textColor} style={{marginRight: 5}}/>
-                                <Text style={[styles.normalText, {color: textColor}]}> Edit </Text>
+                            <View style={[styles.iconTextContainer, {marginTop: 3}]}>
+                                <Clock size={20} color={textColor} style={styles.eventIcon}/>
+                                <Text style={[styles.normalText, {color: textColor}]}>{time}</Text>
+                            </View>
+                            <View style={[styles.iconTextContainer, {marginTop: 3}]}>
+                                <Users size={20} color={textColor} style={styles.eventIcon}/>
+                                <Text style={[styles.normalText, {color: textColor}]}>{RSVPs.length}/{capacity}</Text>
+                                {attendee1Profile != null && (
+                                    <Image source={{uri: attendee1Profile}} style={styles.smallProfilePictureContainer}/>
+                                )}
+                                {attendee2Profile != null && (
+                                    <Image source={{uri: attendee2Profile}} style={styles.smallProfilePictureContainer}/>
+                                )}
+                                {attendee3Profile != null && (
+                                    <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>
+                                )}
+                                {RSVPs.length > 3 && (
+                                    <Text style={[styles.normalText, {color: textColor, marginLeft: 5}]}>
+                                        +{RSVPs.length - 
+                                            (attendee1Profile != null ? 1 : 0) - 
+                                            (attendee2Profile != null ? 1 : 0) - 
+                                            (attendee3Profile != null ? 1 : 0)}
+                                    </Text>
+                                )}
+                            </View>
+                            
+                            {isOwner && (
+                                <TouchableOpacity onPress={() => router.push('')} style={{marginTop: 10}}>
+                                    <View style={[styles.buttonContainer, {backgroundColor: buttonColor}]}>
+                                        <Edit3 size={16} color={textColor} style={{marginRight: 5}}/>
+                                        <Text style={[styles.normalText, {color: textColor}]}>Edit</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                        
+                        <TouchableOpacity onPress={handleRSVPPress} style={styles.rsvpButtonContainer}>
+                            <View style={[styles.rsvpButton, {backgroundColor: isRsvped ? cancelButtonColor : '#5CAEF1', marginTop: -50, marginRight: 3}]}>
+                                <Text style={[styles.subheaderText, {color: textColor}]}>
+                                    {isRsvped ? 'RSVPed' : 'RSVP'}
+                                </Text>
                             </View>
                         </TouchableOpacity>
-                    )}
+                    </View>
                 </View>
             )}
         </View>
@@ -251,9 +271,16 @@ const styles = StyleSheet.create({
     tag: {
         borderWidth: 1,
         borderRadius: 20,
-        marginLeft: 2, // space between tags
-        marginRight: 2, // space between tags
+        marginLeft: 2,
+        marginRight: 2,
         padding: 5,
+    },
+    mainContentContainer: {
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+    },
+    eventDetailsContainer: {
+        flex: 1,
     },
     eventIcon: {
         marginRight: 5,
@@ -265,25 +292,36 @@ const styles = StyleSheet.create({
     profilePictureContainer: {
         width: 30,
         height: 30,
-        borderRadius: 50,
+        borderRadius: 15,
         marginLeft: 2
     },
     smallProfilePictureContainer: {
         width: 25,
         height: 25,
-        borderRadius: 50,
+        borderRadius: 12.5,
         marginLeft: 3,
         marginRight: 3
     },
     buttonContainer: {
-        width: 330,
+        width: '100%',
         height: 35,
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
-        marginTop: 10,
         marginBottom: 5
+    },
+    rsvpButtonContainer: {
+        alignItems: 'flex-end',
+        marginTop: 10,
+    },
+    rsvpButton: {
+        borderRadius: 10,
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        minWidth: 80,
+        alignItems: 'center',
+        justifyContent: 'center',
     }
 });
 

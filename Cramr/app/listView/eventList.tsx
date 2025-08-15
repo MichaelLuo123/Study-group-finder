@@ -1,23 +1,28 @@
+import EventCollapsible from '@/components/EventCollapsible';
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
-import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
+import { Colors } from '../../constants/Colors';
 
+import { useUser } from '@/contexts/UserContext';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 import type { Filters } from './filter';
 
-
 export default function EventList({ filters, selectedEventId }: { filters: Filters | null, selectedEventId?: string | null }) {
-
+  // Colors
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
   const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
 
@@ -33,95 +38,116 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
   const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
 
   const fetchEvents = async () => {
-    try {
-      console.log('Fetching events from backend...');
-      setLoading(true);
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-      console.log('Events fetch response status:', response.status);
-      if (!response.ok) throw new Error('Failed to fetch events');
-      const data = await response.json();
-      console.log('Raw events data:', data);
-
-      const factory = new PublicStudySessionFactory();
-
-      const eventsWithDetails = await Promise.all(
-        data.map(async (event: any) => {
-          console.log(`Processing event ${event.id}:`, {
-            title: event.title,
-            accepted_count: event.accepted_count,
-            accepted_ids: event.accepted_ids,
-            type: typeof event.accepted_count
-          });
-          
-          const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
-          const coords = await studySession.addressToCoordinates();
-
-          let isRSVPed = false;
-          let isSaved = false;
-          
-          try {
-            const rsvpRes = await fetch(
-              `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd?user_id=${userId}`
-            );
-            console.log(`RSVP status fetch for event ${event.id} status:`, rsvpRes.status);
-            if (rsvpRes.ok) {
-              const rsvpData = await rsvpRes.json();
-              isRSVPed = Boolean(rsvpData.rsvp && rsvpData.rsvp.status === 'accepted');
-            }
-          } catch (e) {
-            console.warn('Failed to fetch RSVP status:', e);
-            isRSVPed = false;
-          }
-
-          try {
-            const savedRes = await fetch(
-              `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${event.id}`
-            );
-            if (savedRes.ok) {
-              const savedData = await savedRes.json();
-              isSaved = Boolean(savedData.is_saved);
-            }
-          } catch (e) {
-            console.warn('Failed to fetch saved status:', e);
-            isSaved = false;
-          }
-
-          const finalEvent = {
-            ...event,
-            coordinates: coords.geometry.location,
-            isRSVPed,
-            isSaved,
+  try {
+    setLoading(true);
+    setError(null);
+    
+    // 1. Fetch events from backend
+    const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    const eventsData = await response.json();
+    
+    // 2. Process each event with error handling
+    const processedEvents = await Promise.all(
+      eventsData.map(async (event: any) => {
+        try {
+          // Default coordinates (fallback to Carlsbad coordinates)
+          let coordinates = { 
+            lat: 33.1581, 
+            lng: -117.3506,
+            isAccurate: false 
           };
           
-          console.log(`Final event ${event.id} data:`, {
-            title: finalEvent.title,
-            accepted_count: finalEvent.accepted_count,
-            accepted_ids: finalEvent.accepted_ids,
-            isRSVPed: finalEvent.isRSVPed,
-            isSaved: finalEvent.isSaved
-          });
+          // Try geocoding if location exists
+          if (event.location) {
+            try {
+              const factory = new PublicStudySessionFactory();
+              const geocodeResult = await factory.addressToCoordinates(event.location);
+              
+              if (geocodeResult?.geometry?.location) {
+                coordinates = {
+                  lat: geocodeResult.geometry.location.lat,
+                  lng: geocodeResult.geometry.location.lng,
+                  isAccurate: true
+                };
+              }
+            } catch (geocodeError) {
+              console.warn(`Geocoding failed for ${event.location}:`, geocodeError);
+            }
+          }
           
-          return finalEvent;
-        })
-      );
-
-      // Sort events by distance ascending (closest first)
-      const sortedData = eventsWithDetails.sort((a: any, b: any) => {
-        const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
-        const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
-        return aDistance - bDistance;
-      });
-
-      setEvents(sortedData);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching events:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch events');
-    } finally {
-      setLoading(false);
-      console.log('Finished fetching events');
-    }
-  };
+          // Check RSVP status
+          let isRSVPed = false;
+          try {
+            const rsvpResponse = await fetch(
+              `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd?user_id=${userId}`
+            );
+            
+            if (rsvpResponse.ok) {
+              const rsvpData = await rsvpResponse.json();
+              isRSVPed = rsvpData.rsvp?.status === 'accepted';
+            }
+          } catch (rsvpError) {
+            console.warn(`RSVP check failed for event ${event.id}:`, rsvpError);
+          }
+          
+          // Check saved status
+          let isSaved = false;
+          try {
+            const savedResponse = await fetch(
+              `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${event.id}`
+            );
+            
+            if (savedResponse.ok) {
+              const savedData = await savedResponse.json();
+              isSaved = savedData.is_saved;
+            }
+          } catch (savedError) {
+            console.warn(`Saved check failed for event ${event.id}:`, savedError);
+          }
+          
+          return {
+            ...event,
+            coordinates,
+            isRSVPed,
+            isSaved,
+            geocodeError: !coordinates.isAccurate
+          };
+          
+        } catch (eventProcessingError) {
+          console.error(`Error processing event ${event.id}:`, eventProcessingError);
+          return {
+            ...event,
+            coordinates: { lat: 0, lng: 0, isAccurate: false },
+            isRSVPed: false,
+            isSaved: false,
+            geocodeError: true
+          };
+        }
+      })
+    );
+    
+    // 3. Sort events by distance
+    const sortedEvents = processedEvents.sort((a, b) => {
+      const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
+      const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
+      return aDistance - bDistance;
+    });
+    
+    setEvents(sortedEvents);
+    
+  } catch (mainError) {
+    console.error('Failed to fetch events:', mainError);
+    setError(mainError instanceof Error ? mainError.message : 'Unknown error');
+    setEvents([]); // Clear events on error
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchEvents();
@@ -175,14 +201,6 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
               : event
           );
         });
-        
-        Alert.alert('RSVP Cancelled', 'You have been removed from the attendance list.');
-        
-        // Small delay before database refresh to allow local state to be visible
-        setTimeout(async () => {
-          console.log('Refreshing from database...');
-          await fetchEvents();
-        }, 100);
       } else {
         console.log(`RSVPing for event ${eventId}...`);
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
@@ -212,14 +230,6 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
               : event
           );
         });
-        
-        Alert.alert('RSVP Successful', 'You are now attending this event.');
-        
-        // Small delay before database refresh to allow local state to be visible
-        setTimeout(async () => {
-          console.log('Refreshing from database...');
-          await fetchEvents();
-        }, 100);
       }
     } catch (err) {
       console.error('RSVP toggle error:', err);
@@ -236,7 +246,6 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
 
     try {
       if (currentStatus) {
-        console.log(`Unsaving event ${eventId}...`);
         const res = await fetch(
           `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`,
           { method: 'DELETE' }
@@ -254,14 +263,6 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
               : event
           )
         );
-        
-        Alert.alert('Event Unsaved', 'Event has been removed from your saved events.');
-        
-        // Small delay before database refresh to allow local state to be visible
-        setTimeout(async () => {
-          console.log('Refreshing from database...');
-          await fetchEvents();
-        }, 100);
       } else {
         console.log(`Saving event ${eventId}...`);
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`, {
@@ -282,14 +283,6 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
               : event
           )
         );
-        
-        Alert.alert('Event Saved', 'Event has been added to your saved events.');
-        
-        // Small delay before database refresh to allow local state to be visible
-        setTimeout(async () => {
-          console.log('Refreshing from database...');
-          await fetchEvents();
-        }, 100);
       }
     } catch (err) {
       console.error('Save toggle error:', err);
@@ -403,134 +396,49 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
       nestedScrollEnabled={true}
       style={{ flex: 1 }}
       bounces={true}
-      alwaysBounceVertical={false}
-      scrollEnabled={true}
     >
-      {filteredEvents.map((event: any) => {
-        const isCollapsed = collapsedEvents.has(event.id);
+    {filteredEvents.map((event: any) => {
+      const isOpen = collapsedEvents.has(event.id);
 
-        return (
-          <View key={event.id} style={styles.card}>
-            {/* Title Header - Clickable */}
-            <Pressable 
-              style={[styles.header, { backgroundColor: '#f0f0f0' }]}
-              onPress={() => toggleEvent(event.id)}
-            >
-              <View style={styles.headerLeft}>
-                <View style={styles.titleContainer}>
-                  <Text style={styles.title}>{event.title}</Text>
-                  <Text style={styles.creatorName}>
-                    by {event.creator_name || 'Unknown User'}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.headerRight}>
-                {/* Creator Profile Picture */}
-                {event.creator_profile_picture && (
-                  <Image 
-                    source={{ uri: event.creator_profile_picture }} 
-                    style={styles.profilePicture}
-                  />
-                )}
-                <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
-              </View>
-            </Pressable>
-
-            {/* Collapsible Content */}
-            {!isCollapsed && (
-              <>
-                {/* Labels */}
-                {event.tags && event.tags.length > 0 && (
-                  <View style={styles.labels}>
-                    {event.tags.map((tag: string, index: number) => (
-                      <Text key={index} style={styles.label}>
-                        {tag}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-
-                {/* Details */}
-                {event.class && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.icon}>📘</Text>
-                    <Text style={styles.detail}>{event.class}</Text>
-                  </View>
-                )}
-                {event.location && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.icon}>📍</Text>
-                    <Text style={styles.detail}>{event.location}</Text>
-                  </View>
-                )}
-                {event.date_and_time && (
-                  <>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.icon}>📅</Text>
-                      <Text style={styles.detail}>{new Date(event.date_and_time).toLocaleDateString()}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.icon}>🕒</Text>
-                      <Text style={styles.detail}>{new Date(event.date_and_time).toLocaleTimeString()}</Text>
-                    </View>
-                  </>
-                )}
-
-                {/* Debug logging for count display */}
-                {(() => {
-                  console.log(`Rendering event ${event.id} footer:`, {
-                    title: event.title,
-                    accepted_count: event.accepted_count,
-                    accepted_ids: event.accepted_ids,
-                    display_count: event.accepted_count || 0
-                  });
-                  return null;
-                })()}
-
-                {/* Footer */}
-                <View style={styles.footer}>
-                  <Text style={styles.count}>
-                    {event.accepted_count || 0}/{event.capacity || '∞'} 👥
-                  </Text>
-                  <View style={styles.buttonContainer}>
-                    <Pressable
-                      style={styles.saveButton}
-                      onPress={() => toggleSave(event.id, event.isSaved)}
-                      disabled={busyEventId === event.id}
-                    >
-                      <Ionicons 
-                        name={event.isSaved ? "bookmark" : "bookmark-outline"} 
-                        size={20} 
-                        color={event.isSaved ? "#000000" : "#666666"} 
-                      />
-                    </Pressable>
-                    <Pressable
-                      style={styles.rsvpButton}
-                      onPress={() => toggleRSVP(event.id, event.isRSVPed)}
-                      disabled={busyEventId === event.id}
-                    >
-                      <Text style={{ color: 'white' }}>
-                        {event.isRSVPed ? 'Cancel RSVP' : 'RSVP'}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </>
-            )}
-          </View>
-        );
-      })}
-      {/* Extra space */}
-      <View style={[styles.extraSpace, { height: Math.max(filteredEvents.length * 75 + 160, 300) }]} />
-    </ScrollView>
+      return (
+        event.creator_id !== userId && (
+          <EventCollapsible
+            key={event.id}
+            eventId={event.id}
+            ownerId={event.creator_id}
+            ownerProfile={event.creator_profile_picture}
+            title={event.title}
+            bannerColor={bannerColors[event.banner_color || 1]}
+            tag1={event.tags?.[0] || null}
+            tag2={event.tags?.[1] || null}
+            tag3={event.tags?.[2] || null}
+            subject={event.class}
+            location={event.location}
+            date={event.date || new Date(event.date_and_time).toLocaleDateString()}
+            time={event.time || new Date(event.date_and_time).toLocaleTimeString()}
+            rsvpedCount={event.accepted_count || event.rsvped_count || 0}
+            capacity={event.capacity || '∞'}
+            isDarkMode={isDarkMode}
+            isOwner={event.creator_id === userId}
+            isSaved={event.isSaved}
+            onSavedChange={() => toggleSave(event.id, event.isSaved)}
+            isRsvped={event.isRSVPed}
+            onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
+            style={{marginBottom: 5}}
+          />
+        )
+      );
+    })}
+    {/* Extra space at the bottom */}
+    <View style={[styles.extraSpace, { height: Math.max(filteredEvents.length * 75 + 160, 300) }]} />
+  </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 20,
-    paddingHorizontal: 10,
-    minHeight: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   loadingContainer: {
     flex: 1,
