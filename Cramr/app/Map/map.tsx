@@ -387,7 +387,6 @@ const styles = StyleSheet.create({
   fullWidthHeader: {
     width: '100%',
     flexDirection: 'row',
-    justifyContent: 'center',
   },
   mapContainer: {
     position: 'absolute',
