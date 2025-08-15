@@ -94,11 +94,40 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Get all events
+// Helper function to get blocked users for a given user
+async function getBlockedUsers(userId) {
+  try {
+    const result = await client.query(`
+      SELECT blocked_id FROM blocks WHERE blocker_id = $1
+    `, [userId]);
+    return result.rows.map(row => row.blocked_id);
+  } catch (err) {
+    console.error('Error getting blocked users:', err);
+    return [];
+  }
+}
+
+// Helper function to get users who have blocked a given user
+async function getUsersWhoBlocked(userId) {
+  try {
+    const result = await client.query(`
+      SELECT blocker_id FROM blocks WHERE blocked_id = $1
+    `, [userId]);
+    return result.rows.map(row => row.blocker_id);
+  } catch (err) {
+    console.error('Error getting users who blocked:', err);
+    return [];
+  }
+}
+
+// Get all events (filtered by blocking)
 app.get('/events', async (req, res) => {
   try {
+    const { userId } = req.query; // Optional: if provided, filter out blocked users
+    
     console.log('Fetching events with creator info and attendee counts...');
-    const result = await client.query(`
+    
+    let query = `
       SELECT 
         e.*,
         u.full_name as creator_name,
@@ -106,8 +135,25 @@ app.get('/events', async (req, res) => {
         u.username as creator_username
       FROM events e
       LEFT JOIN users u ON e.creator_id::uuid = u.id::uuid
-      ORDER BY e.created_at DESC
-    `);
+    `;
+    
+    let params = [];
+    
+    // If userId is provided, filter out events from users they've blocked and events from users who have blocked them
+    if (userId) {
+      const blockedUsers = await getBlockedUsers(userId);
+      const usersWhoBlocked = await getUsersWhoBlocked(userId);
+      const allBlockedIds = [...blockedUsers, ...usersWhoBlocked];
+      
+      if (allBlockedIds.length > 0) {
+        query += ` WHERE e.creator_id NOT IN (${allBlockedIds.map((_, index) => `$${index + 1}`).join(',')})`;
+        params = allBlockedIds;
+      }
+    }
+    
+    query += ` ORDER BY e.created_at DESC`;
+    
+    const result = await client.query(query, params);
     
     // Add attendee counts and IDs for each event
     console.log(`Processing ${result.rows.length} events to add attendee data...`);
@@ -359,20 +405,17 @@ app.post('/auth/reset-password', async (req, res) => {
     
     const user = userResult.rows[0];
     
-    // Generate reset token
-    const resetToken = uuidv4();
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
     
-    // Store reset token in database
+    // Store verification code and expiry in database
     await client.query(
-      'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
-      [resetToken, resetTokenExpiry, user.id]
+      'UPDATE users SET verification_code = $1, verification_code_expiry = $2 WHERE id = $3',
+      [verificationCode, resetTokenExpiry, user.id]
     );
     
-    // Create reset link
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/Login/ResetPassword?token=${resetToken}`;
-    
-    // Send email with reset link
+    // Send email with verification code
     const data = {
       Messages: [
         {
@@ -386,8 +429,8 @@ app.post('/auth/reset-password', async (req, res) => {
               Name: user.username
             },
           ],
-          Subject: "Password Reset Request",
-          TextPart: `Hello ${user.username},\n\nYou have requested to reset your password. Click the link below to set a new password:\n\n${resetLink}\n\nThis link will expire in 1 hour. If you did not request a password reset, please ignore this email.\n\nThank you,\nThe Cramr Team`
+          Subject: "Password Reset Verification Code",
+          TextPart: `Hello ${user.username},\n\nYou have requested to reset your password. Use the following verification code to proceed:\n\n${verificationCode}\n\nThis code will expire in 10 minutes. If you did not request a password reset, please ignore this email.\n\nThank you,\nThe Cramr Team`
         }
       ]
     };
@@ -401,14 +444,61 @@ app.post('/auth/reset-password', async (req, res) => {
     if (Status === 'success') {
       res.json({
         success: true,
-        message: 'Password reset email sent successfully'
+        message: 'Verification code sent successfully'
       });
     } else {
-      res.status(500).json({ success: false, message: 'Failed to send reset email' });
+      res.status(500).json({ success: false, message: 'Failed to send verification code' });
     }
   } catch (err) {
     console.error('Password reset error:', err);
     res.status(500).json({ success: false, message: 'Failed to process password reset request' });
+  }
+});
+
+// Verify reset code
+app.post('/auth/verify-reset-code', async (req, res) => {
+  const { email, verificationCode } = req.body;
+  
+  if (!email || !verificationCode) {
+    return res.status(400).json({ success: false, message: 'Email and verification code are required' });
+  }
+  
+  try {
+    // Find user with valid verification code
+    const userResult = await client.query(
+      'SELECT id FROM users WHERE email = $1 AND verification_code = $2 AND verification_code_expiry > NOW()',
+      [email, verificationCode]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired verification code',
+        details: 'The verification code has expired or is invalid. Please request a new code.',
+        code: 'CODE_EXPIRED'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Generate a temporary token for password reset (valid for 5 minutes)
+    const tempToken = uuidv4();
+    const tempTokenExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    // Store temporary token
+    await client.query(
+      'UPDATE users SET verification_code = $1, verification_code_expiry = $2 WHERE id = $3',
+      [tempToken, tempTokenExpiry, user.id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Verification code verified successfully',
+      token: tempToken
+    });
+  } catch (err) {
+    console.error('Code verification error:', err);
+    res.status(500).json({ success: false, message: 'Failed to verify code' });
   }
 });
 
@@ -450,7 +540,7 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
   try {
     // Find user with valid reset token
     const userResult = await client.query(
-      'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
+      'SELECT id FROM users WHERE verification_code = $1 AND verification_code_expiry > NOW()',
       [token]
     );
     
@@ -458,7 +548,7 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid or expired reset token',
-        details: 'The password reset link has expired or is invalid. Please request a new password reset from the login page.',
+        details: 'The password reset token has expired or is invalid. Please request a new password reset from the login page.',
         code: 'TOKEN_EXPIRED'
       });
     }
@@ -469,9 +559,9 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     
-    // Update password and clear reset token
+    // Update password and clear verification code
     await client.query(
-      'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL, updated_at = NOW() WHERE id = $2',
+      'UPDATE users SET password_hash = $1, verification_code = NULL, verification_code_expiry = NULL, updated_at = NOW() WHERE id = $2',
       [hashedPassword, user.id]
     );
     
@@ -607,6 +697,15 @@ app.post('/users/:id/follow', async (req, res) => {
   }
   
   try {
+    // Check if user is blocked or has blocked the target user
+    const blockedUsers = await getBlockedUsers(id);
+    const usersWhoBlocked = await getUsersWhoBlocked(id);
+    const allBlockedIds = [...blockedUsers, ...usersWhoBlocked];
+    
+    if (allBlockedIds.includes(userId)) {
+      return res.status(403).json({ error: 'Cannot follow blocked users' });
+    }
+    
     // Check if already following
     const existingFollow = await client.query(`
       SELECT * FROM follows WHERE follower_id = $1 AND following_id = $2
@@ -736,10 +835,17 @@ app.post('/users/:id/block', async (req, res) => {
       RETURNING *
     `, [id, blockedId]);
     
+    // Remove follow relationships in both directions
+    await client.query(`
+      DELETE FROM follows 
+      WHERE (follower_id = $1 AND following_id = $2) 
+         OR (follower_id = $2 AND following_id = $1)
+    `, [id, blockedId]);
+    
     res.status(201).json({
       success: true,
-      message: 'Blocked successfully!',
-      follow: result.rows[0]
+      message: 'Blocked successfully and removed follow relationships!',
+      block: result.rows[0]
     });
   } catch (err) {
     console.error('Blocking user error:', err);
@@ -1146,16 +1252,20 @@ app.post('/events/:eventId/rsvpd', async (req, res) => {
   
   try {
     // Check if event exists
-    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [eventId]);
+    const eventResult = await client.query('SELECT id, creator_id FROM events WHERE id = $1', [eventId]);
     if (eventResult.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
+    
+    const event = eventResult.rows[0];
     
     // Check if user exists
     const userResult = await client.query('SELECT id FROM users WHERE id = $1', [user_id]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
+    
+
     
     // Insert or update RSVP
     const result = await client.query(`

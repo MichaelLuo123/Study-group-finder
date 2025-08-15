@@ -1,8 +1,9 @@
 import EventCollapsible from '@/components/EventCollapsible';
 import { useUser } from '@/contexts/UserContext';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Slider from '../../components/Slider';
 import { Colors } from '../../constants/Colors';
 
@@ -29,6 +30,7 @@ interface Event {
 
 export default function Saved() {
     const router = useRouter();
+    const { isDarkMode } = useUser();
 
     // Colors
     const {isDarkMode, toggleDarkMode} = useUser();
@@ -38,6 +40,7 @@ export default function Saved() {
     const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
     const [isSwitch, setIsSwitch] = useState<boolean>(false);
+    const [currentPage, setCurrentPage] = useState('bookmarks');
     
     // User
     const userId = 'a163cdc9-6db7-4498-a73b-a439ed221dec';
@@ -120,6 +123,18 @@ export default function Saved() {
 
     fetchSavedEvents();
     }, [userId]);
+
+    const handleNavigation = (page: string) => {
+        if (currentPage !== page) {
+            setCurrentPage(page);
+            if (page === 'listView') router.push('/listView');
+            if (page === 'map') router.push('/Map/map');
+            if (page === 'addEvent') router.push('/CreateEvent/createevent');
+            if (page === 'bookmarks') router.push('/Saved/Saved');
+            if (page === 'profile') router.push('/Profile/Internal');
+        }
+    };
+
     return (
         <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
             <ScrollView>
@@ -160,6 +175,7 @@ export default function Saved() {
                                 acceptedIds={event.rsvped_ids}
                                 isDarkMode={isDarkMode}
                                 isOwner={false}
+                                style={{}}
                             />
                         )))
                     )}
@@ -193,6 +209,65 @@ export default function Saved() {
 
                 </View>
             </ScrollView>
+
+            {/* Bottom Navigation Bar - Same as Map */}
+            <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}> 
+                <TouchableOpacity 
+                    style={styles.navButton}
+                    onPress={() => handleNavigation('listView')}
+                >
+                    <MaterialCommunityIcons 
+                        name="clipboard-list-outline" 
+                        size={24} 
+                        color={isDarkMode ? "#ffffff" : "#000000"} 
+                    />
+                    {currentPage === 'listView' && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.navButton}
+                    onPress={() => handleNavigation('map')}
+                >
+                    <Ionicons 
+                        name="map-outline" 
+                        size={24} 
+                        color={isDarkMode ? "#ffffff" : "#000000"} 
+                    />
+                    {currentPage === 'map' && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.navButton}
+                    onPress={() => handleNavigation('addEvent')}
+                >
+                    <Feather 
+                        name="plus-square" 
+                        size={24} 
+                        color={isDarkMode ? "#ffffff" : "#000000"} 
+                    />
+                    {currentPage === 'addEvent' && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.navButton}
+                    onPress={() => handleNavigation('bookmarks')}
+                >
+                    <Feather 
+                        name="bookmark" 
+                        size={24} 
+                        color={isDarkMode ? "#ffffff" : "#000000"} 
+                    />
+                    {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.navButton}
+                    onPress={() => handleNavigation('profile')}
+                >
+                    <Ionicons 
+                        name="person-circle-outline" 
+                        size={24} 
+                        color={isDarkMode ? "#ffffff" : "#000000"} 
+                    />
+                    {currentPage === 'profile' && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+            </View>
         </SafeAreaView>
         
     );
@@ -225,5 +300,32 @@ const styles = StyleSheet.create({
     logoContainer: {
         height: 27,
         width: 120
+    },
+    bottomNav: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderTopWidth: 1,
+        paddingBottom: Platform.OS === 'ios' ? 34 : 12,
+        zIndex: 1001,
+        elevation: 5,
+    },
+    navButton: {
+        alignItems: 'center',
+        padding: 8,
+    },
+    activeDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#5caef1',
+        position: 'absolute',
+        bottom: -5,
     },
 });

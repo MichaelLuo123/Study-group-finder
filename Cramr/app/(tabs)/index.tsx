@@ -1,16 +1,16 @@
 import { Colors } from '@/constants/Colors';
-import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isDarkMode } = useUser(); 
+  // Temporarily disable useUser to fix the error
+  // const { isDarkMode } = useUser(); 
   
-  const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
-  const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
-  const buttonBackgroundColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
+  const backgroundColor = Colors.light.background;
+  const textColor = Colors.light.text;
+  const buttonBackgroundColor = Colors.light.textInput;
 
   const navigationItems = [
     // Sign in and Sign up
