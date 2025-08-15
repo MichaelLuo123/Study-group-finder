@@ -19,14 +19,25 @@ export default function HomeScreen() {
     { title: 'Sign up success', route: '/SignUp/signupsuccess' },
     { title: 'Sign up fail', route: '/signupfail' },
     { title: '2-Factor Authentication', route: '/TwoFactor/TwoFAPage'},
-
+    
     // Home
     { title: 'Home/List', route: '/listView' },
-    { title: 'Event List Page', route: '/listView/eventList' },
+
+    // Map
     { title: 'Map', route: '/Map/map' },
+    
+    { title: 'Event List Page', route: '/listView/eventList' },
     { title: 'View event', route: '/ViewEvent/viewevent' },
+
+    // Create Event and Edit Event
     { title: 'Create event', route: '/CreateEvent/createevent' },
-    { title: 'Saved/RSVP Events', route: '/Saved/Saved' },
+    { title: 'Edit event', route: '/CreateEvent/EditEvent' },
+
+
+    // Saved/RSVPed Events
+    { title: 'Saved/RSVPed Events', route: '/Saved/Saved' },
+
+    // Profile and Settings
     { title: 'Profile Page (Internal)', route: '/Profile/Internal' },
     { title: 'Settings', route: '/Settings/SettingsFrontPage' },
     { title: 'Profile Page (External)', route: '/Profile/External' },

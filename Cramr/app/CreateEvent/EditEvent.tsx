@@ -4,7 +4,7 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Image, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import FollowersDropdown from '../../components/FollowersDropdown';
 import { Colors } from '../../constants/Colors';
@@ -34,6 +34,8 @@ const CreateEventScreen = () => {
   const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
   const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
   const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
+  const dividerColor = isDarkMode ? Colors.dark.divider : Colors.light.divider;
+  const cancelButtonColor = isDarkMode ? Colors.dark.cancelButton : Colors.light.cancelButton;
 
   // Other state variables
   const [isOnline, setIsOnline] = useState(false);
@@ -77,97 +79,23 @@ const CreateEventScreen = () => {
     });
   };
 
-  const handleSubmit = async () => {
-    // Validate required fields
-    if (!title.trim()) {
-      Alert.alert('Error', 'Please enter an event title');
-      return;
-    }
+  const handleSave = async () => {
+    // handle save functionality here
+  };
 
-    if (!description.trim()) {
-      Alert.alert('Error', 'Please enter an event description');
-      return;
-    }
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 
-    if (!location.trim()) {
-      Alert.alert('Error', 'Please enter an event location');
-      return;
-    }
+  const handleDeleteModal = async () => {
+    setIsDeleteModalVisible(true);
+  };
 
-    if (!classField.trim()) {
-      Alert.alert('Error', 'Please enter a class name');
-      return;
-    }
 
-    if (!capacity || isNaN(Number(capacity)) || Number(capacity) <= 0) {
-      Alert.alert('Error', 'Please enter a valid capacity (must be a positive number)');
-      return;
-    }
+  const handleCancelDelete = async () => {
+    setIsDeleteModalVisible(false);
+  };
 
-    setIsSubmitting(true);
-
-    // Check if user is logged in before creating event
-    if (!loggedInUser?.id) {
-      Alert.alert('Error', 'You must be logged in to create an event');
-      return;
-    }
-
-    const eventData = {
-      title,
-      description,
-      location,
-      class: classField,
-      date: date.toISOString(),
-      tags: selectedTags, // Now using selectedTags array directly
-      capacity: Number(capacity),
-      invitePeople: selectedFriends,
-      creator_id: loggedInUser.id,
-    };
-    console.log('Event Data:', eventData);
-    
-    try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: eventData.title,
-          description: eventData.description,
-          location: eventData.location,
-          class: eventData.class,
-          date: eventData.date,
-          tags: eventData.tags,
-          capacity: eventData.capacity,
-          invitePeople: eventData.invitePeople,
-          creator_id: eventData.creator_id,
-        })
-      });
-  
-      const data = await response.json();
-      
-      if (response.ok) {
-        Alert.alert('Success', 'Event created!');
-        // Clear form after successful creation
-        setTitle('');
-        setDescription('');
-        setLocation('');
-        setClassField('');
-        setSelectedTags([]); // Clear selected tags
-        setCapacity('');
-        setSelectedFriends([]);
-        setDate(new Date());
-        // Navigate back to home after successful creation
-        router.push('/(tabs)');
-        return data;
-      } else {
-        Alert.alert('Error', data.error || 'Failed to create event');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleDelete = async () => {
+    // handle save functionality here
   };
 
   const handleNavigation = (page: string) => {
@@ -178,9 +106,9 @@ const CreateEventScreen = () => {
       } else if (page === 'map') {
         router.push('/Map/map');
       } else if (page === 'addEvent') {
-
+        // Already on addEvent page, no navigation needed
       } else if (page === 'bookmarks') {
-        router.push('/Saved/Saved');
+        // router.push('/bookmarks');
       } else       if (page === 'profile') {
         router.push('/Profile/Internal');
       }
@@ -241,7 +169,7 @@ const CreateEventScreen = () => {
           </TouchableOpacity>
 
           <View style={{ alignItems: 'center' }}>
-            <Text style={[styles.headerText, { color: textColor, marginTop: 20, marginBottom: 20 }]}>Create Event</Text>
+            <Text style={[styles.headerText, { color: textColor, marginTop: 20, marginBottom: 20 }]}>Edit Event</Text>
           </View>
 
           <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Name </Text>
@@ -399,19 +327,40 @@ const CreateEventScreen = () => {
           
           {/* Submit Button */}
           <TouchableOpacity
-            onPress={handleSubmit}
-            style={[styles.submitButton, { backgroundColor: '#5CAEF1' }]}
+            onPress={handleSave}
+            style={[styles.saveButton, { backgroundColor: '#5CAEF1' }]}
             disabled={isSubmitting}
           >
             {isSubmitting ? (
               <View style={styles.loadingContainer}>
                 <Text style={[styles.subheaderText, { color: textColor}]}>
-                  Creating...
+                  Saving...
                 </Text>
               </View>
             ) : (
               <Text style={[styles.subheaderText, { color: textColor }]}>
-                Create
+                Save
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={{ height: 0.5, backgroundColor: dividerColor, marginTop: 15, marginBottom: 5 }} />
+
+          {/* Delete Button */}
+          <TouchableOpacity
+            onPress={handleDeleteModal}
+            style={[styles.saveButton, { backgroundColor: '#E36062' }]}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <View style={styles.loadingContainer}>
+                <Text style={[styles.subheaderText, { color: textColor}]}>
+                  Deleting...
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.subheaderText, { color: textColor }]}>
+                Delete
               </Text>
             )}
           </TouchableOpacity>
@@ -496,6 +445,37 @@ const CreateEventScreen = () => {
           />
           {currentPage === 'profile' && <View style={styles.activeDot} />}
         </TouchableOpacity>
+
+        <Modal
+            animationType="fade"
+            transparent={true}
+            visible={isDeleteModalVisible}
+            onRequestClose={handleDelete}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={[styles.modalContent, {backgroundColor: backgroundColor, padding: 15}]}>
+                    <Text style={[styles.normalText, {color: textColor, textAlign: 'center', marginTop: 10}]}>
+                        Delete [event name]?
+                    </Text>
+                        
+                    <View style={{flexDirection: 'row', gap: 10, width: '100%', marginTop: 20}}>
+                        <TouchableOpacity
+                            style={{flex: 1, backgroundColor: cancelButtonColor, height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
+                            onPress={handleCancelDelete}
+                        >
+                            <Text style={[styles.normalText, {color: textColor}]}>Cancel</Text>
+                        </TouchableOpacity>
+                          
+                        <TouchableOpacity
+                            style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
+                            onPress={handleDelete}
+                        >
+                            <Text style={[styles.normalText, {color: 'white'}]}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -581,7 +561,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
   },
-  submitButton: {
+  saveButton: {
     padding: 10,
     borderRadius: 10,
     alignItems: 'center',
@@ -620,6 +600,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#5caef1',
     position: 'absolute',
     bottom: -5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 0,
+    width: '80%',
+    maxWidth: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
 

@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import EventCollapsible from '../../components/EventCollapsible';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
@@ -441,7 +442,7 @@ export default function External() {
             />
 
             <TouchableOpacity onPress={handlePressMore}>
-              <Image source={require('../../assets/images/more.png')} style={styles.iconContainer} />
+              <Icon name="more-horiz" size={24} color={textColor} />
             </TouchableOpacity>
           </View>
 
@@ -570,11 +571,11 @@ export default function External() {
                 tag1={event.tags[0] || null}
                 tag2={event.tags[1] || null}
                 tag3={event.tags[2] || null}
-                eventClass={event.class}
+                subject={event.class}
                 location={event.location}
                 date={event.date}
                 time={event.time}
-                numAttendees={event.accepted_count}
+                rsvpedCount={event.accepted_count}
                 capacity={event.capacity}
                 acceptedIds={event.accepted_ids}
                 isDarkMode={isDarkMode}

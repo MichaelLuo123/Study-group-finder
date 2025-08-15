@@ -1,11 +1,11 @@
 import EventCollapsible from '@/components/EventCollapsible';
+import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Slider from '../../components/Slider';
 import { Colors } from '../../constants/Colors';
-import { useUser } from '../../contexts/UserContext';
 
 interface Event {
     id: string;
@@ -30,7 +30,6 @@ interface Event {
 
 export default function Saved() {
     const router = useRouter();
-    const { isDarkMode } = useUser();
 
     // Colors
     const {isDarkMode, toggleDarkMode} = useUser();
@@ -43,36 +42,85 @@ export default function Saved() {
     const [currentPage, setCurrentPage] = useState('bookmarks');
     
     // User
-    const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+    const userId = 'a163cdc9-6db7-4498-a73b-a439ed221dec';
 
     // Events
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+    const [events, setEvents] = useState<Event[]>([]);
     const [rsvpedEvents, setRsvpedEvents] = useState<Event[]>([]);
     const [savedEvents, setSavedEvents] = useState<Event[]>([]);
-    
-    useEffect(() => {
+
+    // 1. Fetch all events
+  useEffect(() => {
     const fetchEvents = async () => {
-        try {
+      try {
         const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-        if (response.ok) {
-            const eventsData = await response.json();
+        if (!response.ok) throw new Error('Failed to fetch events');
+        const data: Event[] = await response.json();
+        setEvents(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load events');
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  // 2. Fetch RSVP'd events (depends on events and userId)
+  useEffect(() => {
+    if (!events.length || !userId) return;
+
+    const fetchRsvpedEvents = async () => {
+      try {
+        const promises = events.map(async (event) => {
+          const response = await fetch(
+            `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd?user_id=${userId}`
+          );
+          if (!response.ok) return null;
+          const rsvpData = await response.json();
+          return rsvpData.rsvp ? event : null;
+        });
+
+        const results = await Promise.all(promises);
+        setRsvpedEvents(results.filter(Boolean) as Event[]);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load RSVPs');
+      }
+    };
+
+    fetchRsvpedEvents();
+  }, [events, userId]);
+
+  // 3. Separate useEffect for saved events (depends only on userId)
+    useEffect(() => {
+    if (!userId) return;
+
+    const fetchSavedEvents = async () => {
+        try {
+        const response = await fetch(
+            `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`
+        );
         
-            // Corrected filter for saved events
-            const savedEvents = eventsData.filter((event: Event) => event.saved_ids && event.saved_ids.includes(userId));
-            setSavedEvents(savedEvents);
-
-            // Corrected filter for RSVPed events
-            const rsvpedEvents = eventsData.filter((event: Event) => event.rsvped_ids && event.rsvped_ids.includes(userId));
-            setRsvpedEvents(rsvpedEvents);
-
-        } else {
-            console.error('Failed to fetch events data');
-        }
-        } catch (error) {
-        console.error('Error fetching events data:', error);
+        if (!response.ok) throw new Error('Failed to fetch saved events');
+        
+        const data = await response.json();
+        
+        // Corrected response handling
+        const savedEvents = Array.isArray(data?.saved_events) 
+            ? data.saved_events 
+            : [];
+        
+        setSavedEvents(savedEvents as Event[]);
+        } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load saved events');
+        setSavedEvents([]);
+        } finally {
+        setLoading(false);
         }
     };
 
-    fetchEvents(); // You must call the function to execute it
+    fetchSavedEvents();
     }, [userId]);
 
     const handleNavigation = (page: string) => {
@@ -106,7 +154,7 @@ export default function Saved() {
 
                     {isSwitch === false && (
                         rsvpedEvents.length === 0 ? 
-                        (<Text style={styles.normalText}> No RSVPed events... </Text>) 
+                        (<Text style={[styles.normalText, {color: textColor}]}> No RSVPed events... </Text>) 
                         : 
                         (rsvpedEvents.map((event) => (
                             <EventCollapsible
@@ -117,11 +165,11 @@ export default function Saved() {
                                 tag1={event.tags[0] || null}
                                 tag2={event.tags[1] || null}
                                 tag3={event.tags[2] || null}
-                                eventClass={event.class}
+                                subject={event.class}
                                 location={event.location}
                                 date={event.date}
                                 time={event.time}
-                                numAttendees={event.rsvped_count}
+                                rsvpedCount={event.rsvped_count}
                                 capacity={event.capacity}
                                 acceptedIds={event.rsvped_ids}
                                 isDarkMode={isDarkMode}
@@ -133,7 +181,7 @@ export default function Saved() {
 
                     {isSwitch === true && (
                         savedEvents.length === 0 ? 
-                        (<Text style={styles.normalText}> No saved events.. </Text>) 
+                        (<Text style={[styles.normalText, {color: textColor}]}> No saved events.. </Text>) 
                         : 
                         (savedEvents.map((event) => (
                             <EventCollapsible
@@ -144,11 +192,11 @@ export default function Saved() {
                                 tag1={event.tags[0] || null}
                                 tag2={event.tags[1] || null}
                                 tag3={event.tags[2] || null}
-                                eventClass={event.class}
+                                subject={event.class}
                                 location={event.location}
                                 date={event.date}
                                 time={event.time}
-                                numAttendees={event.rsvped_count}
+                                rsvpedCount={event.rsvped_count}
                                 capacity={event.capacity}
                                 acceptedIds={event.rsvped_ids}
                                 isOwner={false}

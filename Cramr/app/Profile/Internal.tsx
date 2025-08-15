@@ -350,11 +350,11 @@ export default function Internal() {
                 tag2={event.tags[1] != null ? event.tags[1] : null} // Fixed this too
                 tag3={event.tags[2] != null ? event.tags[2] : null} // Fixed this too
                 ownerId = {event.creator_id}
-                eventClass={event.class}
+                subject={event.class}
                 location={event.location}
                 date={event.date}
                 time={event.time}
-                numAttendees={event.rsvped_count}
+                rsvpedCount={event.rsvped_count}
                 capacity={event.capacity}
                 acceptedIds={event.rsvped_ids}
                 light={true}
