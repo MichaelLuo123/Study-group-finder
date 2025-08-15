@@ -30,7 +30,6 @@ interface Event {
 
 export default function Saved() {
     const router = useRouter();
-    const { isDarkMode } = useUser();
 
     // Colors
     const {isDarkMode, toggleDarkMode} = useUser();
