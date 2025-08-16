@@ -109,7 +109,7 @@ export default function HomeScreen() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: userId }),
+        body: JSON.stringify({ userId }),
       });
 
       if (response.ok) {
@@ -210,8 +210,8 @@ export default function HomeScreen() {
         onSave={handleSaveFilters}
       />
 
-      {/* Event List (with filters) */}
-      {searchMode === 'events' && <EventList filters={filters} />}
+      {/* Event List (with filters + search from the upper grey bar) */}
+      {searchMode === 'events' && <EventList filters={filters} searchQuery={searchQuery} />}
 
       {/* People Results */}
       {searchMode === 'people' && (
@@ -451,10 +451,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
