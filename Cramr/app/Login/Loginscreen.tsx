@@ -44,9 +44,9 @@ const LoginScreen = () => {
                     setLoginMessage('Login successful!');
                     // Store user information in context
                     setUser(result.user);
-                    // Navigate to list view page after successful login
+                    // Navigate to 2FA page after successful login
                     setTimeout(() => {
-                        router.push('/listView');
+                        router.push('/TwoFactor/TwoFAPage');
                     }, 1000); // Small delay to show success message
                 } else {
                     setLoginStatus('error');
