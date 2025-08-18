@@ -13,6 +13,7 @@ import Animated, {
   useSharedValue,
   withSpring
 } from 'react-native-reanimated';
+import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
 import EventList from '../listView/eventList';
 
@@ -38,10 +39,17 @@ const StarMarker = ({ color, remainingCapacity }: { color: string, remainingCapa
 };
 
 export default function MapScreen() {
+  // Colors
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
-  const {isDarkMode} = useUser();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState('map');
@@ -51,16 +59,34 @@ export default function MapScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerStyle: {
+        backgroundColor: backgroundColor,
+        height: Platform.OS === 'ios' ? 100 : 80,
+      },
+      headerTitleStyle: {
+        width: '100%',
+      },
+      headerTitle: () => null,
       headerLeft: () => (
-        <Image
-          source={require('../listView/assets/images/finalCramrLogo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <View style={styles.fullWidthHeader}>
+          <TouchableOpacity 
+            style={styles.logo}
+            onPress={() => router.push('/(tabs)')}
+          >
+            <Image
+              source={require('../listView/assets/images/finalCramrLogo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
       ),
-      headerTitle: '', 
+      headerTitleContainerStyle: {
+        left: 0,
+        right: 0,
+      },
     });
-  }, [navigation]);
+  }, [navigation, backgroundColor]);
 
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
@@ -72,7 +98,7 @@ export default function MapScreen() {
         router.push('/CreateEvent/createevent');
       } 
       if (page === 'bookmarks') {
-        // router.push('/bookmarks');
+        router.push('/Saved/Saved');
       } 
       if (page === 'profile') {
         router.push('/Profile/Internal');
@@ -129,7 +155,6 @@ export default function MapScreen() {
     };
   });
 
-  //currently unnecessary, but we might need it once we need geocoordinates to find study groups near us.
   useEffect(() => {
     async function getCurrentLocation() {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -163,7 +188,7 @@ export default function MapScreen() {
             ...event,
             coordinates: coords.geometry.location,
             remainingCapacity: event.capacity - (event.accepted_count || 0),
-            bannerColor: event.banner_color || 'transparent' // Default color if none provided
+            bannerColor: event.banner_color || 'transparent'
           };
           console.log('Processed event:', processedEvent);
           return processedEvent;
@@ -181,10 +206,9 @@ export default function MapScreen() {
 
   
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>  
+    <View style={[styles.container, { backgroundColor: backgroundColor}]}>  
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-        {/* <Text style={styles.mapPlaceholder}>{JSON.stringify(location)}</Text> */}
         <MapView 
           style={styles.map}
           provider={PROVIDER_GOOGLE} 
@@ -226,28 +250,30 @@ export default function MapScreen() {
 
       {/* Draggable Bottom Sheet */}
       <PanGestureHandler onGestureEvent={gestureHandler}>
-        <Animated.View style={[styles.bottomSheet, bottomSheetStyle]}>
+        <Animated.View style={[styles.bottomSheet, bottomSheetStyle, {backgroundColor: backgroundColor}]}>
           {/* Drag Handle */}
-          <View style={styles.dragHandle} />
+          <View style={[styles.dragHandle]} />
           
           {/* Search Bar + Filter */}
-          <View style={styles.searchRow}>
-            <View style={styles.searchInputContainer}>
+          <View style={[styles.searchRow]}>
+            <View style={[styles.searchInputContainer, {backgroundColor: textInputColor}]}>
               <TextInput
                 mode="flat"
                 placeholder="Search"
                 style={styles.searchInput}
-                left={<TextInput.Icon icon="magnify" />}
+                left={<TextInput.Icon icon="magnify" color={textColor}/>}
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
+                textColor={textColor}
+                placeholderTextColor={placeholderTextColor}
               />
             </View>
             <IconButton
               icon="filter"
               size={28}
               onPress={() => {}}
-              style={styles.filterButton}
-              iconColor="#000"
+              style={[styles.filterButton, {backgroundColor: textInputColor}]}
+              iconColor={textColor}
             />
           </View>
 
@@ -354,9 +380,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logo: {
-    height: 100,
-    width: 100,
-    marginLeft: 12,
+    height: 120,
+    width: 120,
+    marginTop: -18
+  },
+  fullWidthHeader: {
+    width: '100%',
+    flexDirection: 'row',
   },
   mapContainer: {
     position: 'absolute',
@@ -378,8 +408,7 @@ const styles = StyleSheet.create({
     top: HEADER_HEIGHT + (screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT) / 2, 
     left: 0,
     right: 0,
-    height: BOTTOM_SHEET_MAX_HEIGHT, 
-    backgroundColor: 'white',
+    height: BOTTOM_SHEET_MAX_HEIGHT,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
@@ -404,25 +433,22 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
   },
   searchInputContainer: {
     flex: 1,
-    backgroundColor: '#e5e5e5',
-    borderRadius: 25,
-    marginRight: 8,
+    borderRadius: 10,
+    marginRight: 5,
     justifyContent: 'center',
   },
   searchInput: {
+    fontFamily: 'Poppins-Regular',
     backgroundColor: 'transparent',
     height: 44,
     fontSize: 16,
-    paddingLeft: 0,
   },
   filterButton: {
-    backgroundColor: '#e5e5e5',
-    borderRadius: 25,
+    borderRadius: 10,
     width: 44,
     height: 44,
     justifyContent: 'center',
@@ -430,8 +456,6 @@ const styles = StyleSheet.create({
   },
   eventListContainer: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 20, 
   },
   bottomNav: {
     position: 'absolute',

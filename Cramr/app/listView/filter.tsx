@@ -30,15 +30,22 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
   const [location, setLocation] = useState<string | null>(null);
 
   const next = () => setStep((s) => Math.min(s + 1, 4));
+  // We keep prev for internal use, but the UI back button will jump to step 0 (main)
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
+  // 🔄 Reset now also clears filters in the parent + closes the modal
   const reset = () => {
+    // reset local UI to defaults
     setDistance(1);
     setUnit('mi');
     setAttendees(2);
     setNoise(null);
     setLocation(null);
     setStep(0);
+
+    // tell parent “no filters” (distance/attendees = 0 disables them in your EventList)
+    onSave({ distance: 0, unit: 'mi', attendees: 0, noise: null, location: null });
+    onClose();
   };
 
   const handleSave = () => {
@@ -85,6 +92,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
               </Pressable>
             </>
           )}
+
           {step === 1 && (
             <>
               <Text style={styles.inputLabel}>Distance</Text>
@@ -115,6 +123,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
               </Text>
             </>
           )}
+
           {step === 2 && (
             <>
               <Text style={styles.inputLabel}>Number of Attendees</Text>
@@ -133,6 +142,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
               </Text>
             </>
           )}
+
           {step === 3 && (
             <>
               <Text style={styles.inputLabel}>Noise Level</Text>
@@ -153,6 +163,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
               <Text style={{ alignSelf: 'flex-end', marginBottom: 24 }}>{noise || ''}</Text>
             </>
           )}
+
           {step === 4 && (
             <>
               <Text style={styles.inputLabel}>Location Type</Text>
@@ -174,6 +185,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
             </>
           )}
         </View>
+
         <View style={styles.footer}>
           <Pressable style={[styles.footerBtn, { backgroundColor: '#f37b7b' }]} onPress={reset}>
             <Text style={{ color: 'white', fontWeight: 'bold' }}>Reset</Text>
@@ -187,8 +199,10 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
             </Text>
           </Pressable>
         </View>
+
+        {/* ⏪ Back button now jumps to main page (step 0) */}
         {step > 0 && (
-          <Pressable onPress={prev} style={styles.backBtn}>
+          <Pressable onPress={() => setStep(0)} style={styles.backBtn} accessibilityLabel="Back to main filter menu">
             <Text style={{ color: '#5caef1', fontWeight: 'bold', fontSize: 16 }}>{'<'}</Text>
           </Pressable>
         )}

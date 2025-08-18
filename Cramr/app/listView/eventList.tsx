@@ -1,23 +1,29 @@
+import EventCollapsible from '@/components/EventCollapsible';
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
-import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
+import { Colors } from '../../constants/Colors';
 
+import { useUser } from '@/contexts/UserContext';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  TextInput
 } from 'react-native';
 import type { Filters } from './filter';
 
-
-export default function EventList({ filters, selectedEventId }: { filters: Filters | null, selectedEventId?: string | null }) {
-
+export default function EventList({ filters, selectedEventId, searchQuery }: { filters: Filters | null, selectedEventId?: string | null, searchQuery?: string }) {
+  // Colors
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
   const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
 
@@ -34,92 +40,113 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
 
   const fetchEvents = async () => {
     try {
-      console.log('Fetching events from backend...');
       setLoading(true);
+      setError(null);
+      
+      // 1. Fetch events from backend
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-      console.log('Events fetch response status:', response.status);
-      if (!response.ok) throw new Error('Failed to fetch events');
-      const data = await response.json();
-      console.log('Raw events data:', data);
-
-      const factory = new PublicStudySessionFactory();
-
-      const eventsWithDetails = await Promise.all(
-        data.map(async (event: any) => {
-          console.log(`Processing event ${event.id}:`, {
-            title: event.title,
-            accepted_count: event.accepted_count,
-            accepted_ids: event.accepted_ids,
-            type: typeof event.accepted_count
-          });
-          
-          const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
-          const coords = await studySession.addressToCoordinates();
-
-          let isRSVPed = false;
-          let isSaved = false;
-          
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const eventsData = await response.json();
+      
+      // 2. Process each event with error handling
+      const processedEvents = await Promise.all(
+        eventsData.map(async (event: any) => {
           try {
-            const rsvpRes = await fetch(
-              `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd?user_id=${userId}`
-            );
-            console.log(`RSVP status fetch for event ${event.id} status:`, rsvpRes.status);
-            if (rsvpRes.ok) {
-              const rsvpData = await rsvpRes.json();
-              isRSVPed = Boolean(rsvpData.rsvp && rsvpData.rsvp.status === 'accepted');
+            // Default coordinates (fallback to Carlsbad coordinates)
+            let coordinates = { 
+              lat: 33.1581, 
+              lng: -117.3506,
+              isAccurate: false 
+            };
+            
+            // Try geocoding if location exists
+            if (event.location) {
+              try {
+                const factory = new PublicStudySessionFactory();
+                const geocodeResult = await factory.addressToCoordinates(event.location);
+                
+                if (geocodeResult?.geometry?.location) {
+                  coordinates = {
+                    lat: geocodeResult.geometry.location.lat,
+                    lng: geocodeResult.geometry.location.lng,
+                    isAccurate: true
+                  };
+                }
+              } catch (geocodeError) {
+                console.warn(`Geocoding failed for ${event.location}:`, geocodeError);
+              }
             }
-          } catch (e) {
-            console.warn('Failed to fetch RSVP status:', e);
-            isRSVPed = false;
-          }
-
-          try {
-            const savedRes = await fetch(
-              `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${event.id}`
-            );
-            if (savedRes.ok) {
-              const savedData = await savedRes.json();
-              isSaved = Boolean(savedData.is_saved);
+            
+            // Check RSVP status
+            let isRSVPed = false;
+            try {
+              const rsvpResponse = await fetch(
+                `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd?user_id=${userId}`
+              );
+              
+              if (rsvpResponse.ok) {
+                const rsvpData = await rsvpResponse.json();
+                isRSVPed = rsvpData.rsvp?.status === 'accepted';
+              }
+            } catch (rsvpError) {
+              console.warn(`RSVP check failed for event ${event.id}:`, rsvpError);
             }
-          } catch (e) {
-            console.warn('Failed to fetch saved status:', e);
-            isSaved = false;
+            
+            // Check saved status
+            let isSaved = false;
+            try {
+              const savedResponse = await fetch(
+                `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${event.id}`
+              );
+              
+              if (savedResponse.ok) {
+                const savedData = await savedResponse.json();
+                isSaved = savedData.is_saved;
+              }
+            } catch (savedError) {
+              console.warn(`Saved check failed for event ${event.id}:`, savedError);
+            }
+            
+            return {
+              ...event,
+              coordinates,
+              isRSVPed,
+              isSaved,
+              geocodeError: !coordinates.isAccurate
+            };
+            
+          } catch (eventProcessingError) {
+            console.error(`Error processing event ${event.id}:`, eventProcessingError);
+            return {
+              ...event,
+              coordinates: { lat: 0, lng: 0, isAccurate: false },
+              isRSVPed: false,
+              isSaved: false,
+              geocodeError: true
+            };
           }
-
-          const finalEvent = {
-            ...event,
-            coordinates: coords.geometry.location,
-            isRSVPed,
-            isSaved,
-          };
-          
-          console.log(`Final event ${event.id} data:`, {
-            title: finalEvent.title,
-            accepted_count: finalEvent.accepted_count,
-            accepted_ids: finalEvent.accepted_ids,
-            isRSVPed: finalEvent.isRSVPed,
-            isSaved: finalEvent.isSaved
-          });
-          
-          return finalEvent;
         })
       );
-
-      // Sort events by distance ascending (closest first)
-      const sortedData = eventsWithDetails.sort((a: any, b: any) => {
+      
+      // 3. Sort events by distance
+      const sortedEvents = processedEvents.sort((a, b) => {
         const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
         const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
         return aDistance - bDistance;
       });
-
-      setEvents(sortedData);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching events:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch events');
+      
+      setEvents(sortedEvents);
+      
+    } catch (mainError) {
+      console.error('Failed to fetch events:', mainError);
+      setError(mainError instanceof Error ? mainError.message : 'Unknown error');
+      setEvents([]); // Clear events on error
     } finally {
       setLoading(false);
-      console.log('Finished fetching events');
     }
   };
 
@@ -138,105 +165,65 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
     getCurrentLocation();
   }, []);
 
-  
-
-  // ADDED: Function to RSVP/un-RSVP
   const toggleRSVP = async (eventId: string, currentStatus: boolean) => {
-    if (busyEventId) return; // Prevent multiple requests at once
+    if (busyEventId) return; 
     setBusyEventId(eventId);
 
     try {
       if (currentStatus) {
-        console.log(`Cancelling RSVP for event ${eventId}...`);
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId }),
         });
-        console.log('Cancel RSVP response status:', res.status);
         if (!res.ok) {
           const txt = await res.text();
           throw new Error(`Failed to cancel RSVP: ${txt}`);
         }
         
-        // Update local state immediately for instant feedback
         setEvents(prevEvents => {
           const currentEvent = prevEvents.find(e => e.id === eventId);
           const newCount = Math.max(0, (currentEvent?.accepted_count || 0) - 1);
-          console.log(`Updating local state: RSVP cancelled, count from ${currentEvent?.accepted_count} to ${newCount}`);
-          
           return prevEvents.map(event => 
             event.id === eventId 
-              ? { 
-                  ...event, 
-                  isRSVPed: false,
-                  accepted_count: newCount
-                }
+              ? { ...event, isRSVPed: false, accepted_count: newCount }
               : event
           );
         });
-        
-        Alert.alert('RSVP Cancelled', 'You have been removed from the attendance list.');
-        
-        // Small delay before database refresh to allow local state to be visible
-        setTimeout(async () => {
-          console.log('Refreshing from database...');
-          await fetchEvents();
-        }, 100);
       } else {
-        console.log(`RSVPing for event ${eventId}...`);
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId, status: 'accepted' }),
         });
-        console.log('RSVP response status:', res.status);
         if (!res.ok) {
           const txt = await res.text();
           throw new Error(`Failed to RSVP: ${txt}`);
         }
         
-        // Update local state immediately for instant feedback
         setEvents(prevEvents => {
           const currentEvent = prevEvents.find(e => e.id === eventId);
           const newCount = (currentEvent?.accepted_count || 0) + 1;
-          console.log(`Updating local state: RSVP accepted, count from ${currentEvent?.accepted_count} to ${newCount}`);
-          
           return prevEvents.map(event => 
             event.id === eventId 
-              ? { 
-                  ...event, 
-                  isRSVPed: true,
-                  accepted_count: newCount
-                }
+              ? { ...event, isRSVPed: true, accepted_count: newCount }
               : event
           );
         });
-        
-        Alert.alert('RSVP Successful', 'You are now attending this event.');
-        
-        // Small delay before database refresh to allow local state to be visible
-        setTimeout(async () => {
-          console.log('Refreshing from database...');
-          await fetchEvents();
-        }, 100);
       }
     } catch (err) {
-      console.error('RSVP toggle error:', err);
       Alert.alert('Error', err instanceof Error ? err.message : 'Unexpected error');
     } finally {
       setBusyEventId(null);
     }
   };
 
-  // ADDED: Function to save/unsave events
   const toggleSave = async (eventId: string, currentStatus: boolean) => {
-    if (busyEventId) return; // Prevent multiple requests at once
+    if (busyEventId) return; 
     setBusyEventId(eventId);
 
     try {
       if (currentStatus) {
-        console.log(`Unsaving event ${eventId}...`);
         const res = await fetch(
           `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`,
           { method: 'DELETE' }
@@ -246,7 +233,6 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
           throw new Error(`Failed to unsave event: ${txt}`);
         }
         
-        // Update local state immediately for instant feedback
         setEvents(prevEvents => 
           prevEvents.map(event => 
             event.id === eventId 
@@ -254,16 +240,7 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
               : event
           )
         );
-        
-        Alert.alert('Event Unsaved', 'Event has been removed from your saved events.');
-        
-        // Small delay before database refresh to allow local state to be visible
-        setTimeout(async () => {
-          console.log('Refreshing from database...');
-          await fetchEvents();
-        }, 100);
       } else {
-        console.log(`Saving event ${eventId}...`);
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -274,7 +251,6 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
           throw new Error(`Failed to save event: ${txt}`);
         }
         
-        // Update local state immediately for instant feedback
         setEvents(prevEvents => 
           prevEvents.map(event => 
             event.id === eventId 
@@ -282,24 +258,13 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
               : event
           )
         );
-        
-        Alert.alert('Event Saved', 'Event has been added to your saved events.');
-        
-        // Small delay before database refresh to allow local state to be visible
-        setTimeout(async () => {
-          console.log('Refreshing from database...');
-          await fetchEvents();
-        }, 100);
       }
     } catch (err) {
-      console.error('Save toggle error:', err);
       Alert.alert('Error', err instanceof Error ? err.message : 'Unexpected error');
     } finally {
       setBusyEventId(null);
     }
   };
-  
-  
 
   const compareDistanceFromLocation = (lat: number, long: number) => {
     let latDistance = (location?.coords.latitude || 0) - lat;
@@ -322,16 +287,50 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
   // ----------- FILTERING LOGIC -----------
   const filteredEvents = events.filter((event: any) => {
     if (!filters) return true;
-    // Filter by attendees (event.accepted_count)
-    if (filters.attendees && event.accepted_count > filters.attendees) return false;
-    // Filter by noise (tags)
-    if (filters.noise && !(event.tags && event.tags.includes(filters.noise))) return false;
-    // Filter by location type (tags)
-    if (filters.location && !(event.tags && event.tags.includes(filters.location))) return false;
-    // You could filter by distance as well (uncomment if needed)
-    // if (filters.distance && compareDistanceFromLocation(event.coordinates.lat, event.coordinates.lng) > filters.distance) return false;
+  
+    // 1) Distance filter (max distance)
+    /*if (filters.distance && event.coordinates?.lat != null && event.coordinates?.lng != null) {
+      const d = distanceFromUser(event.coordinates.lat, event.coordinates.lng, filters.unit);
+      if (d > filters.distance) return false;
+    }*/
+  
+    // 2) Attendees filter (minimum attendees, matches UI “> X people”)
+    if (filters.attendees) {
+      const count = event.accepted_count ?? event.rsvped_count ?? 0;
+      if (count < filters.attendees) return false;
+    }
+  
+    // 3) Noise level filter (tags)
+    if (filters.noise) {
+      const wanted = filters.noise.toLowerCase();
+      const hasTag = Array.isArray(event.tags) && event.tags.some((t: string) => (t || '').toLowerCase() === wanted);
+      if (!hasTag) return false;
+    }
+  
+    // 4) Location type filter (tags)
+    if (filters.location) {
+      const wanted = filters.location.toLowerCase();
+      const hasTag = Array.isArray(event.tags) && event.tags.some((t: string) => (t || '').toLowerCase() === wanted);
+      if (!hasTag) return false;
+    }
+  
     return true;
   });
+
+  // ----------- SEARCH FILTER -----------
+  const normalizedQuery = (searchQuery || '').trim().toLowerCase();
+  const searchedEvents = normalizedQuery
+    ? filteredEvents.filter((event: any) => {
+        const creator = (event.creator_name || event.creator_id || '').toLowerCase();
+        const locationText = (event.location || '').toLowerCase();
+        const tagsText = Array.isArray(event.tags) ? event.tags.join(' ').toLowerCase() : '';
+        return (
+          creator.includes(normalizedQuery) ||
+          locationText.includes(normalizedQuery) ||
+          tagsText.includes(normalizedQuery)
+        );
+      })
+    : filteredEvents;
 
   // Update collapsed events when selectedEventId changes
   useEffect(() => {
@@ -346,22 +345,20 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
 
   // Scroll to selected event when selectedEventId changes
   useEffect(() => {
-    if (selectedEventId && filteredEvents.length > 0) {
-      const eventIndex = filteredEvents.findIndex(event => event.id === selectedEventId);
+    if (selectedEventId && searchedEvents.length > 0) {
+      const eventIndex = searchedEvents.findIndex(event => event.id === selectedEventId);
       if (eventIndex !== -1) {
-        
         setTimeout(() => {
           let scrollPosition = 0;
           for (let i = 0; i < eventIndex; i++) {
-            const event = filteredEvents[i];
+            const event = searchedEvents[i];
             const baseHeight = 80;
             if (!collapsedEvents.has(event.id)) {
-              // Add height for expanded content (adjust these values based on your actual layout)
               scrollPosition += event.tags?.length ? 40 : 0;
               scrollPosition += 60; 
             }
-            scrollPosition += baseHeight; // Add base height
-            scrollPosition += 20; // Margin between events
+            scrollPosition += baseHeight; 
+            scrollPosition += 20; 
           }
           
           scrollViewRef.current?.scrollTo({ 
@@ -371,7 +368,7 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
         }, 100); 
       }
     }
-  }, [selectedEventId, filteredEvents, collapsedEvents]);
+  }, [selectedEventId, searchedEvents, collapsedEvents]);
 
   // ----------- RENDER LOGIC -----------
   if (loading) {
@@ -395,141 +392,70 @@ export default function EventList({ filters, selectedEventId }: { filters: Filte
   }
 
   return (
-    <ScrollView 
-      ref={scrollViewRef}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={true}
-      nestedScrollEnabled={true}
-      style={{ flex: 1 }}
-      bounces={true}
-      alwaysBounceVertical={false}
-      scrollEnabled={true}
-    >
-      {filteredEvents.map((event: any) => {
-        const isCollapsed = collapsedEvents.has(event.id);
+    <>
 
-        return (
-          <View key={event.id} style={styles.card}>
-            {/* Title Header - Clickable */}
-            <Pressable 
-              style={[styles.header, { backgroundColor: '#f0f0f0' }]}
-              onPress={() => toggleEvent(event.id)}
-            >
-              <View style={styles.headerLeft}>
-                <View style={styles.titleContainer}>
-                  <Text style={styles.title}>{event.title}</Text>
-                  <Text style={styles.creatorName}>
-                    by {event.creator_name || 'Unknown User'}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.headerRight}>
-                {/* Creator Profile Picture */}
-                {event.creator_profile_picture && (
-                  <Image 
-                    source={{ uri: event.creator_profile_picture }} 
-                    style={styles.profilePicture}
-                  />
-                )}
-                <Text style={styles.collapseIcon}>{isCollapsed ? '▼' : '▲'}</Text>
-              </View>
-            </Pressable>
+      <ScrollView 
+        ref={scrollViewRef}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+        style={{ flex: 1 }}
+        bounces={true}
+      >
+        {searchedEvents.map((event: any) => {
+          const isOpen = collapsedEvents.has(event.id);
 
-            {/* Collapsible Content */}
-            {!isCollapsed && (
-              <>
-                {/* Labels */}
-                {event.tags && event.tags.length > 0 && (
-                  <View style={styles.labels}>
-                    {event.tags.map((tag: string, index: number) => (
-                      <Text key={index} style={styles.label}>
-                        {tag}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-
-                {/* Details */}
-                {event.class && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.icon}>📘</Text>
-                    <Text style={styles.detail}>{event.class}</Text>
-                  </View>
-                )}
-                {event.location && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.icon}>📍</Text>
-                    <Text style={styles.detail}>{event.location}</Text>
-                  </View>
-                )}
-                {event.date_and_time && (
-                  <>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.icon}>📅</Text>
-                      <Text style={styles.detail}>{new Date(event.date_and_time).toLocaleDateString()}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.icon}>🕒</Text>
-                      <Text style={styles.detail}>{new Date(event.date_and_time).toLocaleTimeString()}</Text>
-                    </View>
-                  </>
-                )}
-
-                {/* Debug logging for count display */}
-                {(() => {
-                  console.log(`Rendering event ${event.id} footer:`, {
-                    title: event.title,
-                    accepted_count: event.accepted_count,
-                    accepted_ids: event.accepted_ids,
-                    display_count: event.accepted_count || 0
-                  });
-                  return null;
-                })()}
-
-                {/* Footer */}
-                <View style={styles.footer}>
-                  <Text style={styles.count}>
-                    {event.accepted_count || 0}/{event.capacity || '∞'} 👥
-                  </Text>
-                  <View style={styles.buttonContainer}>
-                    <Pressable
-                      style={styles.saveButton}
-                      onPress={() => toggleSave(event.id, event.isSaved)}
-                      disabled={busyEventId === event.id}
-                    >
-                      <Ionicons 
-                        name={event.isSaved ? "bookmark" : "bookmark-outline"} 
-                        size={20} 
-                        color={event.isSaved ? "#000000" : "#666666"} 
-                      />
-                    </Pressable>
-                    <Pressable
-                      style={styles.rsvpButton}
-                      onPress={() => toggleRSVP(event.id, event.isRSVPed)}
-                      disabled={busyEventId === event.id}
-                    >
-                      <Text style={{ color: 'white' }}>
-                        {event.isRSVPed ? 'Cancel RSVP' : 'RSVP'}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </>
-            )}
-          </View>
-        );
-      })}
-      {/* Extra space */}
-      <View style={[styles.extraSpace, { height: Math.max(filteredEvents.length * 75 + 160, 300) }]} />
-    </ScrollView>
+          return (
+            event.creator_id !== userId && (
+              <EventCollapsible
+                key={event.id}
+                eventId={event.id}
+                ownerId={event.creator_id}
+                ownerProfile={event.creator_profile_picture}
+                title={event.title}
+                bannerColor={bannerColors[event.banner_color || 1]}
+                tag1={event.tags?.[0] || null}
+                tag2={event.tags?.[1] || null}
+                tag3={event.tags?.[2] || null}
+                subject={event.class}
+                location={event.location}
+                date={event.date || new Date(event.date_and_time).toLocaleDateString()}
+                time={event.time || new Date(event.date_and_time).toLocaleTimeString()}
+                rsvpedCount={event.accepted_count || event.rsvped_count || 0}
+                capacity={event.capacity || '∞'}
+                isDarkMode={isDarkMode}
+                isOwner={event.creator_id === userId}
+                isSaved={event.isSaved}
+                onSavedChange={() => toggleSave(event.id, event.isSaved)}
+                isRsvped={event.isRSVPed}
+                onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
+                style={{marginBottom: 5}}
+              />
+            )
+          );
+        })}
+        <View style={[styles.extraSpace, { height: Math.max(searchedEvents.length * 75 + 160, 300) }]} />
+      </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 20,
-    paddingHorizontal: 10,
-    minHeight: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -603,7 +529,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-
   titleContainer: {
     flex: 1,
   },

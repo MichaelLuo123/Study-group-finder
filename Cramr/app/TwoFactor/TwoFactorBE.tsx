@@ -36,3 +36,8 @@ export class TwoFactorBE {
             console.error("Failed to send 2FA email")
     }
 }
+
+// Add default export for expo-router
+export default function TwoFactorBEScreen() {
+  return null; // This is just a placeholder for expo-router
+}
