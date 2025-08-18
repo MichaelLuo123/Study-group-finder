@@ -27,7 +27,9 @@ CREATE TABLE users (
     phone_number VARCHAR(20),
     push_notifications_enabled BOOLEAN DEFAULT true,
     email_notifications_enabled BOOLEAN DEFAULT true,
-    sms_notifications_enabled BOOLEAN DEFAULT false
+    sms_notifications_enabled BOOLEAN DEFAULT false,
+    verification_code VARCHAR(255), -- Stores 6-digit verification code or temporary reset token
+    verification_code_expiry TIMESTAMP -- Expiry time for verification code (10 min) or reset token (5 min)
 );
 
 -- Create events table
@@ -44,12 +46,7 @@ CREATE TABLE events (
     status VARCHAR(50) DEFAULT 'active',
     capacity INTEGER,
     tags TEXT[],
-    invited_ids UUID[],
-    accepted_ids UUID[],
-    declined_ids UUID[],
-    invited_count INTEGER DEFAULT 0,
-    accepted_count INTEGER DEFAULT 0,
-    declined_count INTEGER DEFAULT 0
+    banner_color VARCHAR(100)
 );
 
 -- Create event_attendees table
@@ -61,13 +58,20 @@ CREATE TABLE event_attendees (
     PRIMARY KEY (event_id, user_id)
 );
 
--- Create friends table to manage user friendships
-CREATE TABLE friends (
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,   -- Foreign key referencing the user
-    friend_id UUID REFERENCES users(id) ON DELETE CASCADE, -- Foreign key referencing the friend
-    status VARCHAR(20) DEFAULT 'pending',                   -- Friendship status (e.g., 'pending', 'accepted')
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,         -- Timestamp for when the friendship was created
-    PRIMARY KEY (user_id, friend_id)                        -- Composite primary key to ensure no duplicate friendships
+-- Create follows table to manage user follow relationships
+CREATE TABLE follows (
+    follower_id UUID REFERENCES users(id) ON DELETE CASCADE,   -- Foreign key referencing the follower
+    following_id UUID REFERENCES users(id) ON DELETE CASCADE,  -- Foreign key referencing the user being followed
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,            -- Timestamp for when the follow was created
+    PRIMARY KEY (follower_id, following_id)                   -- Composite primary key to ensure no duplicate follows
+);
+
+-- Create blocks table to manage user blocks relationships
+CREATE TABLE blocks (
+    blocker_id UUID REFERENCES users(id) ON DELETE CASCADE,   -- Foreign key referencing the blocker
+    blocked_id UUID REFERENCES users(id) ON DELETE CASCADE,  -- Foreign key referencing the user being blocked
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,          -- Timestamp for when the block was created
+    PRIMARY KEY (blocker_id, blocked_id)                    -- Composite primary key to ensure no duplicate blocks
 );
 
 -- Insert sample data into users

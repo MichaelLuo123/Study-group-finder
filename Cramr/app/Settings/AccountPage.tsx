@@ -1,50 +1,100 @@
-import React, { useState } from 'react';
-import {
-  SafeAreaView, ScrollView, StyleSheet, Text, TextInput,
-  TouchableOpacity, View, Modal, Pressable, Image,
-} from 'react-native';
+import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
-import { useFonts } from 'expo-font';
-import { useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  Image,
+  Modal, Pressable,
+  SafeAreaView, ScrollView, StyleSheet, Text, TextInput,
+  TouchableOpacity, View,
+} from 'react-native';
+import { Colors } from '../../constants/Colors';
 
 const AccountPage = () => {
+  // All state and hooks must be declared at the top of the component
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const { user: loggedInUser } = useUser(); // <-- Re-enabled the correct way to get the user object
+  const {isDarkMode, toggleDarkMode} = useUser();
 
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
-    'Poppins-Bold': require('../../assets/fonts/Poppins/Poppins-Bold.ttf'),
-    'Poppins-SemiBold': require('../../assets/fonts/Poppins/Poppins-SemiBold.ttf'),
-  });
+  // Colors
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderTextColor= (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
 
-  if (!fontsLoaded) {
-    return null; 
-  }
-
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
-
+  // First useEffect to fetch all user data
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!loggedInUser?.id) {
+        return;
+      }
+      
+      setIsLoading(true);
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
         if (response.ok) {
           const data = await response.json();
           setEmail(data.email || '');
           setPhoneNumber(data.phone_number || '');
+          setBlockedIds(data.blocked_ids || []);
         } else {
           console.error('Failed to fetch user data:', await response.text());
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
       }
+    }; // <-- Function definition ends here
+
+    fetchUserData(); // <-- Call the function here
+  }, [loggedInUser?.id]);
+
+  // Second useEffect to fetch data for blocked users
+  const fetchBlockedUserProfile = async (blockedId: string) => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${blockedId}`);
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          id: blockedId,
+          profilePicture: data.profile_picture_url,
+          username: data.username,
+        };
+      } else {
+        console.error(`Failed to fetch profile for ID ${blockedId}:`, await response.text());
+        return null;
+      }
+    } catch (err) {
+      console.error('Error fetching blocked user profile:', err);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const fetchAllBlockedProfiles = async () => {
+      if (!blockedIds.length) {
+        setBlockedUsers([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      const promises = blockedIds.map(id => fetchBlockedUserProfile(id));
+      const profiles = await Promise.all(promises);
+      const validProfiles = profiles.filter(p => p !== null);
+      setBlockedUsers(validProfiles);
+      setIsLoading(false);
     };
 
-    fetchUserData();
-  }, []);
+    fetchAllBlockedProfiles();
+  }, [blockedIds]);
 
   const handleSave = async () => {
     if (newPassword && newPassword !== confirmPassword) {
@@ -59,7 +109,7 @@ const AccountPage = () => {
         password: newPassword || undefined,
       };
   
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/account`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser?.id}/account`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -81,148 +131,263 @@ const AccountPage = () => {
     }
   };
 
+  const handleUnblock = async (userId: string) => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser?.id}/blocks/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        alert('User unblocked successfully!');
+        // Refresh the blocked users list by refetching user data
+        const fetchUserData = async () => {
+          if (!loggedInUser?.id) {
+            return;
+          }
+          
+          setIsLoading(true);
+          try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
+            if (response.ok) {
+              const data = await response.json();
+              setEmail(data.email || '');
+              setPhoneNumber(data.phone_number || '');
+              setBlockedIds(data.blocked_ids || []);
+            } else {
+              console.error('Failed to fetch user data:', await response.text());
+            }
+          } catch (err) {
+            console.error('Error fetching user data:', err);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        fetchUserData();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to unblock user');
+      }
+    } catch (error) {
+      console.error('Unblock error:', error);
+      alert('Network error occurred');
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Image
-            source={require('../../assets/images/Arrow_black.png')}
-            style={styles.backArrowImage}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.heading}>Account</Text>
-
-        <Text style={styles.subheading}>Email</Text>
-        <TextInput style={styles.input} placeholder="email@ucsd.edu" 
-        value={email} 
-        onChangeText={setEmail}
-        />
-
-        <Text style={styles.subheading}>Phone Number</Text>
-        <TextInput style={styles.input} placeholder="(123) 456-7890" 
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        />
-
-        <Text style={styles.subheading}>Change Password</Text>
-        <TextInput
-        style={styles.input}
-        placeholder="Enter old password"
-        secureTextEntry
-        />
-
-        <TextInput
-        style={styles.input}
-        placeholder="Enter new password"
-        secureTextEntry
-        value={newPassword}
-        onChangeText={setNewPassword}
-        />
-
-        <TextInput
-        style={styles.input}
-        placeholder="Re-enter new password"
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        />
-
-        {newPassword && confirmPassword && newPassword !== confirmPassword && (
-        <Text style={styles.errorText}>New passwords do not match!</Text>
+        
+        {/* Show message if no user is logged in */}
+        {!loggedInUser && (
+          <View style={styles.messageContainer}>
+            <Text style={[styles.messageText, { color: textColor }]}>
+              Please log in to edit your account
+            </Text>
+          </View>
         )}
 
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider} />
-        <Text style={styles.subheading}>Delete Account</Text>
-
-        <TouchableOpacity style={styles.deleteButton} onPress={() => setModalVisible(true)}>
-          <Text style={styles.deleteButtonText}>Delete</Text>
-        </TouchableOpacity>
-
-        <Modal transparent visible={modalVisible} animationType="fade">
-          <View style={styles.modalBackground}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Delete account? This action cannot be undone.</Text>
-              <View style={styles.modalButtons}>
-                <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </Pressable>
-                <Pressable style={[styles.modalButton, styles.confirmButton]} onPress={() => {
-                  setModalVisible(false);
-                }}>
-                  <Text style={styles.confirmText}>Delete</Text>
-                </Pressable>
-              </View>
-            </View>
+        {/* Show loading state */}
+        {isLoading && (
+          <View style={styles.messageContainer}>
+            <Text style={[styles.messageText, { color: textColor }]}>
+              Loading account...
+            </Text>
           </View>
-        </Modal>
+        )}
+
+        {/* Show account content only if user is logged in and not loading */}
+        {loggedInUser && !isLoading && (
+          <>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ArrowLeft 
+                size={24} 
+                color={textColor}
+                onPress={() => router.back()}
+              />
+            </TouchableOpacity>
+
+            <Text style={[styles.heading, { color: textColor }]}>Account</Text>
+
+            <Text style={[styles.subheading, { color: textColor }]}>Email</Text>
+            <TextInput 
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]} 
+              placeholder="email@ucsd.edu" 
+              placeholderTextColor={placeholderTextColor}
+              value={email}
+              onChangeText={setEmail}
+            />
+
+            <Text style={[styles.subheading, { color: textColor }]}>Phone Number</Text>
+            <TextInput 
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]} 
+              placeholder="(123) 456-7890"  
+              placeholderTextColor={placeholderTextColor}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+            />
+
+            <Text style={[styles.subheading, { color: textColor }]}>Change Password</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+              placeholder="Enter old password."
+              placeholderTextColor={placeholderTextColor}
+              secureTextEntry
+            />
+
+            <TextInput
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+              placeholder="Enter new password."
+              placeholderTextColor={placeholderTextColor}
+              secureTextEntry
+              value={newPassword}
+              onChangeText={setNewPassword}
+            />
+
+            <TextInput
+              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+              placeholder="Re-enter new password."
+              placeholderTextColor={placeholderTextColor}
+              secureTextEntry
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+
+            {newPassword && confirmPassword && newPassword !== confirmPassword && (
+              <Text style={styles.errorText}>New passwords do not match!</Text>
+            )}
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={[styles.saveButtonText, {color: textColor}]}>Save</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.divider} />
+            <Text style={[styles.subheading, { color: textColor }]}>Blocked Accounts</Text>
+            
+            {blockedUsers.map((user) => (
+              <View key={user.id} style={[styles.blockedContainer, {backgroundColor: textInputColor, flexDirection: 'row', alignItems: 'center'}]}>
+                <Image
+                  source={{ uri: user.profilePicture }}
+                  style={{ width: 40, height: 40, borderRadius: 20 }}
+                />
+                <Text style={[styles.normalText, { color: textColor, marginLeft: 12}]}>
+                  {user.username}
+                </Text>
+                <TouchableOpacity onPress={() => handleUnblock(user.id)}>
+                    <Text style={[styles.normalBoldText, { color: '#E36062', marginLeft: 150}]}> ✕ </Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <View style={styles.divider} />
+            <Text style={[styles.subheading, { color: textColor }]}>Delete Account</Text>
+
+            <TouchableOpacity style={styles.deleteButton} onPress={() => setModalVisible(true)}>
+              <Text style={[styles.deleteButtonText, {color: textColor}]}>Delete</Text>
+            </TouchableOpacity>
+
+            <Modal transparent visible={modalVisible} animationType="fade">
+              <View style={styles.modalBackground}>
+                <View style={[styles.modalCard, { backgroundColor: textInputColor }]}>
+                  <Text style={[styles.modalTitle, { color: textColor }]}>Delete account? This action cannot be undone.</Text>
+                  <View style={styles.modalButtons}>
+                    <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
+                      <Text style={styles.cancelText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable style={[styles.modalButton, styles.confirmButton]} onPress={() => {
+                      setModalVisible(false);
+                    }}>
+                      <Text style={styles.confirmText}>Delete</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#F5F5F5',
-    },
-    scrollContent: {
-      padding: 24,
-    },
-    backArrow: {
-      fontSize: 30,
-      marginBottom: 0,
-      fontWeight: '600',
-    },
-    backButton: {
-        width: 30,
-        height: 30,
-        marginBottom: 12,
-      },
-      backArrowImage: {
-        width: 30,
-        height: 30,
-      },
-    heading: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      alignSelf: 'center',
-      marginBottom: 24,
-      fontFamily: 'Poppins-Bold',
-    },
-    subheading: {
-      marginBottom: 8,  
-      fontSize: 16,
-      fontFamily: 'Poppins-Regular',
-    },
-    input: {
-      borderWidth: 1,
-      borderColor: '#FFFFFF',
-      borderRadius: 10,
-      padding: 12,
-    //   marginTop: 6,
-      marginBottom: 16,
-      backgroundColor: '#FFFFFF',
-      fontFamily: 'Poppins-Regular',
-    },
-    errorText: {
-      color: 'red',
-      marginBottom: 16,
-      fontFamily: 'Poppins-Regular',
-    },
-    saveButton: {
-      backgroundColor: '#5CAEF1',
-      padding: 12,
-      borderRadius: 12,
-      marginBottom: 12,
-    },
+  headerText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+  },
+  subheaderText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+  },
+  subheaderBoldText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+  },
+  normalText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+  },
+  normalBoldText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+  },
+
+  container: {
+    flex: 1,
+    // backgroundColor moved to inline style
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  backArrow: {
+    fontSize: 25,
+    marginBottom: 0,
+    fontWeight: '600',
+  },
+  backButton: {
+    width: 25,
+    height: 25,
+    marginBottom: 12,
+  },
+  backArrowImage: {
+    width: 25,
+    height: 25,
+  },
+  heading: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    alignSelf: 'center',
+    marginBottom: 20,
+    fontFamily: 'Poppins-Bold',
+  },
+  subheading: {
+    marginBottom: 10,  
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    // backgroundColor and color moved to inline styles
+    fontFamily: 'Poppins-Regular',
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 16,
+    fontFamily: 'Poppins-Regular',
+  },
+  saveButton: {
+    backgroundColor: '#5CAEF1',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 15,
+    marginTop: 15
+  },
     saveButtonText: {
       color: '#000000',
       fontSize: 14,
@@ -252,7 +417,7 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     },
     modalCard: {
-      backgroundColor: 'white',
+      // backgroundColor moved to inline style
       padding: 24,
       borderRadius: 10,
       width: '70%',
@@ -290,6 +455,23 @@ const styles = StyleSheet.create({
       color: '#000000',
       fontFamily: 'Poppins-Regular',
     },
+    messageContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    messageText: {
+      fontSize: 16,
+      textAlign: 'center',
+      fontFamily: 'Poppins-Regular',
+    },
+    blockedContainer: {
+      width: '100%',
+      padding: 8,
+      marginBottom: 8,
+      borderRadius: 10,
+    }
 });
   
 

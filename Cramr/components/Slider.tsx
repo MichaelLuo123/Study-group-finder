@@ -5,7 +5,9 @@ import { Colors } from '../constants/Colors';
 interface SliderProps {
     rightLabel: string;
     leftLabel: string;
+    width: number;
     onChangeSlider?: (value: boolean) => void;
+    lightMode: boolean;
     value?: boolean; // Optional initial value
     style?: object; // Optional style prop for customization
 }
@@ -13,13 +15,15 @@ interface SliderProps {
 const Slider: React.FC<SliderProps> = ({ 
     rightLabel, 
     leftLabel, 
+    width,
     onChangeSlider: onValueChange, 
-    value: initialValue = false,
+    lightMode,
+    value: initialValue,
     style={}
 }) => {
-    const sliderBackgroundColor = (true ? Colors.light.sliderBackground : Colors.dark.sliderBackground)
-    const sliderColor = (true ? Colors.light.slider : Colors.dark.slider)
-    const textColor = (true ? Colors.light.text : Colors.dark.text)
+    const sliderBackgroundColor = (lightMode ? Colors.light.sliderBackground : Colors.dark.sliderBackground)
+    const sliderColor = (lightMode ? Colors.light.slider : Colors.dark.slider)
+    const textColor = (lightMode ? Colors.light.text : Colors.dark.text)
 
     const [value, setValue] = useState(initialValue);
     const [slideAnim] = useState(new Animated.Value(initialValue ? 1 : 0));
@@ -42,7 +46,7 @@ const Slider: React.FC<SliderProps> = ({
     });
 
     return (
-        <TouchableOpacity style={styles.container} onPress={toggleSlider}>
+        <TouchableOpacity style={[{width: width, height: 40}, style]} onPress={toggleSlider}>
             <View style={[styles.track, { backgroundColor: sliderBackgroundColor }]}>
             <Animated.View 
                 style={[
@@ -66,11 +70,6 @@ const styles = StyleSheet.create({
     bodyText: {
         fontFamily: 'Poppins-Regular',
         fontSize: 14,
-    },
-
-    container: {
-        width: 120,
-        height: 40,
     },
     track: {
         flex: 1,

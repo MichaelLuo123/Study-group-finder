@@ -1,6 +1,8 @@
+import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Dropdown from '../../components/Dropdown';
 import ImageUpload from '../../components/ImageUpload';
 import Slider from '../../components/Slider';
@@ -31,13 +33,16 @@ export default function Profile() {
   const router = useRouter();
 
   // Colors
-  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
-  const textColor = (true ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (true ? Colors.light.textInput : Colors.dark.textInput)
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
 
   // User
   const [user, setUser] = useState<User | null>(null);
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const [isLoading, setIsLoading] = useState(false);
+  const { user: loggedInUser } = useUser();
 
   // Form state;
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -76,8 +81,14 @@ export default function Profile() {
   // pull user data from database
   useEffect(() => {
     const fetchUserData = async () => {
+      // Only fetch if we have a valid logged-in user
+      if (!loggedInUser?.id) {
+        return; // Don't fetch if no logged-in user
+      }
+      
+      setIsLoading(true);
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
         
         if (response.ok) {
           const userData = await response.json();
@@ -105,11 +116,13 @@ export default function Profile() {
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchUserData();
-  }, [userId]);
+  }, [loggedInUser?.id]);
 
   // Save updated profile to database
   const handleSave = async () => {
@@ -133,7 +146,7 @@ export default function Profile() {
         prompt_3_answer: prompt3Answer,
       };
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/profile`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser?.id}/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -153,16 +166,40 @@ export default function Profile() {
   };
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{flex:1, backgroundColor: backgroundColor}}>
       <ScrollView>
         <View style={[styles.container, {backgroundColor: backgroundColor}]}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Image source={require('../../assets/images/Arrow_black.png')} style={styles.iconContainer} />
-          </TouchableOpacity>
+          
+          {/* Show message if no user is logged in */}
+          {!loggedInUser && (
+            <View style={styles.messageContainer}>
+              <Text style={[styles.messageText, {color: textColor}]}>
+                Please log in to edit your profile
+              </Text>
+            </View>
+          )}
 
-          <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: 10}]}>
-            Profile
-          </Text>
+          {/* Show loading state */}
+          {isLoading && (
+            <View style={styles.messageContainer}>
+              <Text style={[styles.messageText, {color: textColor}]}>
+                Loading profile...
+              </Text>
+            </View>
+          )}
+
+          {/* Show profile content only if user is logged in and not loading */}
+          {loggedInUser && !isLoading && (
+            <>
+              <ArrowLeft 
+                size={24} 
+                color={textColor}
+                onPress={() => router.back()}
+              />
+
+              <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: 10}]}>
+                Profile
+              </Text>
 
           <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}>
             Picture
@@ -170,6 +207,7 @@ export default function Profile() {
           <ImageUpload 
             value={profilePicture}
             onChangeImage={setProfilePicture}
+            isDarkMode={isDarkMode}
           />
 
           <Text style={[styles.subheaderText, {color: textColor , marginTop: 10, marginBottom: 5}]}>
@@ -177,23 +215,23 @@ export default function Profile() {
           </Text>
             <View style={styles.bannerColorContainer}>
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#AACC96'}, bannerColor === 1 && styles.ring]}
+              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 1 && styles.ring]}
               onPress={() => setBannerColor(1)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#F4BEAE'}, bannerColor === 2 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 2 && styles.ring]} 
               onPress={() => setBannerColor(2)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#52A5CE'}, bannerColor === 3 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 3 && styles.ring]} 
               onPress={() => setBannerColor(3)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#FF7BAC'}, bannerColor === 4 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 4 && styles.ring]} 
               onPress={() => setBannerColor(4)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: '#D3B6D3'}, bannerColor === 5 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 5 && styles.ring]} 
               onPress={() => setBannerColor(5)} 
             />
             </View>
@@ -202,7 +240,7 @@ export default function Profile() {
             Name 
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your name."
             value={name}
             onChangeText={setName}
@@ -216,7 +254,7 @@ export default function Profile() {
             Username
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your username."
             value={username}
             onChangeText={setUsername}
@@ -230,7 +268,7 @@ export default function Profile() {
             School
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your school."
             value={school}
             onChangeText={setSchool}
@@ -244,7 +282,7 @@ export default function Profile() {
             Major
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your major."
             value={major}
             onChangeText={setMajor}
@@ -258,7 +296,7 @@ export default function Profile() {
             Class Level
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your class level."
             value={classLevel}
             onChangeText={setClassLevel}
@@ -272,7 +310,7 @@ export default function Profile() {
             Pronouns
           </Text>
           <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your pronouns."
             value={pronouns}
             onChangeText={setPronouns}
@@ -288,15 +326,17 @@ export default function Profile() {
           <Slider
             leftLabel="Yes"
             rightLabel="No"
+            width={125}
             value={isTransfer}
             onChangeSlider={setIsTransfer}
+            lightMode={!isDarkMode}
           />
 
           <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
             Bio
           </Text>
           <TextInput
-            style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor}]} 
+            style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter bio."
             value={bio}
             onChangeText={setBio}
@@ -325,15 +365,17 @@ export default function Profile() {
             onChangeOption3={setPrompt3}
             option3Answer={prompt3Answer}
             onChangeOption3Answer={setPrompt3Answer}
+            isDarkMode={isDarkMode}
           />
 
           <TouchableOpacity 
             style={[styles.buttonContainer, {marginTop: 20}]}
             onPress={handleSave}
           >
-            <Text style={[styles.bodyText, {color: textColor}]}>Save</Text>
+            <Text style={[styles.subheaderText, {color: textColor}]}>Save</Text>
           </TouchableOpacity>
-
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -346,7 +388,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   subheaderText: {
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
   },
   bodyText: {
@@ -357,10 +399,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Light',
     fontSize: 12,
   },
-  
   container: {
     padding: 20,
-    height: 2000,
+    height: 1600,
   },
   iconContainer: {
     width: 25,
@@ -397,7 +438,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    height: 40,
+    height: 45,
     borderRadius: 10,
     backgroundColor: '#5CAEF1',
     alignItems: 'center',
@@ -407,5 +448,16 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#ee5e5e',
 
+  },
+  messageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  messageText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

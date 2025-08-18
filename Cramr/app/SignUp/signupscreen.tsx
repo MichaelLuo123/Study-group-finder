@@ -1,3 +1,4 @@
+import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -5,7 +6,6 @@ import {
     Image,
     Platform,
     SafeAreaView,
-    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -13,16 +13,29 @@ import {
     View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Colors } from '../../constants/Colors';
 
 //manages the state for input fields, password validation, error messages, and dark mode
 const SignUpScreen = () => {
+    // Colors
+    const {isDarkMode, toggleDarkMode} = useUser();
+
+    const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
+    const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
+    const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
+    const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
+    const disabledButtonColor = isDarkMode ? Colors.dark.disabledButton : Colors.light.disabledButton;
+    const errorColor = '#E36062';
+    const primaryColor = '#5CAEF1';
+    const themeToggleColor = isDarkMode ? Colors.dark.secondary || '#4B5563' : Colors.light.secondary || '#E5E7EB';
+
+
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [userUsername, setUserUsername] = useState('');
     const [errors, setErrors] = useState({
@@ -142,12 +155,10 @@ const SignUpScreen = () => {
         }
     };
     //styles for the sign up screen
-    const styles = getStyles(isDarkMode);
+    const styles = getStyles(isDarkMode, backgroundColor, textColor, textInputColor, placeholderColor, disabledButtonColor, errorColor, primaryColor, themeToggleColor);
     //returns the sign up screen
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: styles.container.backgroundColor }]}>
-            <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-            
+        <SafeAreaView style={[styles.container, { backgroundColor }]}>
             <KeyboardAwareScrollView
                 contentContainerStyle={styles.contentContainer}
                 enableOnAndroid={true}
@@ -161,20 +172,6 @@ const SignUpScreen = () => {
                 keyboardDismissMode="interactive"
                 scrollEnabled={true}
             >
-                <View style={styles.card}>
-                    {/* Theme Toggle */}
-                    <View style={styles.themeToggleContainer}>
-                        <TouchableOpacity
-                            style={styles.themeToggle}
-                            onPress={() => setIsDarkMode(!isDarkMode)}
-                        >
-                            <Ionicons 
-                                name={isDarkMode ? "sunny" : "moon"} 
-                                size={20} 
-                                color={isDarkMode ? "#fff" : "#000"} 
-                            />
-                        </TouchableOpacity>
-                    </View>
 
                     {/* Logo Section */}
                     <View style={styles.logoSection}>
@@ -188,22 +185,22 @@ const SignUpScreen = () => {
                     <View style={styles.formContainer}>
                         {/* Name Field */}
                         <View style={styles.fieldContainer}>
-                            <Text style={styles.label}>Name</Text>
-                            <View style={[styles.inputContainer, errors.username ? styles.inputError : null]}>
+                            <View style={[styles.inputContainer, errors.username ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="person-outline" 
                                     size={16} 
-                                    color="#9CA3AF" 
+                                    color={textColor}
                                     style={styles.inputIcon} 
                                 />
                                 <TextInput
-                                    style={styles.input}
+                                    placeholder='Full Name'
+                                    style={[styles.input, {color: textColor}]}
                                     value={username}
                                     onChangeText={text => {
                                         setUsername(text);
                                         if (errors.username) setErrors({ ...errors, username: '' });
                                     }}
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={placeholderColor}
                                 />
                             </View>
                             {errors.username ? <Text style={styles.errorText}>{errors.username}</Text> : null}
@@ -211,24 +208,23 @@ const SignUpScreen = () => {
 
                         {/* Username Field */}
                         <View style={styles.fieldContainer}>
-                            <Text style={styles.label}>Username</Text>
-                            <View style={[styles.inputContainer, errors.userUsername ? styles.inputError : null]}>
+                            <View style={[styles.inputContainer, errors.userUsername ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="at-outline" 
                                     size={16} 
-                                    color="#9CA3AF" 
+                                    color={textColor}
                                     style={styles.inputIcon} 
                                 />
                                 <TextInput
-                                    style={styles.input}
+                                    style={[styles.input, {color: textColor}]}
                                     value={userUsername}
                                     onChangeText={text => {
                                         setUserUsername(text);
                                         if (errors.userUsername) setErrors({ ...errors, userUsername: '' });
                                     }}
-                                    placeholder=""
+                                    placeholder="Username"
                                     autoCapitalize="none"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={placeholderColor}
                                 />
                             </View>
                             {errors.userUsername ? <Text style={styles.errorText}>{errors.userUsername}</Text> : null}
@@ -236,16 +232,16 @@ const SignUpScreen = () => {
 
                         {/* Email Field */}
                         <View style={styles.fieldContainer}>
-                            <Text style={styles.label}>School Email</Text>
-                            <View style={[styles.inputContainer, errors.email ? styles.inputError : null]}>
+                            <View style={[styles.inputContainer, errors.email ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="mail-outline" 
                                     size={16} 
-                                    color="#9CA3AF" 
+                                    color={textColor}
                                     style={styles.inputIcon} 
                                 />
                                 <TextInput
-                                    style={styles.input}
+                                    placeholder='Email address (.edu)'
+                                    style={[styles.input, {color: textColor}]}
                                     value={email}
                                     onChangeText={text => {
                                         setEmail(text);
@@ -253,7 +249,7 @@ const SignUpScreen = () => {
                                     }}
                                     keyboardType="email-address"
                                     autoCapitalize="none"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={placeholderColor}
                                 />
                             </View>
                             {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
@@ -261,23 +257,23 @@ const SignUpScreen = () => {
 
                         {/* Password Field */}
                         <View style={styles.fieldContainer}>
-                            <Text style={styles.label}>Password</Text>
-                            <View style={[styles.inputContainer, errors.password ? styles.inputError : null]}>
+                            <View style={[styles.inputContainer, errors.password ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="lock-closed-outline" 
                                     size={16} 
-                                    color="#9CA3AF" 
+                                    color={textColor}
                                     style={styles.inputIcon} 
                                 />
                                 <TextInput
-                                    style={[styles.input, styles.passwordInput]}
+                                    placeholder='Password'
+                                    style={[styles.input, styles.passwordInput, {color: textColor}]}
                                     value={password}
                                     onChangeText={text => {
                                         setPassword(text);
                                         if (errors.password) setErrors({ ...errors, password: '' });
                                     }}
                                     secureTextEntry={!showPassword}
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={placeholderColor}
                                 />
                                 <TouchableOpacity
                                     style={styles.eyeIcon}
@@ -286,7 +282,7 @@ const SignUpScreen = () => {
                                     <Ionicons 
                                         name={showPassword ? "eye-off-outline" : "eye-outline"} 
                                         size={16} 
-                                        color="#9CA3AF" 
+                                        color={textColor}
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -295,23 +291,23 @@ const SignUpScreen = () => {
 
                         {/* Confirm Password Field */}
                         <View style={styles.fieldContainer}>
-                            <Text style={styles.label}>Confirm Password</Text>
-                            <View style={[styles.inputContainer, errors.confirmPassword ? styles.inputError : null]}>
+                            <View style={[styles.inputContainer, errors.confirmPassword ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="lock-closed-outline" 
                                     size={16} 
-                                    color="#9CA3AF" 
+                                    color={textColor}
                                     style={styles.inputIcon} 
                                 />
                                 <TextInput
-                                    style={[styles.input, styles.passwordInput]}
+                                    placeholder='Confirm password'
+                                    style={[styles.input, styles.passwordInput, {color: textColor}]}
                                     value={confirmPassword}
                                     onChangeText={text => {
                                         setConfirmPassword(text);
                                         if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
                                     }}
                                     secureTextEntry={!showConfirmPassword}
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={placeholderColor}
                                 />
                                 <TouchableOpacity
                                     style={styles.eyeIcon}
@@ -320,7 +316,7 @@ const SignUpScreen = () => {
                                     <Ionicons 
                                         name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
                                         size={16} 
-                                        color="#9CA3AF" 
+                                        color={textColor}
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -330,7 +326,7 @@ const SignUpScreen = () => {
 
                     {/* Sign Up Button */}
                     <TouchableOpacity 
-                        style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]} 
+                        style={[styles.signUpButton, isLoading && {backgroundColor: disabledButtonColor}]} 
                         onPress={handleSignUp}
                         disabled={isLoading}
                     >
@@ -341,51 +337,25 @@ const SignUpScreen = () => {
 
                     {/* Login Link */}
                     <View style={styles.loginLinkContainer}>
-                        <Text style={styles.loginText}>Already have an account? </Text>
+                        <Text style={[styles.loginText, {color: textColor}]}>Already have an account? </Text>
                         <TouchableOpacity onPress={() => router.push('/Login/Loginscreen')}>
-                            <Text style={styles.signInText}>Log in</Text>
+                            <Text style={styles.signInText}> Sign in</Text>
                         </TouchableOpacity>
                     </View>
-                </View>
             </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 };
 
-const getStyles = (isDarkMode: boolean) => StyleSheet.create({
+const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: string, textInputColor: string, placeholderColor: string, disabledButtonColor: string, errorColor: string, primaryColor: string,) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: isDarkMode ? '#1F2937' : '#F3F4F6',
+        backgroundColor: backgroundColor,
     },
     contentContainer: {
         flexGrow: 1,
         justifyContent: 'flex-start',
-        padding: 16,
-        paddingTop: 8,
-    },
-    card: {
-        backgroundColor: isDarkMode ? '#374151' : '#FFFFFF',
-        borderRadius: 24,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-        borderWidth: 1,
-        borderColor: isDarkMode ? '#4B5563' : '#E5E7EB',
-    },
-    themeToggleContainer: {
-        alignItems: 'flex-end',
-        marginBottom: 16,
-    },
-    themeToggle: {
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: isDarkMode ? '#4B5563' : '#E5E7EB',
+        padding: 20,
     },
     logoSection: {
         alignItems: 'center',
@@ -399,8 +369,8 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         marginTop: 0,
     },
     logo: {
-        width: 280,
-        height: 160,
+        width: 300,
+        height: 200,
         resizeMode: 'contain',
         marginBottom: 0,
         marginTop: -16,
@@ -408,9 +378,10 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: isDarkMode ? '#fff' : '#222',
-        marginBottom: 0,
-        marginTop: -30,
+        color: textColor,
+        marginBottom: 30,
+        marginTop: -60,
+        fontFamily: "Poppins-Bold"
     },
     formContainer: {
         marginTop: 8,
@@ -421,27 +392,24 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '500',
-        color: isDarkMode ? '#FFFFFF' : '#111827',
+        color: textColor,
         textAlign: 'center',
         marginBottom: 8,
     },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: isDarkMode ? '#4B5563' : '#F3F4F6',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: isDarkMode ? '#6B7280' : '#D1D5DB',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
+        borderRadius: 10,
+        padding: 10,
     },
     inputIcon: {
-        marginRight: 8,
+        marginRight: 10,
+        fontFamily: "Poppins-Regular"
     },
     input: {
         flex: 1,
         fontSize: 16,
-        color: isDarkMode ? '#FFFFFF' : '#111827',
+        fontFamily: 'Poppins-Regular'
     },
     passwordInput: {
         paddingRight: 40,
@@ -452,16 +420,17 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         padding: 4,
     },
     signUpButton: {
-        backgroundColor: '#3B82F6',
+        backgroundColor: primaryColor,
         paddingVertical: 12,
         borderRadius: 8,
         alignItems: 'center',
         marginBottom: 16,
     },
     signUpButtonText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '500',
+        fontFamily: 'Poppins-Regular',
+        color: textColor
     },
     loginLinkContainer: {
         flexDirection: 'row',
@@ -470,25 +439,22 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     },
     loginText: {
         fontSize: 14,
-        color: isDarkMode ? '#9CA3AF' : '#6B7280',
+        fontFamily: 'Poppins-Regular'
     },
     signInText: {
         fontSize: 14,
-        color: isDarkMode ? '#60A5FA' : '#3B82F6',
-        fontWeight: '500',
+        color: primaryColor,
+        fontFamily: 'Poppins-Bold',
+        marginBottom: 1,
     },
     inputError: {
-        borderColor: '#EF4444', // red-500
+        borderColor: errorColor,
     },
     errorText: {
-        color: '#EF4444',
+        color: errorColor,
         fontSize: 12,
         marginTop: 4,
         marginLeft: 4,
-    },
-    signUpButtonDisabled: {
-        backgroundColor: '#9CA3AF', // gray-400
-        opacity: 0.7,
     },
 });
 

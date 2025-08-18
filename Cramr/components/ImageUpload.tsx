@@ -14,10 +14,11 @@ interface ImageUploadProps {
   value?: string | null; // URL or local path
   onChangeImage: (uri: string | null) => void; // Callback to return the URI
   style?: object;
+  isDarkMode: boolean;
 }
 
-export default function ImageUpload({value, onChangeImage, style}: ImageUploadProps) {
-  const backgroundColor = (true ? Colors.light.background : Colors.dark.background)
+export default function ImageUpload({value, onChangeImage, style, isDarkMode}: ImageUploadProps) {
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
   
   const [image, setImage] = useState<string | null>(value || null);
   const [error, setError] = useState(null);
