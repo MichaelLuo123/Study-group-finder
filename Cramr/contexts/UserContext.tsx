@@ -15,6 +15,7 @@ interface UserContextType {
   isLoggedIn: boolean;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  logout: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -34,20 +35,57 @@ interface UserProviderProps {
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  useEffect (() => {
-    const loadTheme = async () => {
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Load user data and theme on app startup
+  useEffect(() => {
+    const loadUserData = async () => {
       try {
-        const savedMode = await AsyncStorage.getItem('isDarkMode');
-        if (savedMode != null){
+        const [savedUser, savedMode] = await Promise.all([
+          AsyncStorage.getItem('user'),
+          AsyncStorage.getItem('isDarkMode')
+        ]);
+        
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
+          console.log('UserContext: Loading user from AsyncStorage:', parsedUser);
+          setUser(parsedUser);
+        }
+        
+        if (savedMode != null) {
           setIsDarkMode(JSON.parse(savedMode));
         }
-      }
-      catch (error) {
-        console.error('Error loading theme from AsyncStorage:', error);
+      } catch (error) {
+        console.error('Error loading user data from AsyncStorage:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    loadTheme();
-  }, [])
+    
+    loadUserData();
+  }, []);
+
+  // Persist user data when it changes
+  useEffect(() => {
+    const saveUserData = async () => {
+      if (user) {
+        try {
+          console.log('UserContext: Saving user to AsyncStorage:', user);
+          await AsyncStorage.setItem('user', JSON.stringify(user));
+        } catch (error) {
+          console.error('Error saving user data to AsyncStorage:', error);
+        }
+      } else {
+        try {
+          await AsyncStorage.removeItem('user');
+        } catch (error) {
+          console.error('Error removing user data from AsyncStorage:', error);
+        }
+      }
+    };
+    
+    saveUserData();
+  }, [user]);
 
   const toggleDarkMode = async () => {
     const newMode = !isDarkMode;
@@ -60,12 +98,22 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
+  const logout = async () => {
+    try {
+      await AsyncStorage.removeItem('user');
+      setUser(null);
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
   const value = {
     user,
     setUser,
     isLoggedIn: user !== null,
     isDarkMode,
-    toggleDarkMode
+    toggleDarkMode,
+    logout
   };
 
   return (

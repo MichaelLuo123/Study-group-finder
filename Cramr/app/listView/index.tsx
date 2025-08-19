@@ -2,9 +2,8 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
-import { IconButton, TextInput, useTheme } from 'react-native-paper';
-import Slider from '../../components/Slider';
-import { Colors } from '../../constants/Colors';
+import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
+import Slider from '../../components/Slider'; // 👈 use your slider component
 import { useUser } from '../../contexts/UserContext';
 import EventList from './eventList';
 import FilterModal, { Filters } from './filter';
@@ -25,6 +24,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const scheme = useColorScheme();
   const lightMode = scheme !== 'dark';
+  const { isDarkMode, user } = useUser();
 
   const [currentPage, setCurrentPage] = useState('listView');
   const [showFilter, setShowFilter] = useState(false);
@@ -37,7 +37,7 @@ export default function HomeScreen() {
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [following, setFollowing] = useState<any[]>([]);
-  const [currentUserId] = useState('2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'); // TODO: Get from auth
+  const currentUserId = user?.id; // Use logged-in user's ID
 
   useLayoutEffect(() => {
     navigation.setOptions({

@@ -31,9 +31,9 @@ interface EventCollapsibleProps {
     rsvpedCount: number;
     isOwner: boolean;
     isSaved: boolean;
-    onSavedChange: (saved: boolean) => void;
+    onSavedChange?: (saved: boolean) => void;
     isRsvped: boolean;
-    onRsvpedChange: (rsvped: boolean) => void;
+    onRsvpedChange?: (rsvped: boolean) => void;
     isDarkMode: boolean;
     style?: object;
 }
@@ -55,9 +55,9 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     rsvpedCount,
     isOwner,
     isSaved,
-    onSavedChange,
+    onSavedChange = () => {},
     isRsvped,
-    onRsvpedChange,
+    onRsvpedChange = () => {},
     isDarkMode,
     style,
 }) => {
@@ -100,7 +100,9 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     const [isOpen, setIsOpen] = useState(false);
 
     const handleRSVPPress = () => {
-        onRsvpedChange(!isRsvped);
+        if (onRsvpedChange) {
+            onRsvpedChange(!isRsvped);
+        }
     };
     
     return (
@@ -137,7 +139,11 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                                 </View>
                             )}
                         </View>
-                        {!isOwner && (<TouchableOpacity onPress={() => onSavedChange(!isSaved)}>
+                        <TouchableOpacity onPress={() => {
+                            if (onSavedChange) {
+                                onSavedChange(!isSaved);
+                            }
+                        }}>
                             <Bookmark 
                                 color={textColor} 
                                 fill={isSaved ? textColor : 'none'}
@@ -186,7 +192,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                             </View>
                             
                             {isOwner && (
-                                <TouchableOpacity onPress={() => router.push('')} style={{marginTop: 10}}>
+                                <TouchableOpacity onPress={() => router.push('/CreateEvent/EditEvent')} style={{marginTop: 10}}>
                                     <View style={[styles.buttonContainer, {backgroundColor: buttonColor}]}>
                                         <Edit3 size={16} color={textColor} style={{marginRight: 5}}/>
                                         <Text style={[styles.normalText, {color: textColor}]}>Edit</Text>
