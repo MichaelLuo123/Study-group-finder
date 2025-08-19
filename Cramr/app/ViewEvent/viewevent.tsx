@@ -1,13 +1,12 @@
+import { Colors } from '@/constants/Colors';
 import { useUser } from '@/contexts/UserContext';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   Image,
   SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -21,31 +20,19 @@ const { width } = Dimensions.get('window');
 interface Event {
   id: string;
   title: string;
+  bannerColor: number;
   description: string;
   location: string;
-  date_and_time: string;
+  class: string;
+  date: string;
+  time: string;
   creator_id: string;
+  creator_profile_picture: string;
   created_at: string;
   event_type: string;
   status: string;
   capacity: number;
   tags: string[];
-  invited_ids: string[];
-  invited_count: number;
-  accepted_ids: string[];
-  accepted_count: number;
-  declined_ids: string[];
-  declined_count: number;
-}
-
-interface Comment {
-  id: string;
-  user_id: string;
-  username: string;
-  full_name: string;
-  profile_picture_url?: string;
-  comment: string;
-  created_at: string;
 }
 
 interface RSVP {
@@ -57,17 +44,22 @@ interface RSVP {
 }
 
 const EventViewScreen = () => {
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
-  const { isDarkMode, toggleDarkMode } = useUser();
-  const [comment, setComment] = useState('');
+  // Colors
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+  const rsvpedButtonColor = (!isDarkMode ? Colors.light.rsvpedButton : Colors.dark.rsvpedButton)
+  const bannerColors = Colors.bannerColors
+
+  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // CHANGE TO LOGGED IN USER
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [loading, setLoading] = useState(true);
   const eventId = '3272c557-e2c8-451b-8114-e9b2d5269d0a';
-  const commentInputRef = useRef<TextInput>(null);
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState('eventView');
   const [busy, setBusy] = useState(false);
@@ -97,18 +89,6 @@ const EventViewScreen = () => {
     }
   };
 
-  const fetchComments = async () => {
-    try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/comments`);
-      if (res.ok) {
-        const data = await res.json();
-        setComments(data.comments || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch comments:', error);
-    }
-  };
-
   const fetchRSVPs = async () => {
     try {
       const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvps`);
@@ -123,7 +103,6 @@ const EventViewScreen = () => {
 
   useEffect(() => {
     fetchEvent();
-    fetchComments();
     fetchRSVPs();
   }, [eventId]);
 
@@ -192,103 +171,39 @@ const EventViewScreen = () => {
       setBusy(false);
     }
   };
-
-  const submitComment = async () => {
-    if (!comment.trim() || busy) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          user_id: userId, 
-          comment: comment.trim() 
-        }),
-      });
-      if (res.ok) {
-        setComment('');
-        await fetchComments();
-      }
-    } catch (err) {
-      console.error('Comment submission error:', err);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const startTime = date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-    // Add 2 hours for end time (you can adjust this logic)
-    const endDate = new Date(date.getTime() + 2 * 60 * 60 * 1000);
-    const endTime = endDate.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-    return `${startTime} - ${endTime}`;
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  const theme = isDarkMode ? darkTheme : lightTheme;
-
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#87CEEB" />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
+  
   if (!event) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: theme.textColor }]}>Event not found</Text>
+          <Text style={[styles.errorText, { color: textColor }]}>Event not found</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   const displayedRSVPs = rsvps.slice(0, 6);
-  const remainingCount = Math.max(0, event.accepted_count - 6);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      
+    <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
       <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
         enableOnAndroid
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
+          <ArrowLeft 
+            size={24} 
+            color={textColor}
+            onPress={() => router.back()}
+            style={{marginBottom: 15}}
+          />
           {/* Event Card */}
-          <View style={[styles.eventCard, { backgroundColor: theme.cardBackground }]}>
+          <View style={[styles.eventCard, { backgroundColor: textInputColor }]}>
             {/* Event Header with colored banner */}
-            <View style={[styles.eventHeader, { backgroundColor: '#d4a5a5' }]}>
-              <Text style={styles.eventTitle}>{event.title}</Text>
-              <View style={styles.ownerAvatar}>
-                <Text style={styles.ownerAvatarText}>👤</Text>
-              </View>
+            <View style={[styles.eventHeader, { backgroundColor: bannerColors[event.bannerColor || 1] }]}>
+              <Text style={[styles.eventTitle, {color: textColor}]}>{event.title}</Text>
+              <Image source={{ uri: event.creator_profile_picture }} style={styles.ownerAvatar} />
             </View>
 
             <View style={styles.eventContent}>
@@ -297,70 +212,54 @@ const EventViewScreen = () => {
                 <View style={styles.tagsRow}>
                   <View style={styles.tagsContainer}>
                     {event.tags.slice(0, 3).map((tag, index) => (
-                      <View key={index} style={[styles.tag, { borderColor: theme.textColor }]}>
-                        <Text style={[styles.tagText, { color: theme.textColor }]}>{tag}</Text>
+                      <View key={index} style={[styles.tag, { borderColor: textColor }]}>
+                        <Text style={[styles.tagText, { color: textColor }]}>{tag}</Text>
                       </View>
                     ))}
                   </View>
-                  <TouchableOpacity onPress={toggleSave}>
-                    <Ionicons
-                      name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                      size={24}
-                      color={theme.textColor}
-                    />
-                  </TouchableOpacity>
                 </View>
               )}
 
               {/* Event Details */}
               <View style={styles.detailsContainer}>
                 <View style={styles.detailRow}>
-                  <Ionicons name="book-outline" size={20} color={theme.textColor} />
-                  <Text style={[styles.detailText, { color: theme.textColor }]}>{event.event_type.replace('_', ' ')}</Text>
+                  <BookOpen size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>{event.class}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
-                  <Ionicons name="location-outline" size={20} color={theme.textColor} />
-                  <Text style={[styles.detailText, { color: theme.textColor }]}>{event.location}</Text>
+                  <MapPin size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>{event.location}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
-                  <Ionicons name="calendar-outline" size={20} color={theme.textColor} />
-                  <Text style={[styles.detailText, { color: theme.textColor }]}>{formatDate(event.date_and_time)}</Text>
+                  <Calendar size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>{event.date}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
-                  <Ionicons name="time-outline" size={20} color={theme.textColor} />
-                  <Text style={[styles.detailText, { color: theme.textColor }]}>{formatTime(event.date_and_time)}</Text>
+                  <Clock size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>{event.time}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
-                  <Ionicons name="people-outline" size={20} color={theme.textColor} />
-                  <Text style={[styles.detailText, { color: theme.textColor }]}>
-                    {event.accepted_count}/{event.capacity}
+                  <Users size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>
+                    {rsvps.length}/{event.capacity}
                   </Text>
-                  
-                  {/* RSVP Avatars */}
-                  <View style={styles.avatarsContainer}>
-                    {displayedRSVPs.map((rsvp, index) => (
-                      <View key={index} style={styles.rsvpAvatar}>
-                        {rsvp.profile_picture_url ? (
-                          <Image source={{ uri: rsvp.profile_picture_url }} style={styles.avatarImage} />
-                        ) : (
-                          <View style={[styles.avatarPlaceholder, { backgroundColor: '#FFD700' }]}>
-                            <Text style={styles.avatarText}>
-                              {getInitials(rsvp.full_name || rsvp.username)}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                    {remainingCount > 0 && (
-                      <View style={[styles.avatarPlaceholder, { backgroundColor: '#ccc' }]}>
-                        <Text style={styles.avatarText}>+{remainingCount}</Text>
-                      </View>
-                    )}
-                  </View>
+                </View>
+
+                {/* RSVP Avatars */}
+                <View style={styles.avatarsContainer}>
+                  {displayedRSVPs.map((rsvp, index) => (
+                    <View key={index} style={styles.rsvpAvatar}>
+                      {rsvp.profile_picture_url ? (
+                        <Image source={{ uri: rsvp.profile_picture_url }} style={styles.avatarImage} />
+                      ) : (
+                        <Image source={require('../../assets/images/default_profile.jpg')} style={styles.avatarImage} />
+                      )}
+                    </View>
+                  ))}
                 </View>
               </View>
 
@@ -368,90 +267,64 @@ const EventViewScreen = () => {
               {event.description && (
                 <View style={styles.infoSection}>
                   <View style={styles.infoRow}>
-                    <Ionicons name="information-circle-outline" size={20} color={theme.textColor} />
-                    <Text style={[styles.infoText, { color: theme.textColor }]}>{event.description}</Text>
+                    <Info size={20} color={textColor} />
+                    <Text style={[styles.infoText, { color: textColor }]}>{event.description}</Text>
                   </View>
                 </View>
               )}
 
               {/* RSVP Button */}
-              <TouchableOpacity
-                onPress={toggleRSVP}
-                disabled={busy}
-                style={[
-                  styles.rsvpButton,
-                  { backgroundColor: isRSVPed ? '#4CAF50' : '#87CEEB' }
-                ]}
-              >
-                {busy ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.rsvpButtonText}>
-                    {isRSVPed ? 'RSVP' : 'RSVP'}
+              <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+                <TouchableOpacity
+                  onPress={toggleRSVP}
+                  disabled={busy}
+                  style={[
+                    styles.rsvpButton,
+                    { backgroundColor: isRSVPed ? rsvpedButtonColor : '#5CAEF1'}
+                  ]}
+                >
+                  <Text style={[styles.rsvpButtonText, {color: textColor}]}>
+                    {isRSVPed ? 'RSVPed' : 'RSVP'}
                   </Text>
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
 
-              <TouchableOpacity style={styles.saveButtonContainer} onPress={toggleSave}>
-                <Ionicons
-                  name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                  size={24}
-                  color={theme.textColor}
-                />
-              </TouchableOpacity>
+                {/* Save Button */}
+                <TouchableOpacity onPress={toggleSave}>
+                  <Bookmark 
+                    color={textColor} 
+                    size={25}
+                    fill={isSaved ? textColor : 'none'}
+                    style={styles.saveButtonContainer}
+                  />
+                </TouchableOpacity>
+              </View>
+
             </View>
           </View>
 
+          <View style={{height: 1, backgroundColor: placeholderTextColor, marginVertical: 5}}></View>
+
           {/* Comments Section */}
           <View style={styles.commentsSection}>
-            <Text style={[styles.commentsTitle, { color: theme.textColor }]}>
-              {comments.length} Comments
+            <Text style={[styles.commentsTitle, { color: textColor }]}>
+              ... Comments
             </Text>
-
-            {comments.map((commentItem, index) => (
-              <View key={index} style={[styles.commentItem, { backgroundColor: 
-                index % 2 === 0 ? '#c4b57a' : '#7a9c7a' 
-              }]}>
-                <View style={styles.commentHeader}>
-                  <View style={styles.commentAvatar}>
-                    {commentItem.profile_picture_url ? (
-                      <Image source={{ uri: commentItem.profile_picture_url }} style={styles.commentAvatarImage} />
-                    ) : (
-                      <View style={[styles.commentAvatarPlaceholder, { backgroundColor: '#FFD700' }]}>
-                        <Text style={styles.commentAvatarText}>
-                          {getInitials(commentItem.full_name || commentItem.username)}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.commentUsername}>
-                    {commentItem.full_name || commentItem.username}
-                  </Text>
-                </View>
-                <Text style={styles.commentText}>{commentItem.comment}</Text>
-              </View>
-            ))}
 
             {/* Add Comment */}
             <View style={styles.addCommentContainer}>
               <TextInput
-                ref={commentInputRef}
                 style={[styles.commentInput, { 
-                  backgroundColor: theme.inputBackground,
-                  color: theme.textColor 
+                  backgroundColor: textInputColor,
+                  color: textColor 
                 }]}
                 placeholder="Add a comment..."
-                placeholderTextColor={theme.placeholderColor}
-                value={comment}
-                onChangeText={setComment}
+                placeholderTextColor={placeholderTextColor}
                 multiline
               />
-              <TouchableOpacity 
-                onPress={submitComment}
-                disabled={!comment.trim() || busy}
-                style={[styles.sendButton, { opacity: comment.trim() ? 1 : 0.5 }]}
-              >
-                <Ionicons name="send" size={20} color="#87CEEB" />
+              <TouchableOpacity>
+                <View style={styles.sendButton}>
+                  <Send size={20} color="#5CAEF1" strokeWidth={2} />
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -498,6 +371,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    borderRadius: 10,
   },
   eventTitle: {
     fontSize: 18,
@@ -509,7 +383,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -537,7 +410,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   tagText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Poppins-Regular',
   },
   detailsContainer: {
@@ -556,17 +429,15 @@ const styles = StyleSheet.create({
   },
   avatarsContainer: {
     flexDirection: 'row',
-    marginLeft: 8,
+    marginLeft: 30,
   },
   rsvpAvatar: {
-    marginLeft: -4,
+    marginRight: 5,
   },
   avatarImage: {
-    width: 24,
-    height: 24,
+    width: 25,
+    height: 25,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#fff',
   },
   avatarPlaceholder: {
     width: 24,
@@ -575,12 +446,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
   },
   avatarText: {
     fontSize: 10,
     fontFamily: 'Poppins-SemiBold',
-    color: '#333',
   },
   infoSection: {
     marginBottom: 20,
@@ -597,70 +466,29 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   rsvpButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    marginRight: 15,
+    flex: 1,
   },
   rsvpButtonText: {
-    color: '#fff',
     fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Regular',
   },
   saveButtonContainer: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
+    alignContent: 'center',
+    top: 10
   },
   commentsSection: {
-    marginTop: 8,
+    marginTop: 10,
   },
   commentsTitle: {
     fontSize: 18,
     fontFamily: 'Poppins-SemiBold',
-    marginBottom: 16,
-  },
-  commentItem: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  commentAvatar: {
-    marginRight: 8,
-  },
-  commentAvatarImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  commentAvatarPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commentAvatarText: {
-    fontSize: 10,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#333',
-  },
-  commentUsername: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#fff',
-  },
-  commentText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#fff',
-    lineHeight: 18,
+    marginBottom: 15,
   },
   addCommentContainer: {
     flexDirection: 'row',
@@ -669,10 +497,10 @@ const styles = StyleSheet.create({
   },
   commentInput: {
     flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: -40,
     maxHeight: 100,
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
@@ -681,21 +509,5 @@ const styles = StyleSheet.create({
     padding: 8,
   },
 });
-
-const lightTheme = {
-  backgroundColor: '#f5f5f5',
-  cardBackground: '#ffffff',
-  textColor: '#000000',
-  inputBackground: '#f0f0f0',
-  placeholderColor: '#999999',
-};
-
-const darkTheme = {
-  backgroundColor: '#1a1a1a',
-  cardBackground: '#2d2d2d',
-  textColor: '#ffffff',
-  inputBackground: '#3a3a3a',
-  placeholderColor: '#cccccc',
-};
 
 export default EventViewScreen;
