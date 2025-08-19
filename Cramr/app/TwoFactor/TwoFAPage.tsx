@@ -87,7 +87,7 @@ const TwoFAPage = () => {
     const handleSubmit = () => {
         const joined = code.join('');
         if (joined === '111111') {
-            alert('Success!');
+            router.push('/listView')
         } else {
             setError(true);
             setCode(Array(CODE_LENGTH).fill(''));
