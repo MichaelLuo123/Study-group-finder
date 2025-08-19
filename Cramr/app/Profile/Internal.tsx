@@ -3,9 +3,9 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Bell, Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import EventCollapsible from '../../components/EventCollapsible';
+import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import EventList from '../listView/eventList';
 
 // Define user interface
 interface User {
@@ -33,20 +33,20 @@ interface User {
 interface Event {
   id: string;
   title: string;
-  banner_color: number;
   description: string;
   location: string;
-  date: string;
-  time: string;
   creator_id: string;
   created_at: string;
   event_type: string;
   status: string;
   capacity: number;
   tags: string[];
-  rsvped_count: number;
-  rsvped_ids: string[];
   class: string;
+  banner_color: number;
+  date: string;
+  time: string;
+  rsvped_count: number;
+  event_format: string;
   creator_name: string;
   creator_profile_picture: string;
   creator_username: string;
@@ -341,33 +341,11 @@ export default function Internal() {
 
           <Text style={[styles.subheaderBoldText, {color: textColor, marginTop: 10}]}>{name}'s Events</Text>
           
-          {userEvents.length === 0 ? (
-            <Text style={styles.normalText}> No events </Text>
-          ) : (
-            userEvents.map((event) => (
-              <EventCollapsible
-                key={event.id} // Add this key prop
-                title={event.title}
-                bannerColor={bannerColors[bannerColor ? bannerColor : 1]}
-                tag1={event.tags[0] != null ? event.tags[0] : null} // Also fixed this - should be event.tags[0], not EventSource.tags[0]
-                tag2={event.tags[1] != null ? event.tags[1] : null} // Fixed this too
-                tag3={event.tags[2] != null ? event.tags[2] : null} // Fixed this too
-                ownerId = {event.creator_id}
-                subject={event.class}
-                location={event.location}
-                date={event.date}
-                time={event.time}
-                rsvpedCount={event.rsvped_count}
-                capacity={event.capacity}
-                rsvpedIds={event.rsvped_ids}
-                light={true}
-                isOwner={true}
-                style={{marginBottom: 10}}
-                isDarkMode={isDarkMode}
-              />
-            ))
-          )}
-            </>
+          <EventList
+            creatorUserId={userId}
+          />
+
+            </> 
           )}
         </View>
       </ScrollView>
