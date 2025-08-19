@@ -1,14 +1,12 @@
+import { Colors } from '@/constants/Colors';
 import { useUser } from '@/contexts/UserContext';
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
-  Platform,
+  Image,
   SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -22,33 +20,46 @@ const { width } = Dimensions.get('window');
 interface Event {
   id: string;
   title: string;
+  bannerColor: number;
   description: string;
   location: string;
-  date_and_time: string;
+  class: string;
+  date: string;
+  time: string;
   creator_id: string;
+  creator_profile_picture: string;
   created_at: string;
   event_type: string;
   status: string;
   capacity: number;
   tags: string[];
-  invited_ids: string[];
-  invited_count: number;
-  accepted_ids: string[];
-  accepted_count: number;
-  declined_ids: string[];
-  declined_count: number;
+}
+
+interface RSVP {
+  user_id: string;
+  username: string;
+  full_name: string;
+  profile_picture_url?: string;
+  status: string;
 }
 
 const EventViewScreen = () => {
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
-  const { isDarkMode, toggleDarkMode } = useUser();
-  const [comment, setComment] = useState('');
+  // Colors
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+  const rsvpedButtonColor = (!isDarkMode ? Colors.light.rsvpedButton : Colors.dark.rsvpedButton)
+  const bannerColors = Colors.bannerColors
+
+  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // CHANGE TO LOGGED IN USER
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
+  const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [loading, setLoading] = useState(true);
   const eventId = '3272c557-e2c8-451b-8114-e9b2d5269d0a';
-  const commentInputRef = useRef<TextInput>(null);
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState('eventView');
   const [busy, setBusy] = useState(false);
@@ -78,8 +89,21 @@ const EventViewScreen = () => {
     }
   };
 
+  const fetchRSVPs = async () => {
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvps`);
+      if (res.ok) {
+        const data = await res.json();
+        setRsvps(data.rsvps || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch RSVPs:', error);
+    }
+  };
+
   useEffect(() => {
     fetchEvent();
+    fetchRSVPs();
   }, [eventId]);
 
   useEffect(() => {
@@ -116,6 +140,7 @@ const EventViewScreen = () => {
         setIsRSVPed(true);
       }
       await fetchEvent();
+      await fetchRSVPs();
     } catch (err) {
       console.error('RSVP toggle error:', err);
     } finally {
@@ -146,63 +171,160 @@ const EventViewScreen = () => {
       setBusy(false);
     }
   };
+  
+  if (!event) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, { color: textColor }]}>Event not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  const theme = isDarkMode ? darkTheme : lightTheme;
-
-  if (loading) return <ActivityIndicator />;
-  if (!event) return <Text>Event not found</Text>;
+  const displayedRSVPs = rsvps.slice(0, 6);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+    <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
       <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
         enableOnAndroid
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
+          <ArrowLeft 
+            size={24} 
+            color={textColor}
+            onPress={() => router.back()}
+            style={{marginBottom: 15}}
+          />
           {/* Event Card */}
-          <View style={[styles.eventCard, { backgroundColor: theme.cardBackground }]}>
-            <View style={[styles.eventHeader, { backgroundColor: theme.eventHeaderBackground }]}>
-              <Text style={[styles.eventTitle, { color: theme.textColor }]}>{event.title}</Text>
-              <TouchableOpacity onPress={toggleDarkMode} style={styles.profileButton}>
-                <Text style={styles.profileEmoji}>👤</Text>
-              </TouchableOpacity>
+          <View style={[styles.eventCard, { backgroundColor: textInputColor }]}>
+            {/* Event Header with colored banner */}
+            <View style={[styles.eventHeader, { backgroundColor: bannerColors[event.bannerColor || 1] }]}>
+              <Text style={[styles.eventTitle, {color: textColor}]}>{event.title}</Text>
+              <Image source={{ uri: event.creator_profile_picture }} style={styles.ownerAvatar} />
             </View>
 
-            <View style={styles.eventDetails}>
-              <Text style={[styles.detailText, { color: theme.textColor }]}>{event.location}</Text>
-              <Text style={[styles.detailText, { color: theme.textColor }]}>
-                {new Date(event.date_and_time).toLocaleString()}
-              </Text>
-            </View>
+            <View style={styles.eventContent}>
+              {/* Tags */}
+              {event.tags && event.tags.length > 0 && (
+                <View style={styles.tagsRow}>
+                  <View style={styles.tagsContainer}>
+                    {event.tags.slice(0, 3).map((tag, index) => (
+                      <View key={index} style={[styles.tag, { borderColor: textColor }]}>
+                        <Text style={[styles.tagText, { color: textColor }]}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
 
-            {/* RSVP + Save */}
-            <View style={styles.rsvpSection}>
-              <TouchableOpacity
-                onPress={toggleRSVP}
-                style={[
-                  styles.rsvpButton,
-                  {
-                    backgroundColor: isRSVPed ? theme.rsvpActiveBackground : theme.rsvpBackground,
-                  },
-                ]}
-              >
-                <Text
+              {/* Event Details */}
+              <View style={styles.detailsContainer}>
+                <View style={styles.detailRow}>
+                  <BookOpen size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>{event.class}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <MapPin size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>{event.location}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Calendar size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>{event.date}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Clock size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>{event.time}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Users size={20} color={textColor} />
+                  <Text style={[styles.detailText, { color: textColor }]}>
+                    {rsvps.length}/{event.capacity}
+                  </Text>
+                </View>
+
+                {/* RSVP Avatars */}
+                <View style={styles.avatarsContainer}>
+                  {displayedRSVPs.map((rsvp, index) => (
+                    <View key={index} style={styles.rsvpAvatar}>
+                      {rsvp.profile_picture_url ? (
+                        <Image source={{ uri: rsvp.profile_picture_url }} style={styles.avatarImage} />
+                      ) : (
+                        <Image source={require('../../assets/images/default_profile.jpg')} style={styles.avatarImage} />
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Info Section */}
+              {event.description && (
+                <View style={styles.infoSection}>
+                  <View style={styles.infoRow}>
+                    <Info size={20} color={textColor} />
+                    <Text style={[styles.infoText, { color: textColor }]}>{event.description}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* RSVP Button */}
+              <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+                <TouchableOpacity
+                  onPress={toggleRSVP}
+                  disabled={busy}
                   style={[
-                    styles.rsvpButtonText,
-                    { color: isRSVPed ? theme.rsvpActiveText : theme.rsvpText },
+                    styles.rsvpButton,
+                    { backgroundColor: isRSVPed ? rsvpedButtonColor : '#5CAEF1'}
                   ]}
                 >
-                  {isRSVPed ? 'RSVPed!' : 'RSVP'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={toggleSave} style={styles.saveButton}>
-                <Ionicons
-                  name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                  size={24}
-                  color={theme.saveButtonText}
-                />
+                  <Text style={[styles.rsvpButtonText, {color: textColor}]}>
+                    {isRSVPed ? 'RSVPed' : 'RSVP'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Save Button */}
+                <TouchableOpacity onPress={toggleSave}>
+                  <Bookmark 
+                    color={textColor} 
+                    size={25}
+                    fill={isSaved ? textColor : 'none'}
+                    style={styles.saveButtonContainer}
+                  />
+                </TouchableOpacity>
+              </View>
+
+            </View>
+          </View>
+
+          <View style={{height: 1, backgroundColor: placeholderTextColor, marginVertical: 5}}></View>
+
+          {/* Comments Section */}
+          <View style={styles.commentsSection}>
+            <Text style={[styles.commentsTitle, { color: textColor }]}>
+              ... Comments
+            </Text>
+
+            {/* Add Comment */}
+            <View style={styles.addCommentContainer}>
+              <TextInput
+                style={[styles.commentInput, { 
+                  backgroundColor: textInputColor,
+                  color: textColor 
+                }]}
+                placeholder="Add a comment..."
+                placeholderTextColor={placeholderTextColor}
+                multiline
+              />
+              <TouchableOpacity>
+                <View style={styles.sendButton}>
+                  <Send size={20} color="#5CAEF1" strokeWidth={2} />
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -214,73 +336,178 @@ const EventViewScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { flexGrow: 1, paddingBottom: 80 },
-  content: { paddingHorizontal: 16, paddingBottom: 20 },
-
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  errorContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  errorText: { 
+    fontSize: 18,
+    fontFamily: 'Poppins-Regular'
+  },
+  scrollContent: { 
+    flexGrow: 1 
+  },
+  content: { 
+    padding: 16 
+  },
   eventCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 20,
-    padding: 16,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
   eventHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    padding: 16,
+    borderRadius: 10,
   },
-  eventTitle: { fontSize: 18, fontWeight: 'bold' },
-  profileButton: { padding: 4 },
-  profileEmoji: { fontSize: 18 },
-
-  eventDetails: { marginBottom: 12 },
-  detailText: { fontSize: 14, marginBottom: 6 },
-
-  rsvpSection: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rsvpButton: {
+  eventTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#fff',
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 20,
+  },
+  ownerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rsvpButtonText: { fontSize: 16, fontWeight: '600' },
-  saveButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  ownerAvatarText: {
+    fontSize: 16,
+  },
+  eventContent: {
+    padding: 16,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  tag: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginRight: 8,
+  },
+  tagText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+  },
+  detailsContainer: {
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detailText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    marginLeft: 8,
+    flex: 1,
+  },
+  avatarsContainer: {
+    flexDirection: 'row',
+    marginLeft: 30,
+  },
+  rsvpAvatar: {
+    marginRight: 5,
+  },
+  avatarImage: {
+    width: 25,
+    height: 25,
+    borderRadius: 12,
+  },
+  avatarPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+  },
+  avatarText: {
+    fontSize: 10,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  infoSection: {
+    marginBottom: 20,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  infoText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 20,
+  },
+  rsvpButton: {
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    marginRight: 15,
+    flex: 1,
+  },
+  rsvpButtonText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+  },
+  saveButtonContainer: {
+    alignContent: 'center',
+    top: 10
+  },
+  commentsSection: {
+    marginTop: 10,
+  },
+  commentsTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    marginBottom: 15,
+  },
+  addCommentContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginTop: 8,
+  },
+  commentInput: {
+    flex: 1,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: -40,
+    maxHeight: 100,
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+  },
+  sendButton: {
+    padding: 8,
   },
 });
-
-const lightTheme = {
-  backgroundColor: '#f8f9fa',
-  cardBackground: '#ffffff',
-  eventHeaderBackground: '#e8d5d5',
-  textColor: '#000000',
-  rsvpBackground: '#87CEEB', // sky blue
-  rsvpText: '#ffffff',
-  rsvpActiveBackground: '#E8E8E8',
-  rsvpActiveText: '#000000',
-  saveButtonText: '#000000',
-};
-
-const darkTheme = {
-  backgroundColor: '#1a1a1a',
-  cardBackground: '#2d2d2d',
-  eventHeaderBackground: '#374151',
-  textColor: '#ffffff',
-  rsvpBackground: '#87CEEB',
-  rsvpText: '#ffffff',
-  rsvpActiveBackground: '#444',
-  rsvpActiveText: '#ffffff',
-  saveButtonText: '#ffffff',
-};
 
 export default EventViewScreen;

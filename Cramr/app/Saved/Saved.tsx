@@ -3,7 +3,7 @@ import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Slider from '../../components/Slider';
 import { Colors } from '../../constants/Colors';
 
@@ -94,7 +94,7 @@ export default function Saved() {
 
   // 3. Separate useEffect for saved events (depends only on userId)
     useEffect(() => {
-    if (!userId) return;
+    if (!userId || !events.length) return;
 
     const fetchSavedEvents = async () => {
         try {
@@ -135,8 +135,8 @@ export default function Saved() {
     };
 
     return (
-        <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
-            <ScrollView>
+        <View style={{backgroundColor: backgroundColor, flex: 1}}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
                 <View style={{padding: 20, backgroundColor: backgroundColor}}>
                     <TouchableOpacity onPress={() => router.back()}>
                         <Image source={require('../../assets/images/cramr_logo.png')} style={[styles.logoContainer]} />
@@ -153,7 +153,9 @@ export default function Saved() {
                     </View>
 
                     {isSwitch === false && (
-                        rsvpedEvents.length === 0 ? 
+                        loading ? 
+                        (<Text style={[styles.normalText, {color: textColor}]}> Loading RSVPed events... </Text>) 
+                        : rsvpedEvents.length === 0 ? 
                         (<Text style={[styles.normalText, {color: textColor}]}> No RSVPed events... </Text>) 
                         : 
                         (rsvpedEvents.map((event) => (
@@ -180,7 +182,9 @@ export default function Saved() {
                     )}
 
                     {isSwitch === true && (
-                        savedEvents.length === 0 ? 
+                        loading ? 
+                        (<Text style={[styles.normalText, {color: textColor}]}> Loading saved events... </Text>) 
+                        : savedEvents.length === 0 ? 
                         (<Text style={[styles.normalText, {color: textColor}]}> No saved events.. </Text>) 
                         : 
                         (savedEvents.map((event) => (
@@ -267,7 +271,7 @@ export default function Saved() {
                     {currentPage === 'profile' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
             </View>
-        </SafeAreaView>
+        </View>
         
     );
 }

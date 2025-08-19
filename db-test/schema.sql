@@ -46,7 +46,9 @@ CREATE TABLE events (
     status VARCHAR(50) DEFAULT 'active',
     capacity INTEGER,
     tags TEXT[],
-    banner_color VARCHAR(100)
+    banner_color VARCHAR(100),
+    event_format VARCHAR(20) DEFAULT 'In Person',
+    virtual_room_link TEXT
 );
 
 -- Create event_attendees table
@@ -74,6 +76,24 @@ CREATE TABLE blocks (
     PRIMARY KEY (blocker_id, blocked_id)                    -- Composite primary key to ensure no duplicate blocks
 );
 
+-- Create notifications table to manage user notifications
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,     -- User receiving the notification
+    sender_id UUID REFERENCES users(id) ON DELETE CASCADE,   -- User who triggered the notification
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,   -- Related event (optional)
+    type VARCHAR(50) NOT NULL,                              -- Type of notification (follow, event_invite, event_rsvp, etc.)
+    message TEXT NOT NULL,                                  -- Notification message
+    is_read BOOLEAN DEFAULT false,                          -- Whether notification has been read
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,          -- When notification was created
+    metadata JSONB                                          -- Additional data for the notification
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX idx_notifications_is_read ON notifications(is_read);
+
 -- Insert sample data into users
 -- INSERT INTO users (username, password_hash, email, full_name, major, year, bio, profile_picture_url)
 -- VALUES 
@@ -99,3 +119,16 @@ CREATE TABLE blocks (
 SELECT * FROM users;
 SELECT * FROM events;
 SELECT * FROM event_attendees;
+
+-- Insert sample notifications (uncomment and modify as needed for testing)
+-- INSERT INTO notifications (user_id, sender_id, type, message, event_id, metadata) VALUES
+--   ('user_uuid_1', 'user_uuid_2', 'follow', 'jessicastacy started following you.', NULL, '{"action": "follow"}'),
+--   ('user_uuid_1', 'user_uuid_3', 'event_invite', 'You''ve been invited to CS101 Study Group', 'event_uuid_1', '{"event_title": "CS101 Study Group", "location": "Room 101, UCSD"}'),
+--   ('user_uuid_1', 'user_uuid_4', 'event_rsvp', 'caileymnm RSVPed to In-N-Out Study Session', 'event_uuid_2', '{"event_title": "In-N-Out Study Session", "status": "accepted"}');
+
+-- Insert sample notifications for specific user 2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5
+-- Note: Replace the sender_id UUIDs with actual user IDs from your database
+INSERT INTO notifications (user_id, sender_id, type, message, event_id, metadata) VALUES
+  ('2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', 'follow', 'jessicastacy started following you.', NULL, '{"action": "follow"}'),
+  ('2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', 'event_invite', 'You''ve been invited to CS101 Study Group', NULL, '{"event_title": "CS101 Study Group", "location": "Room 101, UCSD"}'),
+  ('2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', 'event_rsvp', 'caileymnm RSVPed to In-N-Out Study Session', NULL, '{"event_title": "In-N-Out Study Session", "status": "accepted"}');

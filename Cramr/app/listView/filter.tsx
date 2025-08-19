@@ -1,8 +1,11 @@
 import Slider from '@react-native-community/slider';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Modal from 'react-native-modal';
 import { Button } from 'react-native-paper';
+import { Colors } from '../../constants/Colors';
+import { useUser } from '../../contexts/UserContext';
 
 const noiseLevels = ['Quiet', 'Medium', 'Loud'];
 const locationTypes = ['Library', 'Cafe', 'Outdoor'];
@@ -22,6 +25,16 @@ type Props = {
 };
 
 export default function FilterModal({ visible, onClose, onSave }: Props) {
+  // Colors
+    const {isDarkMode, toggleDarkMode} = useUser();
+    const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+    const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+    const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+    const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+    const bannerColors = Colors.bannerColors
+    const buttonColor = Colors.button
+    const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
+
   const [step, setStep] = useState(0);
   const [distance, setDistance] = useState(1);
   const [unit, setUnit] = useState<'mi' | 'km'>('mi');
@@ -43,7 +56,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
     setLocation(null);
     setStep(0);
 
-    // tell parent “no filters” (distance/attendees = 0 disables them in your EventList)
+    // tell parent "no filters" (distance/attendees = 0 disables them in your EventList)
     onSave({ distance: 0, unit: 'mi', attendees: 0, noise: null, location: null });
     onClose();
   };
@@ -67,45 +80,61 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
       animationIn="slideInUp"
       animationOut="slideOutDown"
     >
-      <View style={styles.modal}>
-        <Text style={styles.header}>Filter by</Text>
+      <View style={[styles.modal, {backgroundColor: backgroundColor}]}>
+        <Text style={[styles.header, {color: textColor}]}>Filter by</Text>
         <View style={styles.content}>
           {step === 0 && (
             <>
-              <Pressable style={styles.inputBox} onPress={() => setStep(1)}>
-                <Text style={styles.inputLabel}>Distance</Text>
-                <Text style={styles.inputValue}>
+              <Pressable style={[styles.inputBox, {backgroundColor: textInputColor}]} onPress={() => setStep(1)}>
+                <Text style={[styles.inputLabel, {color: textColor}]}>Distance</Text>
+                <Text style={[styles.inputValue, {color: textColor}]}>
                   {distance} {unit}
                 </Text>
               </Pressable>
-              <Pressable style={styles.inputBox} onPress={() => setStep(2)}>
-                <Text style={styles.inputLabel}>Number of Attendees</Text>
-                <Text style={styles.inputValue}>{attendees} people</Text>
+              <Pressable style={[styles.inputBox, {backgroundColor: textInputColor}]} onPress={() => setStep(2)}>
+                <Text style={[styles.inputLabel, {color: textColor}]}>Number of Attendees</Text>
+                <Text style={[styles.inputValue, {color: textColor}]}>{attendees} people</Text>
               </Pressable>
-              <Pressable style={styles.inputBox} onPress={() => setStep(3)}>
-                <Text style={styles.inputLabel}>Noise Level</Text>
-                <Text style={styles.inputValue}>{noise || ''}</Text>
+              <Pressable style={[styles.inputBox, {backgroundColor: textInputColor}]} onPress={() => setStep(3)}>
+                <Text style={[styles.inputLabel, {color: textColor}]}>Noise Level</Text>
+                <Text style={[styles.inputValue, {color: textColor}]}>{noise || '--'}</Text>
               </Pressable>
-              <Pressable style={styles.inputBox} onPress={() => setStep(4)}>
-                <Text style={styles.inputLabel}>Location Type</Text>
-                <Text style={styles.inputValue}>{location || ''}</Text>
+              <Pressable style={[styles.inputBox, {backgroundColor: textInputColor}]} onPress={() => setStep(4)}>
+                <Text style={[styles.inputLabel, {color: textColor}]}>Location Type</Text>
+                <Text style={[styles.inputValue, {color: textColor}]}>{location || '--'}</Text>
               </Pressable>
             </>
           )}
 
           {step === 1 && (
             <>
-              <Text style={styles.inputLabel}>Distance</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 8 }}>
-                <Button mode={unit === 'mi' ? 'contained' : 'outlined'} onPress={() => setUnit('mi')}>
-                  Mi
+              <Text style={[styles.inputLabel, {color: textColor}]}>Distance</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 5 }}>
+                <Button 
+                  mode={unit === 'mi' ? 'outlined' : 'contained'} 
+                  onPress={() => setUnit('mi')} 
+                  style={{ backgroundColor: textInputColor }}
+                  theme={{
+                    colors: {
+                      outline: textColor, // This sets the border color for outlined mode
+                      onSurface: textColor, // This affects the text color in outlined mode
+                    }
+                  }}
+                >
+                  <Text style={{ color: textColor, fontFamily: 'Poppins-Regular', fontSize: 14 }}>Mi</Text>
                 </Button>
                 <Button
-                  mode={unit === 'km' ? 'contained' : 'outlined'}
+                  mode={unit === 'km' ? 'outlined' : 'contained'}
                   onPress={() => setUnit('km')}
-                  style={{ marginLeft: 8 }}
+                  style={{ marginLeft: 8, backgroundColor: textInputColor }}
+                  theme={{
+                    colors: {
+                      outline: textColor, // This sets the border color for outlined mode
+                      onSurface: textColor, // This affects the text color in outlined mode
+                    }
+                  }}
                 >
-                  Km
+                  <Text style={{ color: textColor, fontFamily: 'Poppins-Regular', fontSize: 14 }}>Km</Text>
                 </Button>
               </View>
               <Slider
@@ -116,9 +145,9 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
                 value={distance}
                 onValueChange={setDistance}
                 minimumTrackTintColor="#5caef1"
-                maximumTrackTintColor="#eee"
+                maximumTrackTintColor={placeholderTextColor}
               />
-              <Text style={{ alignSelf: 'center', marginBottom: 24 }}>
+              <Text style={{ alignSelf: 'center', marginBottom: 24, fontSize: 14, fontFamily: 'Poppins-Regular', color: textColor }}>
                 {`> ${distance} ${unit}`}
               </Text>
             </>
@@ -126,7 +155,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
 
           {step === 2 && (
             <>
-              <Text style={styles.inputLabel}>Number of Attendees</Text>
+              <Text style={[styles.inputLabel, {color: textColor}]}>Number of Attendees</Text>
               <Slider
                 style={{ width: '100%', height: 40 }}
                 minimumValue={1}
@@ -137,7 +166,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
                 minimumTrackTintColor="#5caef1"
                 maximumTrackTintColor="#eee"
               />
-              <Text style={{ alignSelf: 'center', marginBottom: 24 }}>
+              <Text style={{ alignSelf: 'center', marginBottom: 24, color: textColor, fontFamily: 'Poppins-Regular', fontSize: 14 }}>
                 {`> ${attendees} People`}
               </Text>
             </>
@@ -145,65 +174,78 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
 
           {step === 3 && (
             <>
-              <Text style={styles.inputLabel}>Noise Level</Text>
+              <Text style={[styles.inputLabel, {color: textColor}]}>Noise Level</Text>
               <View style={styles.choiceRow}>
                 {noiseLevels.map((lvl) => (
                   <Pressable
                     key={lvl}
                     onPress={() => setNoise(lvl)}
                     style={[
-                      styles.choice,
-                      noise === lvl && styles.choiceSelected,
+                      styles.choice, {backgroundColor: textInputColor},
+                      noise === lvl && {
+                        borderColor: textColor,
+                        borderWidth: 1,
+                        backgroundColor: textInputColor,
+                      }
                     ]}
                   >
-                    <Text style={{ color: noise === lvl ? 'white' : '#333' }}>{lvl}</Text>
+                    <Text style={{ 
+                      color: textColor, fontFamily: 'Poppins-Regular', fontSize: 14
+                    }}>
+                      {lvl}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
-              <Text style={{ alignSelf: 'flex-end', marginBottom: 24 }}>{noise || ''}</Text>
             </>
           )}
 
           {step === 4 && (
             <>
-              <Text style={styles.inputLabel}>Location Type</Text>
+              <Text style={[styles.inputLabel, {color: textColor}]}>Location Type</Text>
               <View style={styles.choiceRow}>
                 {locationTypes.map((type) => (
                   <Pressable
                     key={type}
                     onPress={() => setLocation(type)}
                     style={[
-                      styles.choice,
-                      location === type && styles.choiceSelected,
+                      styles.choice, {backgroundColor: textInputColor},
+                      location === type && {
+                        borderColor: textColor,
+                        borderWidth: 1,
+                        backgroundColor: textInputColor,}
                     ]}
                   >
-                    <Text style={{ color: location === type ? 'white' : '#333' }}>{type}</Text>
+                    <Text style={{ color: textColor, fontFamily: 'Poppins-Regular', fontSize: 14}}>{type}</Text>
                   </Pressable>
                 ))}
               </View>
-              <Text style={{ alignSelf: 'flex-end', marginBottom: 24 }}>{location || ''}</Text>
             </>
           )}
         </View>
 
         <View style={styles.footer}>
           <Pressable style={[styles.footerBtn, { backgroundColor: '#f37b7b' }]} onPress={reset}>
-            <Text style={{ color: 'white', fontWeight: 'bold' }}>Reset</Text>
+            <Text style={{ color: textColor, fontFamily: 'Poppins-Regular', fontSize: 16 }}>Reset</Text>
           </Pressable>
           <Pressable
             style={[styles.footerBtn, { backgroundColor: '#5caef1' }]}
             onPress={step === 0 ? handleSave : nextOrSave}
           >
-            <Text style={{ color: 'white', fontWeight: 'bold' }}>
+            <Text style={{ color: textColor, fontFamily: 'Poppins-Regular', fontSize: 16 }}>
               {step === 0 ? 'Save' : 'Next'}
             </Text>
           </Pressable>
         </View>
 
-        {/* ⏪ Back button now jumps to main page (step 0) */}
+        {/* ⏪ Back button now uses ArrowLeft icon */}
         {step > 0 && (
           <Pressable onPress={() => setStep(0)} style={styles.backBtn} accessibilityLabel="Back to main filter menu">
-            <Text style={{ color: '#5caef1', fontWeight: 'bold', fontSize: 16 }}>{'<'}</Text>
+            <ArrowLeft
+              size={24}
+              color={textColor}
+              style={{marginTop: -5}}
+            />
           </Pressable>
         )}
       </View>
@@ -213,9 +255,8 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
 
 const styles = StyleSheet.create({
   modal: {
-    backgroundColor: '#fff',
     borderRadius: 18,
-    padding: 22,
+    padding: 20,
     margin: 16,
     elevation: 6,
     shadowColor: '#000',
@@ -226,29 +267,31 @@ const styles = StyleSheet.create({
   },
   header: {
     fontWeight: 'bold',
-    fontSize: 17,
+    fontSize: 18,
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    fontFamily: 'Poppins-SemiBold'
   },
   content: {
-    marginBottom: 32,
+    marginTop: 5,
+    marginBottom: 10,
   },
   inputBox: {
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 9,
+    borderRadius: 10,
     padding: 14,
     marginBottom: 12,
   },
   inputLabel: {
     color: '#666',
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
+    fontFamily: 'Poppins-Regular'
   },
   inputValue: {
     color: '#222',
     fontSize: 14,
+    fontFamily: 'Poppins-Regular'
   },
   choiceRow: {
     flexDirection: 'row',
@@ -257,13 +300,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   choice: {
-    backgroundColor: '#eee',
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 18,
-    marginRight: 6,
+    borderRadius: 25,
     borderWidth: 1,
     borderColor: 'transparent',
+    padding: 10,
   },
   choiceSelected: {
     backgroundColor: '#5caef1',

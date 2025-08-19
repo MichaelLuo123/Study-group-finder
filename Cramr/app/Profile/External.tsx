@@ -3,9 +3,9 @@ import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import EventCollapsible from '../../components/EventCollapsible';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
+import EventList from '../listView/eventList';
 
 // Define user interface
 interface User {
@@ -28,48 +28,12 @@ interface User {
   prompt_3_answer: string;
 }
 
-interface Event {
-  id: string;
-  title: string;
-  banner_color: number;
-  description: string;
-  location: string;
-  date: string;
-  time: string;
-  creator_id: string;
-  created_at: string;
-  event_type: string;
-  status: string;
-  capacity: number;
-  tags: string[];
-  invited_ids: string[];
-  accepted_ids: string[];
-  declined_ids: string[];
-  invited_count: number;
-  accepted_count: number;
-  declined_count: number;
-  class: string;
-  creator_name: string;
-  creator_profile_picture: string;
-  creator_username: string;
-  following: number;
-  follwers: number;
-  following_ids: string[];
-  followers_ids: string[];
-}
-
 export default function External() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const profileId = params.userId as string || '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // Default fallback
+  const profileId = params.userId as string || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c'; // Default fallback
   const { user: loggedInUser } = useUser();
-
-  // Debug logging
-  console.log('URL params:', params);
-  console.log('profileId from URL:', params.userId);
-  console.log('Final profileId being used:', profileId);
-  console.log('Logged in user:', loggedInUser);
-
+  
   const userId = 'a430f1d2-aa88-4977-9796-700f5a5b2a3c'
 
   // Colors
@@ -110,16 +74,12 @@ export default function External() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        console.log('Fetching user data for profileId:', profileId);
-        console.log('API URL:', `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
-        
         const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
         
         console.log('Response status:', response.status);
         
         if (response.ok) {
           const userData = await response.json();
-          console.log('User data received:', userData);
           setUser(userData);
           
           // Populate form fields with database data
@@ -155,72 +115,6 @@ export default function External() {
 
     fetchUserData();
   }, [profileId]);
-
-  // Events
-  const [allEvents, setAllEvents] = useState<Event[]>([]);
-  const [userEvents, setUserEvents] = useState<Event[]>([]);
-
-  // Fetch all events from database and filter by creator_id
-  useEffect(() => {
-    const fetchAllEventsAndFilter = async () => {
-      try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-        if (response.ok) {
-          const eventsData = await response.json();
-          setAllEvents(eventsData);
-          
-          // Filter events where creator_id matches userId
-          const filteredEvents = eventsData.filter((event: Event) => event.creator_id === profileId);
-          setUserEvents(filteredEvents);
-          
-          console.log(`Found ${filteredEvents.length} events created by user ${profileId}`);
-        } else {
-          console.error('Failed to fetch events data');
-        }
-      } catch (error) {
-        console.error('Error fetching events data:', error);
-      }
-    };
-
-    fetchAllEventsAndFilter();
-  }, [profileId]);
-
-  const getUserProfilePicture = async (userId: string): Promise<string | null> => {
-    try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
-      if (response.ok) {
-        const userData = await response.json();
-        return userData.profile_picture_url || null;
-      }
-    } catch (error) {
-      console.error('Error fetching user profile picture:', error);
-    }
-    return null;
-  };
-
-  const [acceptedUserProfilePics, setAcceptedUserProfilePics] = useState<string[]>([]);
-
-  const fetchAcceptedUserProfilePics = async (acceptedIds: string[]) => {
-    try {
-      // Take only first 3 IDs
-      const firstThreeIds = acceptedIds.slice(0, 3);
-      const profilePicPromises = firstThreeIds.map(async (userId) => {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
-        if (response.ok) {
-          const userData = await response.json();
-          return userData.profile_picture_url || null;
-        }
-        return null;
-      });
-      
-      const profilePics = await Promise.all(profilePicPromises);
-      // Filter out any null results
-      const validProfilePics = profilePics.filter(pic => pic !== null);
-      setAcceptedUserProfilePics(validProfilePics);
-    } catch (error) {
-      console.error('Error fetching profile pictures:', error);
-    }
-  };
 
   // More Modal
   const [isMoreModalVisible, setIsMoreModalVisible] = useState(false);
@@ -558,32 +452,10 @@ export default function External() {
           )}
 
           <Text style={[styles.subheaderBoldText, {color: textColor, marginTop: 10}]}>{name}'s Events</Text>
-          
-          {userEvents.length === 0 ? (
-            <Text style={styles.normalText}> No events </Text>
-          ) : (
-            userEvents.map((event) => (
-              <EventCollapsible
-                key={event.id}
-                title={event.title}
-                bannerColor={bannerColors[event.banner_color || 1]}
-                ownerId={event.creator_id}
-                tag1={event.tags[0] || null}
-                tag2={event.tags[1] || null}
-                tag3={event.tags[2] || null}
-                subject={event.class}
-                location={event.location}
-                date={event.date}
-                time={event.time}
-                rsvpedCount={event.accepted_count}
-                capacity={event.capacity}
-                acceptedIds={event.accepted_ids}
-                isDarkMode={isDarkMode}
-                isOwner={false}
-                style={{marginBottom: 10}}
-              />
-            ))
-          )}
+
+          <EventList
+            creatorUserId={profileId}
+            />
             
           {/* More Options Modal */}
           <Modal
@@ -687,7 +559,7 @@ export default function External() {
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, {backgroundColor: backgroundColor, padding: 15}]}>
                 <Text style={[styles.normalText, {color: textColor, textAlign: 'center', marginTop: 10}]}>
-                  Unfollow {username}?
+                  Remove {username} from Following?
                 </Text>
                 
                 <View style={{flexDirection: 'row', gap: 10, width: '100%', marginTop: 20}}>
