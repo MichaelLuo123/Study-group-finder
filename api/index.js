@@ -272,6 +272,16 @@ app.post('/events', async (req, res) => {
             'INSERT INTO event_attendees (event_id, user_id, status) VALUES ($1, $2, $3) ON CONFLICT (event_id, user_id) DO NOTHING',
             [event.id, userId, 'invited']
           );
+          
+          // Create notification for invited user
+          await createNotification(
+            userId,
+            creator_id,
+            'event_invite',
+            `You've been invited to ${title}`,
+            event.id,
+            { event_title: title, location: location, date: date }
+          );
         }
       }
     }
@@ -722,6 +732,17 @@ app.post('/users/:id/follow', async (req, res) => {
       RETURNING *
     `, [id, userId]);
     
+    // Create notification for the user being followed
+    const followerUser = await client.query('SELECT username FROM users WHERE id = $1', [id]);
+    if (followerUser.rows.length > 0) {
+      await createNotification(
+        userId, // user being followed
+        id,     // follower
+        'follow',
+        `${followerUser.rows[0].username} started following you.`
+      );
+    }
+    
     res.status(201).json({
       success: true,
       message: 'Now following user',
@@ -1110,6 +1131,319 @@ app.get('/users/:id/preferences', async (req, res) => {
   }
 });
 
+// Notification endpoints
+// Get all notifications for a user
+app.get('/users/:id/notifications', async (req, res) => {
+  const { id } = req.params;
+  const { limit = 50, offset = 0 } = req.query;
+  
+  try {
+    // First, ensure the notifications table exists
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        metadata JSONB
+      )
+    `);
+    
+    // Create indexes if they don't exist
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)
+    `);
+    
+    const result = await client.query(`
+      SELECT 
+        n.*,
+        u.username as sender_username,
+        u.full_name as sender_full_name,
+        u.profile_picture_url as sender_profile_picture,
+        e.title as event_title
+      FROM notifications n
+      LEFT JOIN users u ON n.sender_id = u.id
+      LEFT JOIN events e ON n.event_id = e.id
+      WHERE n.user_id = $1
+      ORDER BY n.created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [id, parseInt(limit), parseInt(offset)]);
+    
+    // Group notifications by date
+    const groupedNotifications = {};
+    result.rows.forEach(notification => {
+      const date = new Date(notification.created_at);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      let dateKey;
+      if (date.toDateString() === today.toDateString()) {
+        dateKey = 'Today';
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        dateKey = 'Yesterday';
+      } else {
+        dateKey = date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+      }
+      
+      if (!groupedNotifications[dateKey]) {
+        groupedNotifications[dateKey] = [];
+      }
+      
+      groupedNotifications[dateKey].push({
+        id: notification.id,
+        sender: notification.sender_username || 'System',
+        message: notification.message,
+        date: dateKey,
+        type: notification.type,
+        is_read: notification.is_read,
+        event_id: notification.event_id,
+        event_title: notification.event_title,
+        created_at: notification.created_at
+      });
+    });
+    
+    // Sort notifications within each date group by created_at (newest first)
+    Object.keys(groupedNotifications).forEach(dateKey => {
+      groupedNotifications[dateKey].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    });
+    
+    res.json({
+      success: true,
+      notifications: groupedNotifications,
+      total: result.rows.length
+    });
+  } catch (err) {
+    console.error('Get notifications error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Mark notification as read
+app.put('/users/:id/notifications/:notificationId/read', async (req, res) => {
+  const { id, notificationId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      UPDATE notifications 
+      SET is_read = true 
+      WHERE id = $1 AND user_id = $2
+      RETURNING *
+    `, [notificationId, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Notification marked as read',
+      notification: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Mark notification read error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Mark all notifications as read for a user
+app.put('/users/:id/notifications/read-all', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await client.query(`
+      UPDATE notifications 
+      SET is_read = true 
+      WHERE user_id = $1 AND is_read = false
+      RETURNING COUNT(*) as updated_count
+    `, [id]);
+    
+    res.json({
+      success: true,
+      message: 'All notifications marked as read',
+      updated_count: parseInt(result.rows[0].updated_count)
+    });
+  } catch (err) {
+    console.error('Mark all notifications read error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Delete a notification
+app.delete('/users/:id/notifications/:notificationId', async (req, res) => {
+  const { id, notificationId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      DELETE FROM notifications 
+      WHERE id = $1 AND user_id = $2
+      RETURNING *
+    `, [notificationId, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Notification deleted successfully'
+    });
+  } catch (err) {
+    console.error('Delete notification error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get unread notification count
+app.get('/users/:id/notifications/unread-count', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT COUNT(*) as unread_count
+      FROM notifications 
+      WHERE user_id = $1 AND is_read = false
+    `, [id]);
+    
+    res.json({
+      success: true,
+      unread_count: parseInt(result.rows[0].unread_count)
+    });
+  } catch (err) {
+    console.error('Get unread count error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Helper function to create notifications (can be called from other endpoints)
+async function createNotification(userId, senderId, type, message, eventId = null, metadata = {}) {
+  try {
+    const result = await client.query(`
+      INSERT INTO notifications (user_id, sender_id, type, message, event_id, metadata)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [userId, senderId, type, message, eventId, JSON.stringify(metadata)]);
+    
+    return result.rows[0];
+  } catch (err) {
+    console.error('Error creating notification:', err);
+    return null;
+  }
+}
+
+// Test endpoint to create a notification (for development/testing purposes)
+app.post('/test/create-notification', async (req, res) => {
+  const { user_id, sender_id, type, message, event_id, metadata } = req.body;
+  
+  if (!user_id || !sender_id || !type || !message) {
+    return res.status(400).json({ error: 'user_id, sender_id, type, and message are required' });
+  }
+  
+  try {
+    const notification = await createNotification(user_id, sender_id, type, message, event_id, metadata);
+    
+    if (notification) {
+      res.status(201).json({
+        success: true,
+        message: 'Test notification created successfully',
+        notification: notification
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to create notification' });
+    }
+  } catch (err) {
+    console.error('Test notification creation error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Create sample notifications for specific user (hardcoded for testing)
+app.post('/test/create-sample-notifications', async (req, res) => {
+  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  
+  try {
+    // First, clear any existing notifications for this user
+    await client.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+    
+    // Create sample notifications with different dates
+    const sampleNotifications = [
+      {
+        type: 'follow',
+        message: 'jessicastacy started following you.',
+        metadata: { action: 'follow' },
+        created_at: new Date() // Today
+      },
+      {
+        type: 'event_invite',
+        message: 'You\'ve been invited to CS101 Study Group',
+        metadata: { event_title: 'CS101 Study Group', location: 'Room 101, UCSD' },
+        created_at: new Date() // Today
+      },
+      {
+        type: 'event_rsvp',
+        message: 'caileymnm RSVPed to In-N-Out Study Session',
+        metadata: { event_title: 'In-N-Out Study Session', status: 'accepted' },
+        created_at: new Date() // Today
+      },
+      {
+        type: 'event_invite',
+        message: 'You\'ve been invited to Math 20A Study Session',
+        metadata: { event_title: 'Math 20A Study Session', location: 'Library Study Room' },
+        created_at: new Date() // Today
+      },
+      {
+        type: 'follow',
+        message: 'kevinyang123 started following you.',
+        metadata: { action: 'follow' },
+        created_at: new Date() // Today
+      },
+      {
+        type: 'follow',
+        message: 'kevinyang123 started following you.',
+        metadata: { action: 'follow' },
+        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
+      }
+    ];
+    
+    const createdNotifications = [];
+    
+    for (const notif of sampleNotifications) {
+      // Insert with custom created_at timestamp
+      const result = await client.query(`
+        INSERT INTO notifications (user_id, sender_id, type, message, event_id, metadata, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [userId, userId, notif.type, notif.message, null, JSON.stringify(notif.metadata), notif.created_at]);
+      
+      if (result.rows[0]) {
+        createdNotifications.push(result.rows[0]);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Created ${createdNotifications.length} sample notifications for user ${userId} with different dates`,
+      notifications: createdNotifications
+    });
+    
+  } catch (err) {
+    console.error('Error creating sample notifications:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 app.get('/events/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -1275,6 +1609,39 @@ app.post('/events/:eventId/rsvpd', async (req, res) => {
       DO UPDATE SET status = $3, rsvp_date = NOW()
       RETURNING *
     `, [eventId, user_id, status]);
+    
+    // Create notification for event creator if user RSVPs
+    if (status === 'accepted' || status === 'declined') {
+      const eventResult = await client.query('SELECT creator_id, title FROM events WHERE id = $1', [eventId]);
+      if (eventResult.rows.length > 0) {
+        const event = eventResult.rows[0];
+        const userResult = await client.query('SELECT username FROM users WHERE id = $1', [user_id]);
+        
+        if (userResult.rows.length > 0 && event.creator_id !== user_id) {
+          const action = status === 'accepted' ? 'RSVPed to' : 'declined';
+          
+          // Notification for event creator
+          await createNotification(
+            event.creator_id,
+            user_id,
+            'event_rsvp',
+            `${userResult.rows[0].username} ${action} ${event.title}`,
+            eventId,
+            { event_title: event.title, status: status }
+          );
+          
+          // Self notification for the user who RSVP'd
+          await createNotification(
+            user_id,
+            user_id,
+            'event_rsvp',
+            `You ${action} ${event.title}`,
+            eventId,
+            { event_title: event.title, status: status }
+          );
+        }
+      }
+    }
     
     res.json({
       success: true,
