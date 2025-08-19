@@ -165,7 +165,9 @@ export default function Saved() {
                     </View>
 
                     {isSwitch === false && (
-                        rsvpedEvents.length === 0 ? 
+                        loading ? 
+                        (<Text style={[styles.normalText, {color: textColor}]}> Loading RSVPed events... </Text>) 
+                        : rsvpedEvents.length === 0 ? 
                         (<Text style={[styles.normalText, {color: textColor}]}> No RSVPed events... </Text>) 
                         : 
                         (rsvpedEvents.map((event) => (
@@ -232,7 +234,9 @@ export default function Saved() {
                     )}
 
                     {isSwitch === true && (
-                        savedEvents.length === 0 ? 
+                        loading ? 
+                        (<Text style={[styles.normalText, {color: textColor}]}> Loading saved events... </Text>) 
+                        : savedEvents.length === 0 ? 
                         (<Text style={[styles.normalText, {color: textColor}]}> No saved events.. </Text>) 
                         : 
                         (savedEvents.map((event) => (
@@ -359,7 +363,7 @@ export default function Saved() {
                     {currentPage === 'profile' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
             </View>
-        </SafeAreaView>
+        </View>
         
     );
 }

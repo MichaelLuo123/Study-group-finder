@@ -420,6 +420,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
     zIndex: 1000, 
+    paddingHorizontal: 20,
   },
   dragHandle: {
     width: 40,
@@ -433,7 +434,6 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   searchInputContainer: {
     flex: 1,

@@ -16,7 +16,19 @@ import {
 } from 'react-native';
 import type { Filters } from './filter';
 
-export default function EventList({ filters, selectedEventId, searchQuery }: { filters: Filters | null, selectedEventId?: string | null, searchQuery?: string }) {
+interface EventListProps {
+  filters?: Filters | null;
+  selectedEventId?: string | null;
+  searchQuery?: string;
+  creatorUserId?: string; // New prop for filtering by creator
+}
+
+export default function EventList({ 
+  filters, 
+  selectedEventId, 
+  searchQuery, 
+  creatorUserId 
+}: EventListProps) {
   // Colors
   const {isDarkMode, toggleDarkMode, user} = useUser();
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
@@ -293,7 +305,7 @@ export default function EventList({ filters, selectedEventId, searchQuery }: { f
       if (d > filters.distance) return false;
     }*/
   
-    // 2) Attendees filter (minimum attendees, matches UI “> X people”)
+    // 2) Attendees filter (minimum attendees, matches UI "> X people")
     if (filters.attendees) {
       const count = event.accepted_count ?? event.rsvped_count ?? 0;
       if (count < filters.attendees) return false;
@@ -316,10 +328,15 @@ export default function EventList({ filters, selectedEventId, searchQuery }: { f
     return true;
   });
 
+  // ----------- CREATOR FILTER -----------
+  const creatorFilteredEvents = creatorUserId 
+    ? filteredEvents.filter((event: any) => event.creator_id === creatorUserId)
+    : filteredEvents;
+
   // ----------- SEARCH FILTER -----------
   const normalizedQuery = (searchQuery || '').trim().toLowerCase();
   const searchedEvents = normalizedQuery
-    ? filteredEvents.filter((event: any) => {
+    ? creatorFilteredEvents.filter((event: any) => {
         const creator = (event.creator_name || event.creator_id || '').toLowerCase();
         const locationText = (event.location || '').toLowerCase();
         const tagsText = Array.isArray(event.tags) ? event.tags.join(' ').toLowerCase() : '';
@@ -329,7 +346,7 @@ export default function EventList({ filters, selectedEventId, searchQuery }: { f
           tagsText.includes(normalizedQuery)
         );
       })
-    : filteredEvents;
+    : creatorFilteredEvents;
 
   // Update collapsed events when selectedEventId changes
   useEffect(() => {
@@ -405,7 +422,9 @@ export default function EventList({ filters, selectedEventId, searchQuery }: { f
           const isOpen = collapsedEvents.has(event.id);
 
           return (
-            event.creator_id !== userId && (
+            // Updated condition: when creatorUserId is provided, show only creator's events
+            // When creatorUserId is not provided, exclude the current user's events (original behavior)
+            (creatorUserId ? event.creator_id === creatorUserId : event.creator_id !== userId) && (
               <EventCollapsible
                 key={event.id}
                 eventId={event.id}
@@ -416,10 +435,10 @@ export default function EventList({ filters, selectedEventId, searchQuery }: { f
                 tag1={event.tags?.[0] || null}
                 tag2={event.tags?.[1] || null}
                 tag3={event.tags?.[2] || null}
-                subject={event.class}
-                location={event.location}
-                date={event.date || new Date(event.date_and_time).toLocaleDateString()}
-                time={event.time || new Date(event.date_and_time).toLocaleTimeString()}
+                subject={event.class || 'invalid'}
+                location={event.location || 'invalid'}
+                date={event.date}
+                time={event.time}
                 rsvpedCount={event.accepted_count || event.rsvped_count || 0}
                 capacity={event.capacity || '∞'}
                 isDarkMode={isDarkMode}
@@ -441,8 +460,6 @@ export default function EventList({ filters, selectedEventId, searchQuery }: { f
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
   },
   searchContainer: {
     paddingHorizontal: 20,

@@ -9,6 +9,16 @@ import EventList from './eventList';
 import FilterModal, { Filters } from './filter';
 
 export default function HomeScreen() {
+  // Colors
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+  const bannerColors = Colors.bannerColors
+  const buttonColor = Colors.button
+  const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
+
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
@@ -31,29 +41,24 @@ export default function HomeScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerStyle: {
+        backgroundColor: backgroundColor, // This sets the header background
+      },
       headerLeft: () => (
-        <Image
-          source={require('./assets/images/finalCramrLogo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <View style={[styles.fullWidthHeader]}>
+          <Image
+            source={require('./assets/images/finalCramrLogo.png')}
+            style={[styles.logo]}
+            resizeMode="contain"
+          />
+        </View>
       ),
-      headerRight: () => (
-        <Button
-          mode="contained"
-          compact
-          buttonColor="#5caef1"
-          textColor="black"
-          style={styles.addButton}
-          onPress={() => {}}
-        >
-          Add Event
-        </Button>
-      ),
+      headerRight: () => (<></>),
       headerTitle: '', // Hide "index"
+      headerShadowVisible: false, // Optional: removes shadow/border under header
     });
     loadFollowing();
-  }, [navigation]);
+  }, [backgroundColor]); // Add backgroundColor as dependency
 
   // Keep people search responsive when switching to People tab
   useEffect(() => {
@@ -147,28 +152,31 @@ export default function HomeScreen() {
   const sliderValue = searchMode === 'people';
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: backgroundColor}]}>
       {/* Top tabs using Slider (Events / People) */}
       <View style={styles.sliderWrap}>
         <Slider
           leftLabel="Events"
           rightLabel="People"
-          width={240}                 // tweak if you want tighter/wider
-          lightMode={lightMode}
+          width={175}                 // tweak if you want tighter/wider
+          lightMode={!isDarkMode}
           value={sliderValue}
           onChangeSlider={(val) => setSearchMode(val ? 'people' : 'events')}
-          style={{ height: 40 }}
+          style={{ height: 40, marginTop: -15 }}
         />
       </View>
 
       {/* Search Bar + Filter (filter only shows on Events) */}
       <View style={styles.searchRow}>
-        <View style={styles.searchInputContainer}>
+        <View style={[styles.searchInputContainer, { backgroundColor: textInputColor, ...(searchMode === 'people' && {marginTop: 7}) }]}>
           <TextInput
             mode="flat"
             placeholder={searchMode === 'events' ? 'Search events...' : 'Search people...'}
-            style={styles.searchInput}
-            left={<TextInput.Icon icon="magnify" />}
+            placeholderTextColor={placeholderTextColor}
+            style={[styles.searchInput, { color: textColor}]}
+            contentStyle={[styles.searchInputContent, {color: textColor}]} // Add this for font styling
+            outlineStyle={styles.searchInputOutline} // Add this for border radius
+            left={<TextInput.Icon icon="magnify" color={textColor} />}
             underlineColor="transparent"
             activeUnderlineColor="transparent"
             value={searchQuery}
@@ -181,8 +189,8 @@ export default function HomeScreen() {
             icon="filter"
             size={28}
             onPress={() => setShowFilter(true)}
-            style={styles.filterButton}
-            iconColor="#000"
+            style={[styles.filterButton, { backgroundColor: textInputColor }]}
+            iconColor={textColor}
           />
         )}
       </View>
@@ -214,31 +222,30 @@ export default function HomeScreen() {
                   return (
                     <TouchableOpacity
                       key={person.id}
-                      style={styles.personCard}
+                      style={[styles.personCard, {backgroundColor: textInputColor}]}
                       onPress={() => navigateToProfile(person.id)}
                     >
                       <View style={styles.personInfo}>
                         <View style={styles.personAvatar}>
-                          <Text style={styles.personAvatarText}>
+                          <Text style={[styles.personAvatarText, {color:textColor, fontFamily: 'Poppins-Regular'}]}>
                             {person.full_name?.charAt(0) || person.username?.charAt(0) || '?'}
                           </Text>
                         </View>
                         <View style={styles.personDetails}>
-                          <Text style={styles.personName}>{person.full_name || 'Unknown'}</Text>
-                          <Text style={styles.personUsername}>@{person.username}</Text>
-                          {following && <Text style={styles.followingBadge}>Following</Text>}
+                          <Text style={[styles.personName, {color:textColor, fontFamily: 'Poppins-Regular'}]}>{person.full_name || 'Unknown'}</Text>
+                          <Text style={[styles.personUsername, {color:textColor, fontFamily: 'Poppins-Regular'}]}>@{person.username}</Text>
                         </View>
                       </View>
                       <TouchableOpacity
-                        style={[styles.followButton, following && styles.followingButton]}
+                        style={[styles.followButton, (following && [styles.followingButton, {backgroundColor: cancelButtonColor}])]}
                         onPress={(e) => {
                           e.stopPropagation();
                           if (following) unfollowUser(person.id);
                           else followUser(person.id);
                         }}
                       >
-                        <Text style={[styles.followButtonText, following && styles.followingButtonText]}>
-                          {following ? 'Unfollow' : 'Follow'}
+                        <Text style={[styles.followButtonText, (following && [styles.followingButtonText, {color: textColor}])]}>
+                          {following ? 'Following' : 'Follow'}
                         </Text>
                       </TouchableOpacity>
                     </TouchableOpacity>
@@ -247,11 +254,11 @@ export default function HomeScreen() {
             </ScrollView>
           ) : searchQuery.length >= 2 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No people found</Text>
+              <Text style={[styles.emptyText, {color: textColor}]}>No people found</Text>
             </View>
           ) : (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Type at least 2 characters to search people</Text>
+              <Text style={[styles.emptyText, {color: textColor}]}>Type at least 2 characters to search people</Text>
             </View>
           )}
         </View>
@@ -300,45 +307,76 @@ export default function HomeScreen() {
   );
 }
 
+// EXAMPLE: How to hide headers in other screens
+// Add this to your Map screen component:
+/*
+useLayoutEffect(() => {
+  navigation.setOptions({
+    headerShown: false, // This completely hides the header
+  });
+}, [navigation]);
+*/
+
+// OR in your ListView screen component:
+/*
+useLayoutEffect(() => {
+  navigation.setOptions({
+    headerShown: false, // This completely hides the header
+  });
+}, [navigation]);
+*/
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 20,
     justifyContent: 'flex-start',
     paddingBottom: 80,
   },
   logo: {
-    height: 100,
-    width: 100,
-    marginLeft: 12,
+    height: 120,
+    width: 120,
+    marginTop: -30,
   },
   addButton: { marginRight: 8, borderRadius: 10 },
 
   // slider row
   sliderWrap: {
     alignItems: 'center',
-    marginTop: 6,
-    marginBottom: 6,
+    marginTop: 5,
+    marginBottom: 5,
   },
 
   // search row
-  searchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5, marginBottom: 5},
   searchInputContainer: {
     flex: 1,
-    backgroundColor: '#e5e5e5',
-    borderRadius: 25,
+    borderRadius: 10,
     marginRight: 8,
     justifyContent: 'center',
+    overflow: 'hidden', // This ensures the border radius is respected
   },
-  searchInput: { backgroundColor: 'transparent', height: 44, fontSize: 16, paddingLeft: 0 },
+  searchInput: { 
+    backgroundColor: 'transparent', 
+    height: 44, 
+    fontSize: 16,
+  },
+  searchInputContent: {
+    fontFamily: 'Poppins-Regular', // This applies the font to the input text and placeholder
+  },
+  searchInputOutline: {
+    borderRadius: 10, // This ensures the outline respects the border radius
+    borderWidth: 0, // Remove any border if you don't want it
+  },
   filterButton: {
-    backgroundColor: '#e5e5e5',
-    borderRadius: 25,
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 10,
+  },
+
+
+  fullWidthHeader: {
+    width: '100%',
+    flexDirection: 'row',
   },
 
   bottomNav: {
@@ -366,7 +404,7 @@ const styles = StyleSheet.create({
   peopleList: { flex: 1 },
   personCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
-    padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#e0e0e0',
+    padding: 15, borderRadius: 12, marginBottom: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
   },
   personInfo: { flex: 1, flexDirection: 'row', alignItems: 'center' },
@@ -378,13 +416,12 @@ const styles = StyleSheet.create({
   personDetails: { flex: 1 },
   personName: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 2 },
   personUsername: { fontSize: 14, color: '#666' },
-  followButton: { backgroundColor: '#007AFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  followButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  followButton: { backgroundColor: '#5CAEF1', padding: 10, borderRadius: 10 },
+  followButtonText: { color: '#fff', fontSize: 14, fontFamily: 'Poppins-Regular',},
   followingButton: { backgroundColor: '#e0e0e0' },
   followingButtonText: { color: '#666' },
-  followingBadge: { fontSize: 12, color: '#007AFF', fontWeight: 'bold', marginTop: 2 },
 
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
-  emptyText: { fontSize: 16, color: '#999', textAlign: 'center' },
-  debugText: { fontSize: 12, color: '#666', padding: 10, backgroundColor: '#f0f0f0', marginBottom: 10 },
+  emptyText: { fontSize: 16, textAlign: 'center', fontFamily: 'Poppins-Regular' },
+  debugText: { fontSize: 12, padding: 10, backgroundColor: '#f0f0f0', marginBottom: 10 },
 });
