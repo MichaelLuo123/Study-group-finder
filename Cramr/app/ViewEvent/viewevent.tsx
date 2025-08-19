@@ -1,19 +1,17 @@
 import { useUser } from '@/contexts/UserContext';
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Dimensions,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Dimensions,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
@@ -40,8 +38,8 @@ interface Event {
 }
 
 const EventViewScreen = () => {
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
-  const { isDarkMode, toggleDarkMode } = useUser();
+  const { isDarkMode, toggleDarkMode, user } = useUser();
+  const userId = user?.id; // Use logged-in user's ID
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);

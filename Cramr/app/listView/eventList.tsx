@@ -6,26 +6,25 @@ import { Colors } from '../../constants/Colors';
 
 import { useUser } from '@/contexts/UserContext';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  TextInput
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
 } from 'react-native';
 import type { Filters } from './filter';
 
 export default function EventList({ filters, selectedEventId, searchQuery }: { filters: Filters | null, selectedEventId?: string | null, searchQuery?: string }) {
   // Colors
-  const {isDarkMode, toggleDarkMode} = useUser();
+  const {isDarkMode, toggleDarkMode, user} = useUser();
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const userId = user?.id; // Use logged-in user's ID
 
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

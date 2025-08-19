@@ -61,8 +61,8 @@ interface Event {
 export default function External() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const profileId = params.userId as string || '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // Default fallback
   const { user: loggedInUser } = useUser();
+  const profileId = params.userId as string || loggedInUser?.id; // Use logged-in user's ID as fallback
 
   // Debug logging
   console.log('URL params:', params);
@@ -70,7 +70,7 @@ export default function External() {
   console.log('Final profileId being used:', profileId);
   console.log('Logged in user:', loggedInUser);
 
-  const userId = 'a430f1d2-aa88-4977-9796-700f5a5b2a3c'
+  const userId = loggedInUser?.id; // Use logged-in user's ID
 
   // Colors
   const {isDarkMode, toggleDarkMode} = useUser();
@@ -265,7 +265,7 @@ export default function External() {
   const handleBlock = async () => {
     try {
       // Use the logged-in user's ID (you'll need to get this from your auth context or state)
-      const loggedInUserId = loggedInUser?.id || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c'; // TODO: Replace with actual logged-in user ID
+      const loggedInUserId = loggedInUser?.id; // Use logged-in user's ID
       
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUserId}/block`, {
         method: 'POST',
@@ -292,7 +292,7 @@ export default function External() {
 
   const handleUnblock = async () => {
     try {
-      const loggedInUserId = loggedInUser?.id || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c';
+      const loggedInUserId = loggedInUser?.id;
       
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUserId}/blocks/${profileId}`, {
         method: 'DELETE',
@@ -360,7 +360,7 @@ export default function External() {
 
   const handleFollow = async () => {
     try {
-      const loggedInUserId = loggedInUser?.id || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c';
+      const loggedInUserId = loggedInUser?.id;
       
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUserId}/follow`, {
         method: 'POST',
@@ -400,7 +400,7 @@ export default function External() {
   
   const handleUnfollow = async () => {
     try {
-      const loggedInUserId = loggedInUser?.id || 'a430f1d2-aa88-4977-9796-700f5a5b2a3c';
+      const loggedInUserId = loggedInUser?.id;
       
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUserId}/follow/${profileId}`, {
         method: 'DELETE',

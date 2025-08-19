@@ -50,6 +50,7 @@ const LoginScreen = () => {
                     setLoginStatus('success');
                     setLoginMessage('Login successful!');
                     // Store user information in context
+                    console.log('Login successful, storing user:', result.user);
                     setUser(result.user);
                     // Navigate to list view page after successful login
                     setTimeout(() => {
