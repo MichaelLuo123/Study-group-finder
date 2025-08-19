@@ -1,43 +1,68 @@
-import React from 'react';
-import { SafeAreaView, View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type Notification = {
   id: string;
   sender: string;
   message: string;
-  date: string; 
-};
-
-const notifications: { [date: string]: Notification[] } = {
-  "Today": [
-    {
-      id: "1",
-      sender: "jessicastacy",
-      message: "created Carl's Jr Study Session.",
-      date: "Today"
-    },
-    {
-      id: "2",
-      sender: "jessicastacy",
-      message: "started following you.",
-      date: "Today"
-    }
-  ],
-  "7/29": [
-    {
-      id: "3",
-      sender: "caileymnm",
-      message: "RSVPed to In-N-Out Study Session.",
-      date: "7/29"
-    }
-  ]
+  date: string;
 };
 
 export default function NotificationsPage({ navigation }: { navigation: any }) {
+  const [notifications, setNotifications] = useState<{ [date: string]: Notification[] }>({});
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Hardcoded user ID as requested
+  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/notifications`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Transform the backend data to match the original format
+          const transformedNotifications: { [date: string]: Notification[] } = {};
+          
+          Object.entries(data.notifications).forEach(([date, notifs]: [string, any]) => {
+            transformedNotifications[date] = notifs.map((notif: any) => ({
+              id: notif.id,
+              sender: notif.sender,
+              message: notif.message,
+              date: notif.date
+            }));
+          });
+          
+          setNotifications(transformedNotifications);
+        }
+      } else {
+        console.error('Failed to fetch notifications:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchNotifications();
+    setRefreshing(false);
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Top bar with back arrow and title */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
