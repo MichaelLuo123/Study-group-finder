@@ -27,7 +27,7 @@ interface EventCollapsibleProps {
     location: string;
     date: string;
     time: string;
-    capacity: number;
+    capacity: number | string;
     rsvpedCount: number;
     isOwner: boolean;
     isSaved: boolean;
@@ -107,7 +107,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
         <View style={[styles.eventContainer, {backgroundColor: textInputColor}, style]}>
             <TouchableOpacity onPress={() => setIsOpen(!isOpen)} style={[styles.bannerContainer, {backgroundColor: bannerColor}]}>
                 {/* Use white text on colored banner for better contrast */}
-                <Text style={[styles.normalBoldText, {color: '#FFFFFF'}]}>{title}</Text>
+                <Text style={[styles.normalBoldText, {color: textColor}]}>{title}</Text>
                 <Image source={{uri: ownerProfile}} style={styles.profilePictureContainer}/>
             </TouchableOpacity>
 
@@ -137,12 +137,12 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                                 </View>
                             )}
                         </View>
-                        <TouchableOpacity onPress={() => onSavedChange(!isSaved)}>
+                        {!isOwner && (<TouchableOpacity onPress={() => onSavedChange(!isSaved)}>
                             <Bookmark 
                                 color={textColor} 
                                 fill={isSaved ? textColor : 'none'}
                             />
-                        </TouchableOpacity>
+                        </TouchableOpacity>)}
                     </View>
                     
                     <View style={styles.mainContentContainer}>
@@ -195,13 +195,13 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                             )}
                         </View>
                         
-                        <TouchableOpacity onPress={handleRSVPPress} style={styles.rsvpButtonContainer}>
+                        {!isOwner && (<TouchableOpacity onPress={handleRSVPPress} style={styles.rsvpButtonContainer}>
                             <View style={[styles.rsvpButton, {backgroundColor: isRsvped ? cancelButtonColor : '#5CAEF1', marginTop: -50, marginRight: 3}]}>
                                 <Text style={[styles.subheaderText, {color: textColor}]}>
                                     {isRsvped ? 'RSVPed' : 'RSVP'}
                                 </Text>
                             </View>
-                        </TouchableOpacity>
+                        </TouchableOpacity>)}
                     </View>
                 </View>
             )}
