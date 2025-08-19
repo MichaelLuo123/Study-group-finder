@@ -46,7 +46,9 @@ CREATE TABLE events (
     status VARCHAR(50) DEFAULT 'active',
     capacity INTEGER,
     tags TEXT[],
-    banner_color VARCHAR(100)
+    banner_color VARCHAR(100),
+    event_format VARCHAR(20) DEFAULT 'In Person',
+    virtual_room_link TEXT
 );
 
 -- Create event_attendees table

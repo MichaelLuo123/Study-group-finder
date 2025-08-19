@@ -66,7 +66,9 @@ export default function Internal() {
   // User
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // CHANGE THIS TO LOGGED IN USER !!!
+  const userId = loggedInUser?.id || '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  console.log('Logged in user:', loggedInUser);
+  console.log('Using userId:', userId);
 
   // Form state;
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -155,6 +157,8 @@ export default function Internal() {
           setUserEvents(filteredEvents);
           
           console.log(`Found ${filteredEvents.length} events created by user ${userId}`);
+          console.log('All events:', eventsData.map(e => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
+          console.log('Filtered events:', filteredEvents.map(e => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
         } else {
           console.error('Failed to fetch events data');
         }
@@ -215,10 +219,9 @@ export default function Internal() {
   };
 
   return (
-    <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
-      <ScrollView>
-        <View style={[styles.container, {backgroundColor: backgroundColor}]}>
-          
+    <View style={[styles.container, {backgroundColor: backgroundColor}]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        <View>
           {/* Show message if no user is logged in */}
           {!loggedInUser && (
             <View style={styles.messageContainer}>
@@ -405,7 +408,7 @@ export default function Internal() {
           {currentPage === 'profile' && <View style={styles.activeDot} />}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
 
   );
 }
@@ -435,7 +438,7 @@ const styles = StyleSheet.create({
 
   container: {
     padding: 20,
-    height: 1000
+    flex: 1
   },
   logoContainer: {
     height: 27,
