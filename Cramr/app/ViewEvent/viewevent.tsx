@@ -1,8 +1,8 @@
 import { Colors } from '@/constants/Colors';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
-import { Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -35,16 +35,6 @@ interface Event {
   tags: string[];
 }
 
-interface Comment {
-  id: string;
-  user_id: string;
-  username: string;
-  full_name: string;
-  profile_picture_url?: string;
-  comment: string;
-  created_at: string;
-}
-
 interface RSVP {
   user_id: string;
   username: string;
@@ -64,15 +54,12 @@ const EventViewScreen = () => {
   const bannerColors = Colors.bannerColors
 
   const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // CHANGE TO LOGGED IN USER
-  const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [loading, setLoading] = useState(true);
   const eventId = '3272c557-e2c8-451b-8114-e9b2d5269d0a';
-  const commentInputRef = useRef<TextInput>(null);
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState('eventView');
   const [busy, setBusy] = useState(false);
@@ -102,18 +89,6 @@ const EventViewScreen = () => {
     }
   };
 
-  const fetchComments = async () => {
-    try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/comments`);
-      if (res.ok) {
-        const data = await res.json();
-        setComments(data.comments || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch comments:', error);
-    }
-  };
-
   const fetchRSVPs = async () => {
     try {
       const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvps`);
@@ -128,7 +103,6 @@ const EventViewScreen = () => {
 
   useEffect(() => {
     fetchEvent();
-    fetchComments();
     fetchRSVPs();
   }, [eventId]);
 
@@ -197,29 +171,6 @@ const EventViewScreen = () => {
       setBusy(false);
     }
   };
-
-  const submitComment = async () => {
-    if (!comment.trim() || busy) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          user_id: userId, 
-          comment: comment.trim() 
-        }),
-      });
-      if (res.ok) {
-        setComment('');
-        await fetchComments();
-      }
-    } catch (err) {
-      console.error('Comment submission error:', err);
-    } finally {
-      setBusy(false);
-    }
-  };
   
   if (!event) {
     return (
@@ -241,6 +192,12 @@ const EventViewScreen = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
+          <ArrowLeft 
+            size={24} 
+            color={textColor}
+            onPress={() => router.back()}
+            style={{marginBottom: 15}}
+          />
           {/* Event Card */}
           <View style={[styles.eventCard, { backgroundColor: textInputColor }]}>
             {/* Event Header with colored banner */}
@@ -350,29 +307,24 @@ const EventViewScreen = () => {
           {/* Comments Section */}
           <View style={styles.commentsSection}>
             <Text style={[styles.commentsTitle, { color: textColor }]}>
-              {comments.length} Comments
+              ... Comments
             </Text>
 
             {/* Add Comment */}
             <View style={styles.addCommentContainer}>
               <TextInput
-                ref={commentInputRef}
                 style={[styles.commentInput, { 
                   backgroundColor: textInputColor,
                   color: textColor 
                 }]}
                 placeholder="Add a comment..."
                 placeholderTextColor={placeholderTextColor}
-                value={comment}
-                onChangeText={setComment}
                 multiline
               />
-              <TouchableOpacity 
-                onPress={submitComment}
-                disabled={!comment.trim() || busy}
-                style={[styles.sendButton, { opacity: comment.trim() ? 1 : 0.5 }]}
-              >
-                <Send size={20} color="#5CAEF1" strokeWidth={2} />
+              <TouchableOpacity>
+                <View style={styles.sendButton}>
+                  <Send size={20} color="#5CAEF1" strokeWidth={2} />
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -537,44 +489,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'Poppins-SemiBold',
     marginBottom: 15,
-  },
-  commentItem: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  commentAvatar: {
-    marginRight: 8,
-  },
-  commentAvatarImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  commentAvatarPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commentAvatarText: {
-    fontSize: 10,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  commentUsername: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  commentText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    lineHeight: 18,
   },
   addCommentContainer: {
     flexDirection: 'row',
