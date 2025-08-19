@@ -283,7 +283,7 @@ const EventViewScreen = () => {
                     { backgroundColor: isRSVPed ? rsvpedButtonColor : '#5CAEF1'}
                   ]}
                 >
-                  <Text style={styles.rsvpButtonText}>
+                  <Text style={[styles.rsvpButtonText, {color: textColor}]}>
                     {isRSVPed ? 'RSVPed' : 'RSVP'}
                   </Text>
                 </TouchableOpacity>
