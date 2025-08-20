@@ -32,10 +32,10 @@ export default function EventList({
   selectedEventId, 
   searchQuery, 
   creatorUserId,
-  onClearSelectedEvent,
-  onCenterMapOnEvent,
   isDistanceVisible,
   eventDistances,
+  onClearSelectedEvent,
+  onCenterMapOnEvent,
 }: EventListProps) {
   // Colors
   const {isDarkMode, toggleDarkMode, user} = useUser();
