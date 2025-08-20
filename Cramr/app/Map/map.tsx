@@ -2,6 +2,7 @@ import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation, useRouter } from 'expo-router';
+import haversine from 'haversine';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
@@ -16,6 +17,7 @@ import Animated, {
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
 import EventList from '../listView/eventList';
+import FilterModal, { Filters } from '../listView/filter';
 
 const { height: screenHeight } = Dimensions.get('window');
 const BOTTOM_SHEET_MIN_HEIGHT = 120; 
@@ -57,6 +59,14 @@ export default function MapScreen() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const translateY = useSharedValue(50);
   const mapRef = useRef<MapView>(null);
+
+  // Map Filter
+  const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState<Filters | null>(null);
+  const handleSaveFilters = (filterData: Filters) => {
+    setFilters(filterData);
+    setShowFilter(false);
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -184,41 +194,66 @@ export default function MapScreen() {
     getCurrentLocation();
   }, []);
 
-  // Fetch events and their coordinates
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const factory = new PublicStudySessionFactory();
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-        if (!response.ok) throw new Error('Failed to fetch events');
-        const data = await response.json();
 
-        const eventsWithCoordinates = await Promise.all(data.map(async (event: any) => {
-          console.log('Processing event:', event);
-          const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
-          const coords = await studySession.addressToCoordinates();
-          console.log('Event coordinates:', coords);
-          const processedEvent = {
-            ...event,
-            coordinates: coords.geometry.location,
-            remainingCapacity: event.capacity - (event.accepted_count || 0),
-            bannerColor: event.banner_color || 'transparent'
-          };
-          console.log('Processed event:', processedEvent);
-          return processedEvent;
-        }));
-
-        console.log('All events:', eventsWithCoordinates);
-        setEvents(eventsWithCoordinates);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-      }
-    };
-
-    fetchEvents();
-  }, []);
-
+  // calculating distance
+  const calculateDistance = (userLocation: any, eventCoordinates: any, unit: 'km' | 'mi' = 'km') => {
+  if (!userLocation || !eventCoordinates?.lat || !eventCoordinates?.lng) return 0;
   
+  const distance = haversine(
+    { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
+    { latitude: eventCoordinates.lat, longitude: eventCoordinates.lng },
+    { unit: unit } // 'km' or 'mile'
+  );
+  
+  return Math.round(distance * 10) / 10; // Round to 1 decimal
+};
+
+const [eventDistances, setEventDistances] = useState<{ [eventId: string]: number }>({});
+
+// Update your useEffect to build the distance dictionary:
+useEffect(() => {
+  const fetchEvents = async () => {
+    try {
+      const factory = new PublicStudySessionFactory();
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+      if (!response.ok) throw new Error('Failed to fetch events');
+      const data = await response.json();
+
+      const eventsWithCoordinates = [];
+      const distanceMap: { [eventId: string]: number } = {};
+
+      for (const event of data) {
+        const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
+        const coords = await studySession.addressToCoordinates();
+        
+        // Calculate distance
+        const distance = location ? calculateDistance(location, coords.geometry.location, 'km') : 0;
+        
+        // Store in distance map
+        distanceMap[event.id] = distance;
+        
+        const processedEvent = {
+          ...event,
+          coordinates: coords.geometry.location,
+          remainingCapacity: event.capacity - (event.accepted_count || 0),
+          bannerColor: event.banner_color || 'transparent'
+        };
+        
+        eventsWithCoordinates.push(processedEvent);
+      }
+
+      setEvents(eventsWithCoordinates);
+      setEventDistances(distanceMap); // Set the distance dictionary
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
+
+  if (location) {
+    fetchEvents();
+  }
+}, [location]);
+
   return (
     <View style={[styles.container, { backgroundColor: backgroundColor}]}>  
       {/* Full Screen Map Background */}
@@ -286,17 +321,29 @@ export default function MapScreen() {
             <IconButton
               icon="filter"
               size={28}
-              onPress={() => {}}
+              onPress={() => setShowFilter(true)}
               style={[styles.filterButton, {backgroundColor: textInputColor}]}
               iconColor={textColor}
             />
           </View>
 
+          {/* Filter Modal */}
+          <FilterModal
+            visible={showFilter}
+            onClose={() => setShowFilter(false)}
+            onSave={handleSaveFilters}
+          />
+
           {/* Event List - Only visible when expanded */}
           <View style={styles.eventListContainer}>
                          <EventList 
-               filters={null} 
-               selectedEventId={selectedEventId} 
+               
+              filters={filters}
+              
+               selectedEventId={selectedEventId}
+              isDistanceVisible={true}
+              eventDistances={eventDistances}
+            
                onClearSelectedEvent={() => setSelectedEventId(null)}
                onCenterMapOnEvent={centerMapOnEvent}
              />

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Bookmark, BookOpen, Calendar, Clock, Edit3, MapPin, Users } from 'lucide-react-native';
+import { Bookmark, BookOpen, Calendar, Clock, Dot, Edit3, MapPin, Users } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
@@ -34,6 +34,9 @@ interface EventCollapsibleProps {
     onSavedChange?: (saved: boolean) => void;
     isRsvped: boolean;
     onRsvpedChange?: (rsvped: boolean) => void;
+    isDistanceVisible: boolean;
+    distanceUnit?: 'km' | 'mi';
+    distance?: number | null;
     isDarkMode: boolean;
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
@@ -61,6 +64,9 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     onSavedChange = () => {},
     isRsvped,
     onRsvpedChange = () => {},
+    isDistanceVisible,
+    distanceUnit,
+    distance,
     isDarkMode,
     isCollapsed = false,
     onToggleCollapse = () => {},
@@ -116,7 +122,16 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
         <View style={[styles.eventContainer, {backgroundColor: textInputColor}, style]} data-event-id={eventId}>
             <TouchableOpacity onPress={onToggleCollapse} style={[styles.bannerContainer, {backgroundColor: bannerColor}]}>
                 {/* Use white text on colored banner for better contrast */}
-                <Text style={[styles.normalBoldText, {color: textColor}]}>{title}</Text>
+                <Text style={[styles.normalBoldText, {color: textColor}]}>{title}
+                    {isDistanceVisible && (
+                        <>
+                            <Dot size={10} color={textColor} fontWeight={'bold'} />
+                            <Text style={[styles.normalText, {color: textColor, marginBottom: 5}]}>
+                                {distance} {distanceUnit} away
+                            </Text>
+                        </>
+                    )}
+                </Text>
                 <Image source={{uri: ownerProfile}} style={styles.profilePictureContainer}/>
             </TouchableOpacity>
 

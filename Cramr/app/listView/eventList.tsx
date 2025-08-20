@@ -21,6 +21,8 @@ interface EventListProps {
   selectedEventId?: string | null;
   searchQuery?: string;
   creatorUserId?: string; // New prop for filtering by creator
+  isDistanceVisible?: boolean;
+  eventDistances?: { [eventId: string]: number };
   onClearSelectedEvent?: () => void; // Callback to clear selected event
   onCenterMapOnEvent?: (eventId: string) => void; // Callback to center map on event
 }
@@ -30,8 +32,10 @@ export default function EventList({
   selectedEventId, 
   searchQuery, 
   creatorUserId,
+  isDistanceVisible,
+  eventDistances,
   onClearSelectedEvent,
-  onCenterMapOnEvent
+  onCenterMapOnEvent,
 }: EventListProps) {
   // Colors
   const {isDarkMode, toggleDarkMode, user} = useUser();
@@ -459,7 +463,6 @@ export default function EventList({
                 time={event.time}
                 rsvpedCount={event.accepted_count || event.rsvped_count || 0}
                 capacity={event.capacity || '∞'}
-                isDarkMode={isDarkMode}
                 isOwner={event.creator_id === userId}
                 isSaved={event.isSaved}
                 onSavedChange={() => toggleSave(event.id, event.isSaved)}
@@ -468,7 +471,11 @@ export default function EventList({
                 isCollapsed={isCollapsed}
                                  onToggleCollapse={() => handleEventToggle(event.id)}
                  onCenterMapOnEvent={onCenterMapOnEvent}
-                 style={{marginBottom: 5}}
+                 isDistanceVisible={isDistanceVisible ? true : false}
+                distanceUnit={filters?.unit || 'mi'}
+                distance={isDistanceVisible && eventDistances ? eventDistances[event.id] : null}
+                isDarkMode={isDarkMode}
+                style={{marginBottom: 5}}
               />
             )
           );
