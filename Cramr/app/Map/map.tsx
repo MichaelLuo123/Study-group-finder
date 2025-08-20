@@ -2,16 +2,16 @@ import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation, useRouter } from 'expo-router';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import Animated, {
-    useAnimatedGestureHandler,
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
@@ -55,7 +55,8 @@ export default function MapScreen() {
   const [currentPage, setCurrentPage] = useState('map');
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const translateY = useSharedValue(-100);
+  const translateY = useSharedValue(50); // Start at middle position instead of -100
+  const mapRef = useRef<MapView>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -106,6 +107,19 @@ export default function MapScreen() {
     }
   };
 
+  // Function to center map on a specific event
+  const centerMapOnEvent = (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (event && event.coordinates && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: event.coordinates.lat,
+        longitude: event.coordinates.lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000);
+    }
+  };
+
   const gestureHandler = useAnimatedGestureHandler({
     onStart: (_, context: any) => {
       context.startY = translateY.value;
@@ -113,13 +127,13 @@ export default function MapScreen() {
     onActive: (event, context: any) => {
       const newTranslateY = context.startY + event.translationY;
       const maxUpward = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50); 
-      const maxDownward = 200; 
+      const maxDownward = 400; 
       translateY.value = Math.max(maxUpward, Math.min(maxDownward, newTranslateY));
     },
     onEnd: (event) => {
-      const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50);
-      const middlePosition = -100;
-      const bottomPosition = 200; 
+      const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50) + 100;
+      const middlePosition = 50;
+      const bottomPosition = 290; 
       const currentPosition = translateY.value;
       let currentState;
       if (currentPosition < topPosition / 2) {
@@ -209,17 +223,18 @@ export default function MapScreen() {
     <View style={[styles.container, { backgroundColor: backgroundColor}]}>  
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-        <MapView 
-          style={styles.map}
-          provider={PROVIDER_GOOGLE} 
-          showsUserLocation={true}
-          initialRegion={location ? {
-            latitude: location.coords.latitude - .025,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421
-          } : undefined}
-        >
+                 <MapView 
+           ref={mapRef}
+           style={styles.map}
+           provider={PROVIDER_GOOGLE} 
+           showsUserLocation={true}
+           initialRegion={location ? {
+             latitude: location.coords.latitude - .025,
+             longitude: location.coords.longitude,
+             latitudeDelta: 0.0922,
+             longitudeDelta: 0.0421
+           } : undefined}
+         >
           {events.map((event, index) => {
             // Check if coordinates are valid
             if (!event.coordinates?.lat || !event.coordinates?.lng) {
@@ -279,7 +294,12 @@ export default function MapScreen() {
 
           {/* Event List - Only visible when expanded */}
           <View style={styles.eventListContainer}>
-            <EventList filters={null} selectedEventId={selectedEventId} />
+                         <EventList 
+               filters={null} 
+               selectedEventId={selectedEventId} 
+               onClearSelectedEvent={() => setSelectedEventId(null)}
+               onCenterMapOnEvent={centerMapOnEvent}
+             />
           </View>
         </Animated.View>
       </PanGestureHandler>

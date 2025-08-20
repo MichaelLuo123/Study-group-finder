@@ -2,15 +2,16 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
-import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
+import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import Slider from '../../components/Slider'; // 👈 use your slider component
+import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
 import EventList from './eventList';
 import FilterModal, { Filters } from './filter';
 
 export default function HomeScreen() {
   // Colors
-  const {isDarkMode, toggleDarkMode} = useUser();
+  const {isDarkMode, toggleDarkMode, user} = useUser();
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
@@ -23,8 +24,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const scheme = useColorScheme();
-  const lightMode = scheme !== 'dark';
-  const { isDarkMode, user } = useUser();
+
 
   const [currentPage, setCurrentPage] = useState('listView');
   const [showFilter, setShowFilter] = useState(false);

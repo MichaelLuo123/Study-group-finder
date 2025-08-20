@@ -363,7 +363,7 @@ export default function Saved() {
                     {currentPage === 'profile' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
             </View>
-        </View>
+        </SafeAreaView>
         
     );
 }

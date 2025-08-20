@@ -6,13 +6,13 @@ import { Colors } from '../../constants/Colors';
 
 import { useUser } from '@/contexts/UserContext';
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import type { Filters } from './filter';
 
@@ -21,13 +21,17 @@ interface EventListProps {
   selectedEventId?: string | null;
   searchQuery?: string;
   creatorUserId?: string; // New prop for filtering by creator
+  onClearSelectedEvent?: () => void; // Callback to clear selected event
+  onCenterMapOnEvent?: (eventId: string) => void; // Callback to center map on event
 }
 
 export default function EventList({ 
   filters, 
   selectedEventId, 
   searchQuery, 
-  creatorUserId 
+  creatorUserId,
+  onClearSelectedEvent,
+  onCenterMapOnEvent
 }: EventListProps) {
   // Colors
   const {isDarkMode, toggleDarkMode, user} = useUser();
@@ -283,14 +287,23 @@ export default function EventList({
     return Math.sqrt(latDistance ** 2 + longDistance ** 2);
   };
 
-  const toggleEvent = (eventId: string) => {
+  const handleEventToggle = (eventId: string) => {
+    // Clear selectedEventId when user manually toggles events
+    if (selectedEventId && onClearSelectedEvent) {
+      onClearSelectedEvent();
+    }
+    
     setCollapsedEvents(prev => {
       const newSet = new Set(prev);
+      
+      // If this event is already collapsed, expand it
       if (newSet.has(eventId)) {
         newSet.delete(eventId);
       } else {
+        // Collapse this event
         newSet.add(eventId);
       }
+      
       return newSet;
     });
   };
@@ -357,7 +370,7 @@ export default function EventList({
           .filter(id => id !== selectedEventId)
       ));
     }
-  }, [selectedEventId, events]);
+  }, [selectedEventId]); // Remove 'events' dependency to prevent unnecessary re-runs
 
   // Scroll to selected event when selectedEventId changes
   useEffect(() => {
@@ -365,22 +378,31 @@ export default function EventList({
       const eventIndex = searchedEvents.findIndex(event => event.id === selectedEventId);
       if (eventIndex !== -1) {
         setTimeout(() => {
+          // Calculate position dynamically based on actual event heights and collapse state
           let scrollPosition = 0;
           for (let i = 0; i < eventIndex; i++) {
             const event = searchedEvents[i];
-            const baseHeight = 80;
+            
+            // Base height for event banner (always visible)
+            let eventHeight = 60; // banner height + margins
+            
+            // Add height for expanded content if not collapsed
             if (!collapsedEvents.has(event.id)) {
-              scrollPosition += event.tags?.length ? 40 : 0;
-              scrollPosition += 60; 
+              eventHeight += 120; // approximate expanded content height
+              // Add height for tags if they exist
+              if (event.tags?.length) {
+                eventHeight += 30;
+              }
             }
-            scrollPosition += baseHeight; 
-            scrollPosition += 20; 
+            
+            scrollPosition += eventHeight;
           }
           
-          scrollViewRef.current?.scrollTo({ 
-            y: Math.max(0, scrollPosition - 30), 
-            animated: true 
-          });
+                     // Scroll to the calculated position with offset for better visibility
+           scrollViewRef.current?.scrollTo({ 
+             y: Math.max(0, scrollPosition - 60), 
+             animated: true 
+           });
         }, 100); 
       }
     }
@@ -419,7 +441,7 @@ export default function EventList({
         bounces={true}
       >
         {searchedEvents.map((event: any) => {
-          const isOpen = collapsedEvents.has(event.id);
+          const isCollapsed = collapsedEvents.has(event.id);
 
           return (
             // Updated condition: when creatorUserId is provided, show only creator's events
@@ -447,7 +469,10 @@ export default function EventList({
                 onSavedChange={() => toggleSave(event.id, event.isSaved)}
                 isRsvped={event.isRSVPed}
                 onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
-                style={{marginBottom: 5}}
+                isCollapsed={isCollapsed}
+                                 onToggleCollapse={() => handleEventToggle(event.id)}
+                 onCenterMapOnEvent={onCenterMapOnEvent}
+                 style={{marginBottom: 5}}
               />
             )
           );
