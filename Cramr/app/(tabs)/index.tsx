@@ -42,6 +42,9 @@ export default function HomeScreen() {
     { title: 'Settings', route: '/Settings/SettingsFrontPage' },
     { title: 'Profile Page (External)', route: '/Profile/External' },
     { title: 'Follow Page', route: '/Follow/follow' },
+
+    // Study Tools
+    { title: 'Study Tools', route: '/StudyTools/StudyTools' }
   ];
 
   return (

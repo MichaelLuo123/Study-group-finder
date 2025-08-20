@@ -21,13 +21,17 @@ interface EventListProps {
   selectedEventId?: string | null;
   searchQuery?: string;
   creatorUserId?: string; // New prop for filtering by creator
+  isDistanceVisible?: boolean;
+  eventDistances?: { [eventId: string]: number };
 }
 
 export default function EventList({ 
   filters, 
   selectedEventId, 
   searchQuery, 
-  creatorUserId 
+  creatorUserId,
+  isDistanceVisible,
+  eventDistances,
 }: EventListProps) {
   // Colors
   const {isDarkMode, toggleDarkMode} = useUser();
@@ -441,12 +445,15 @@ export default function EventList({
                 time={event.time}
                 rsvpedCount={event.accepted_count || event.rsvped_count || 0}
                 capacity={event.capacity || '∞'}
-                isDarkMode={isDarkMode}
                 isOwner={event.creator_id === userId}
                 isSaved={event.isSaved}
                 onSavedChange={() => toggleSave(event.id, event.isSaved)}
                 isRsvped={event.isRSVPed}
                 onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
+                isDistanceVisible={isDistanceVisible ? true : false}
+                distanceUnit={filters?.unit || 'mi'}
+                distance={isDistanceVisible && eventDistances ? eventDistances[event.id] : null}
+                isDarkMode={isDarkMode}
                 style={{marginBottom: 5}}
               />
             )
