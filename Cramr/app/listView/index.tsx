@@ -3,7 +3,6 @@ import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
-import Slider from '../../components/Slider'; // 👈 use your slider component
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
 import EventList from './eventList';
@@ -24,7 +23,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const scheme = useColorScheme();
-
+  const lightMode = scheme !== 'dark';
 
   const [currentPage, setCurrentPage] = useState('listView');
   const [showFilter, setShowFilter] = useState(false);
@@ -153,17 +152,38 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: backgroundColor}]}>
-      {/* Top tabs using Slider (Events / People) */}
-      <View style={styles.sliderWrap}>
-        <Slider
-          leftLabel="Events"
-          rightLabel="People"
-          width={175}                 // tweak if you want tighter/wider
-          lightMode={!isDarkMode}
-          value={sliderValue}
-          onChangeSlider={(val) => setSearchMode(val ? 'people' : 'events')}
-          style={{ height: 40, marginTop: -15 }}
-        />
+      {/* Toggle Switch */}
+      <View style={styles.toggleContainer}>
+        <View style={styles.toggleSwitch}>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              searchMode === 'events' && styles.toggleButtonActive
+            ]}
+            onPress={() => setSearchMode('events')}
+          >
+            <Text style={[
+              styles.toggleText,
+              searchMode === 'events' && styles.toggleTextActive
+            ]}>
+              Events
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              searchMode === 'people' && styles.toggleButtonActive
+            ]}
+            onPress={() => setSearchMode('people')}
+          >
+            <Text style={[
+              styles.toggleText,
+              searchMode === 'people' && styles.toggleTextActive
+            ]}>
+              People
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar + Filter (filter only shows on Events) */}
@@ -371,6 +391,37 @@ const styles = StyleSheet.create({
   },
   filterButton: {
     borderRadius: 10,
+  },
+  toggleContainer: {
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: -10,
+  },
+  toggleSwitch: {
+    flexDirection: 'row',
+    backgroundColor: '#e5e5e5',
+    borderRadius: 25,
+    padding: 4,
+    width: 200,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#ffffff',
+  },
+  toggleText: {
+    color: '#666666',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  toggleTextActive: {
+    color: '#000000',
   },
 
 

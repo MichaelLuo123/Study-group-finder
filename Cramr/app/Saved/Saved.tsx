@@ -364,7 +364,6 @@ export default function Saved() {
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
-        
     );
 }
 
