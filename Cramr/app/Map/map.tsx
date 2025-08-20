@@ -45,7 +45,7 @@ export default function MapScreen() {
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const bannerColors = Colors.bannerColors
 
   const theme = useTheme();
   const navigation = useNavigation();
@@ -254,7 +254,7 @@ export default function MapScreen() {
                 zIndex={index + 1}
               >
                 <StarMarker 
-                  color={event.bannerColor}
+                  color={bannerColors[event.bannerColor] || 'transparent'}
                   remainingCapacity={event.remainingCapacity}
                 />
               </Marker>
