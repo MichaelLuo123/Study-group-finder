@@ -3,7 +3,7 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation, useRouter } from 'expo-router';
 import haversine from 'haversine';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -47,7 +47,7 @@ export default function MapScreen() {
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const bannerColors = Colors.bannerColors
 
   const theme = useTheme();
   const navigation = useNavigation();
@@ -57,7 +57,8 @@ export default function MapScreen() {
   const [currentPage, setCurrentPage] = useState('map');
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const translateY = useSharedValue(-100);
+  const translateY = useSharedValue(50);
+  const mapRef = useRef<MapView>(null);
 
   // Map Filter
   const [showFilter, setShowFilter] = useState(false);
@@ -116,6 +117,19 @@ export default function MapScreen() {
     }
   };
 
+  // Function to center map on a specific event
+  const centerMapOnEvent = (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (event && event.coordinates && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: event.coordinates.lat,
+        longitude: event.coordinates.lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000);
+    }
+  };
+
   const gestureHandler = useAnimatedGestureHandler({
     onStart: (_, context: any) => {
       context.startY = translateY.value;
@@ -123,13 +137,13 @@ export default function MapScreen() {
     onActive: (event, context: any) => {
       const newTranslateY = context.startY + event.translationY;
       const maxUpward = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50); 
-      const maxDownward = 200; 
+      const maxDownward = 400; 
       translateY.value = Math.max(maxUpward, Math.min(maxDownward, newTranslateY));
     },
     onEnd: (event) => {
-      const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50);
-      const middlePosition = -100;
-      const bottomPosition = 200; 
+      const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50) + 100;
+      const middlePosition = 50;
+      const bottomPosition = 290; 
       const currentPosition = translateY.value;
       let currentState;
       if (currentPosition < topPosition / 2) {
@@ -244,17 +258,18 @@ useEffect(() => {
     <View style={[styles.container, { backgroundColor: backgroundColor}]}>  
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-        <MapView 
-          style={styles.map}
-          provider={PROVIDER_GOOGLE} 
-          showsUserLocation={true}
-          initialRegion={location ? {
-            latitude: location.coords.latitude - .025,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421
-          } : undefined}
-        >
+                 <MapView 
+           ref={mapRef}
+           style={styles.map}
+           provider={PROVIDER_GOOGLE} 
+           showsUserLocation={true}
+           initialRegion={location ? {
+             latitude: location.coords.latitude - .025,
+             longitude: location.coords.longitude,
+             latitudeDelta: 0.0922,
+             longitudeDelta: 0.0421
+           } : undefined}
+         >
           {events.map((event, index) => {
             // Check if coordinates are valid
             if (!event.coordinates?.lat || !event.coordinates?.lng) {
@@ -274,7 +289,7 @@ useEffect(() => {
                 zIndex={index + 1}
               >
                 <StarMarker 
-                  color={event.bannerColor}
+                  color={bannerColors[event.bannerColor] || 'transparent'}
                   remainingCapacity={event.remainingCapacity}
                 />
               </Marker>
@@ -321,12 +336,17 @@ useEffect(() => {
 
           {/* Event List - Only visible when expanded */}
           <View style={styles.eventListContainer}>
-            <EventList 
+                         <EventList 
+               
               filters={filters}
-              selectedEventId={selectedEventId}
+              
+               selectedEventId={selectedEventId}
               isDistanceVisible={true}
               eventDistances={eventDistances}
-            />
+            
+               onClearSelectedEvent={() => setSelectedEventId(null)}
+               onCenterMapOnEvent={centerMapOnEvent}
+             />
           </View>
         </Animated.View>
       </PanGestureHandler>

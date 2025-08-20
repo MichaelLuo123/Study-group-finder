@@ -1,17 +1,19 @@
 import { Colors } from '@/constants/Colors';
 import { useUser } from '@/contexts/UserContext';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
-  Dimensions,
-  Image,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Dimensions,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
@@ -44,16 +46,9 @@ interface RSVP {
 }
 
 const EventViewScreen = () => {
-  // Colors
-  const {isDarkMode, toggleDarkMode} = useUser();
-  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
-  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
-  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
-  const rsvpedButtonColor = (!isDarkMode ? Colors.light.rsvpedButton : Colors.dark.rsvpedButton)
-  const bannerColors = Colors.bannerColors
-
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5'; // CHANGE TO LOGGED IN USER
+  const { isDarkMode, toggleDarkMode, user } = useUser();
+  const userId = user?.id; // Use logged-in user's ID
+  const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);

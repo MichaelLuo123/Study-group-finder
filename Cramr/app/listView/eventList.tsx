@@ -23,6 +23,8 @@ interface EventListProps {
   creatorUserId?: string; // New prop for filtering by creator
   isDistanceVisible?: boolean;
   eventDistances?: { [eventId: string]: number };
+  onClearSelectedEvent?: () => void; // Callback to clear selected event
+  onCenterMapOnEvent?: (eventId: string) => void; // Callback to center map on event
 }
 
 export default function EventList({ 
@@ -30,17 +32,19 @@ export default function EventList({
   selectedEventId, 
   searchQuery, 
   creatorUserId,
+  onClearSelectedEvent,
+  onCenterMapOnEvent,
   isDistanceVisible,
   eventDistances,
 }: EventListProps) {
   // Colors
-  const {isDarkMode, toggleDarkMode} = useUser();
+  const {isDarkMode, toggleDarkMode, user} = useUser();
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const userId = user?.id; // Use logged-in user's ID
 
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -287,14 +291,23 @@ export default function EventList({
     return Math.sqrt(latDistance ** 2 + longDistance ** 2);
   };
 
-  const toggleEvent = (eventId: string) => {
+  const handleEventToggle = (eventId: string) => {
+    // Clear selectedEventId when user manually toggles events
+    if (selectedEventId && onClearSelectedEvent) {
+      onClearSelectedEvent();
+    }
+    
     setCollapsedEvents(prev => {
       const newSet = new Set(prev);
+      
+      // If this event is already collapsed, expand it
       if (newSet.has(eventId)) {
         newSet.delete(eventId);
       } else {
+        // Collapse this event
         newSet.add(eventId);
       }
+      
       return newSet;
     });
   };
@@ -361,7 +374,7 @@ export default function EventList({
           .filter(id => id !== selectedEventId)
       ));
     }
-  }, [selectedEventId, events]);
+  }, [selectedEventId]); // Remove 'events' dependency to prevent unnecessary re-runs
 
   // Scroll to selected event when selectedEventId changes
   useEffect(() => {
@@ -372,19 +385,24 @@ export default function EventList({
           let scrollPosition = 0;
           for (let i = 0; i < eventIndex; i++) {
             const event = searchedEvents[i];
-            const baseHeight = 80;
+            
+            // Base height for event banner 
+            let eventHeight = 60; 
+            
             if (!collapsedEvents.has(event.id)) {
-              scrollPosition += event.tags?.length ? 40 : 0;
-              scrollPosition += 60; 
+              eventHeight += 120; 
+              if (event.tags?.length) {
+                eventHeight += 30;
+              }
             }
-            scrollPosition += baseHeight; 
-            scrollPosition += 20; 
+            
+            scrollPosition += eventHeight;
           }
-          
-          scrollViewRef.current?.scrollTo({ 
-            y: Math.max(0, scrollPosition - 30), 
-            animated: true 
-          });
+      
+           scrollViewRef.current?.scrollTo({ 
+             y: Math.max(0, scrollPosition - 60), 
+             animated: true 
+           });
         }, 100); 
       }
     }
@@ -423,7 +441,7 @@ export default function EventList({
         bounces={true}
       >
         {searchedEvents.map((event: any) => {
-          const isOpen = collapsedEvents.has(event.id);
+          const isCollapsed = collapsedEvents.has(event.id);
 
           return (
             // Updated condition: when creatorUserId is provided, show only creator's events
@@ -450,7 +468,10 @@ export default function EventList({
                 onSavedChange={() => toggleSave(event.id, event.isSaved)}
                 isRsvped={event.isRSVPed}
                 onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
-                isDistanceVisible={isDistanceVisible ? true : false}
+                isCollapsed={isCollapsed}
+                                 onToggleCollapse={() => handleEventToggle(event.id)}
+                 onCenterMapOnEvent={onCenterMapOnEvent}
+                 isDistanceVisible={isDistanceVisible ? true : false}
                 distanceUnit={filters?.unit || 'mi'}
                 distance={isDistanceVisible && eventDistances ? eventDistances[event.id] : null}
                 isDarkMode={isDarkMode}

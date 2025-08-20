@@ -4,16 +4,16 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Modal,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  useColorScheme,
+    Alert,
+    FlatList,
+    Modal,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+    useColorScheme,
 } from 'react-native';
 import Slider from '../../components/Slider'; // ✅ import your custom Slider
 import { Colors } from '../../constants/Colors';
@@ -41,6 +41,7 @@ const FollowList = () => {
   const router = useRouter();
   const scheme = useColorScheme();
   const lightMode = scheme !== 'dark';
+  const { user } = useUser();
 
   const [activeTab, setActiveTab] = useState<'following' | 'followers'>('following');
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,7 +53,7 @@ const FollowList = () => {
   const [removeFollowerModalVisible, setRemoveFollowerModalVisible] = useState(false);
   const [userToRemoveFollower, setUserToRemoveFollower] = useState<Friend | null>(null);
 
-  const currentUserId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const currentUserId = user?.id; // Use logged-in user's ID
 
   useEffect(() => {
     if (activeTab === 'following') fetchFollowing();

@@ -50,6 +50,7 @@ const LoginScreen = () => {
                     setLoginStatus('success');
                     setLoginMessage('Login successful!');
                     // Store user information in context
+                    console.log('Login successful, storing user:', result.user);
                     setUser(result.user);
                     // Navigate to 2FA page after successful login
                     setTimeout(() => {

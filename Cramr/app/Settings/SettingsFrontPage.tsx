@@ -4,19 +4,20 @@ import React, { useState } from 'react';
 import { useUser } from '../../contexts/UserContext';
 
 import {
-  Modal,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Modal,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 
 const SettingsFrontPage = () => {
   const router = useRouter();
+  const { logout } = useUser();
 
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -25,6 +26,16 @@ const SettingsFrontPage = () => {
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background);
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      setModalVisible(false);
+      router.push('/Login/Loginscreen');
+    } catch (error) {
+      console.error('Error during sign out:', error);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -95,10 +106,7 @@ const SettingsFrontPage = () => {
                 </Pressable>
                 <Pressable
                   style={[styles.modalButton, styles.confirmButton]}
-                  onPress={() => {
-                    setModalVisible(false);
-                    // Sign out logic goes here
-                  }}
+                  onPress={handleSignOut}
                 >
                   <Text style={styles.confirmText}>Yes</Text>
                 </Pressable>

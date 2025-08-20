@@ -66,9 +66,7 @@ export default function Internal() {
   // User
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const userId = loggedInUser?.id || '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
-  console.log('Logged in user:', loggedInUser);
-  console.log('Using userId:', userId);
+  const userId = loggedInUser?.id; // Use logged-in user's ID
 
   // Form state;
   const [profilePicture, setProfilePicture] = useState<string | null>(null)

@@ -31,13 +31,16 @@ interface EventCollapsibleProps {
     rsvpedCount: number;
     isOwner: boolean;
     isSaved: boolean;
-    onSavedChange: (saved: boolean) => void;
+    onSavedChange?: (saved: boolean) => void;
     isRsvped: boolean;
-    onRsvpedChange: (rsvped: boolean) => void;
+    onRsvpedChange?: (rsvped: boolean) => void;
     isDistanceVisible: boolean;
     distanceUnit?: 'km' | 'mi';
     distance?: number | null;
     isDarkMode: boolean;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
+    onCenterMapOnEvent?: (eventId: string) => void;
     style?: object;
 }
 
@@ -58,13 +61,16 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     rsvpedCount,
     isOwner,
     isSaved,
-    onSavedChange,
+    onSavedChange = () => {},
     isRsvped,
-    onRsvpedChange,
+    onRsvpedChange = () => {},
     isDistanceVisible,
     distanceUnit,
     distance,
     isDarkMode,
+    isCollapsed = false,
+    onToggleCollapse = () => {},
+    onCenterMapOnEvent = () => {},
     style,
 }) => {
     const router = useRouter();
@@ -103,15 +109,18 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     const attendee2Profile = RSVPs && RSVPs[1] && RSVPs[1].profile_picture_url || null;
     const attendee3Profile = RSVPs && RSVPs[2] && RSVPs[2].profile_picture_url || null;
 
-    const [isOpen, setIsOpen] = useState(false);
+    // Use the prop instead of local state
+    const isOpen = !isCollapsed;
 
     const handleRSVPPress = () => {
-        onRsvpedChange(!isRsvped);
+        if (onRsvpedChange) {
+            onRsvpedChange(!isRsvped);
+        }
     };
     
     return (
-        <View style={[styles.eventContainer, {backgroundColor: textInputColor}, style]}>
-            <TouchableOpacity onPress={() => setIsOpen(!isOpen)} style={[styles.bannerContainer, {backgroundColor: bannerColor}]}>
+        <View style={[styles.eventContainer, {backgroundColor: textInputColor}, style]} data-event-id={eventId}>
+            <TouchableOpacity onPress={onToggleCollapse} style={[styles.bannerContainer, {backgroundColor: bannerColor}]}>
                 {/* Use white text on colored banner for better contrast */}
                 <Text style={[styles.normalBoldText, {color: textColor}]}>{title}
                     {isDistanceVisible && (
@@ -127,7 +136,11 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
             </TouchableOpacity>
 
             {isOpen && (
-                <View style={styles.contentContainer}>
+                <TouchableOpacity 
+                    style={styles.contentContainer} 
+                    onPress={() => onCenterMapOnEvent(eventId)}
+                    activeOpacity={0.7}
+                >
                     <View style={[styles.tagContainer, {marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between'}]}>
                         <View style={{flexDirection: 'row'}}>
                             {tag1 !== null && (
@@ -152,12 +165,16 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                                 </View>
                             )}
                         </View>
-                        {!isOwner && (<TouchableOpacity onPress={() => onSavedChange(!isSaved)}>
-                            <Bookmark 
-                                color={textColor} 
-                                fill={isSaved ? textColor : 'none'}
-                            />
-                        </TouchableOpacity>)}
+                                                 <TouchableOpacity onPress={() => {
+                             if (onSavedChange) {
+                                 onSavedChange(!isSaved);
+                             }
+                         }}>
+                             <Bookmark 
+                                 color={textColor} 
+                                 fill={isSaved ? textColor : 'none'}
+                             />
+                         </TouchableOpacity>
                     </View>
                     
                     <View style={styles.mainContentContainer}>
@@ -201,7 +218,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                             </View>
                             
                             {isOwner && (
-                                <TouchableOpacity onPress={() => router.push('')} style={{marginTop: 10}}>
+                                <TouchableOpacity onPress={() => router.push('/CreateEvent/EditEvent')} style={{marginTop: 10}}>
                                     <View style={[styles.buttonContainer, {backgroundColor: buttonColor}]}>
                                         <Edit3 size={16} color={textColor} style={{marginRight: 5}}/>
                                         <Text style={[styles.normalText, {color: textColor}]}>Edit</Text>
@@ -218,7 +235,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                             </View>
                         </TouchableOpacity>)}
                     </View>
-                </View>
+                </TouchableOpacity>
             )}
         </View>
     );

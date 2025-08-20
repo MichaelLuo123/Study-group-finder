@@ -3,7 +3,7 @@ import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Slider from '../../components/Slider';
 import { Colors } from '../../constants/Colors';
 
@@ -32,7 +32,7 @@ export default function Saved() {
     const router = useRouter();
 
     // Colors
-    const {isDarkMode, toggleDarkMode} = useUser();
+    const {isDarkMode, toggleDarkMode, user} = useUser();
     const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
     const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
     const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
@@ -42,7 +42,29 @@ export default function Saved() {
     const [currentPage, setCurrentPage] = useState('bookmarks');
     
     // User
-    const userId = 'a163cdc9-6db7-4498-a73b-a439ed221dec';
+    const userId = user?.id;
+    
+    // Debug logging
+    console.log('Saved component - User context:', {
+        user,
+        userId,
+        userEmail: user?.email,
+        userName: user?.username,
+        isLoggedIn: !!user
+    });
+    
+    // Additional debugging for environment variables
+    console.log('Environment variables:', {
+        backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL,
+        nodeEnv: process.env.NODE_ENV
+    });
+
+    // Redirect to login if not logged in
+    useEffect(() => {
+        if (!user) {
+            router.push('/Login/Loginscreen');
+        }
+    }, [user, router]);
 
     // Events
     const [loading, setLoading] = useState<boolean>(true);
@@ -50,6 +72,11 @@ export default function Saved() {
     const [events, setEvents] = useState<Event[]>([]);
     const [rsvpedEvents, setRsvpedEvents] = useState<Event[]>([]);
     const [savedEvents, setSavedEvents] = useState<Event[]>([]);
+
+    // Show loading or redirect if user not loaded
+    if (!user) {
+        return null; // Will redirect in useEffect
+    }
 
     // 1. Fetch all events
   useEffect(() => {
@@ -67,61 +94,37 @@ export default function Saved() {
     fetchEvents();
   }, []);
 
-  // 2. Fetch RSVP'd events (depends on events and userId)
+  // 2. Filter RSVP'd and saved events from the fetched events
   useEffect(() => {
     if (!events.length || !userId) return;
 
-    const fetchRsvpedEvents = async () => {
-      try {
-        const promises = events.map(async (event) => {
-          const response = await fetch(
-            `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd?user_id=${userId}`
-          );
-          if (!response.ok) return null;
-          const rsvpData = await response.json();
-          return rsvpData.rsvp ? event : null;
-        });
+    // Filter events where the current user is in rsvped_ids
+    const rsvped = events.filter(event => 
+      event.rsvped_ids && event.rsvped_ids.includes(userId)
+    );
+    setRsvpedEvents(rsvped);
 
-        const results = await Promise.all(promises);
-        setRsvpedEvents(results.filter(Boolean) as Event[]);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load RSVPs');
-      }
-    };
+    // Filter events where the current user is in saved_ids
+    const saved = events.filter(event => 
+      event.saved_ids && event.saved_ids.includes(userId)
+    );
+    setSavedEvents(saved);
 
-    fetchRsvpedEvents();
+    setLoading(false);
   }, [events, userId]);
 
-  // 3. Separate useEffect for saved events (depends only on userId)
-    useEffect(() => {
-    if (!userId || !events.length) return;
-
-    const fetchSavedEvents = async () => {
-        try {
-        const response = await fetch(
-            `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`
-        );
-        
-        if (!response.ok) throw new Error('Failed to fetch saved events');
-        
-        const data = await response.json();
-        
-        // Corrected response handling
-        const savedEvents = Array.isArray(data?.saved_events) 
-            ? data.saved_events 
-            : [];
-        
-        setSavedEvents(savedEvents as Event[]);
-        } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load saved events');
-        setSavedEvents([]);
-        } finally {
-        setLoading(false);
-        }
-    };
-
-    fetchSavedEvents();
-    }, [userId]);
+  // Function to refresh events
+  const refreshEvents = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+      if (!response.ok) throw new Error('Failed to fetch events');
+      const data: Event[] = await response.json();
+      setEvents(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load events');
+    }
+  };
 
     const handleNavigation = (page: string) => {
         if (currentPage !== page) {
@@ -135,8 +138,17 @@ export default function Saved() {
     };
 
     return (
-        <View style={{backgroundColor: backgroundColor, flex: 1}}>
-            <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
+            <ScrollView
+                refreshControl={
+                    <RefreshControl
+                        refreshing={loading}
+                        onRefresh={refreshEvents}
+                        colors={[isDarkMode ? '#ffffff' : '#000000']}
+                        tintColor={isDarkMode ? '#ffffff' : '#000000'}
+                    />
+                }
+            >
                 <View style={{padding: 20, backgroundColor: backgroundColor}}>
                     <TouchableOpacity onPress={() => router.back()}>
                         <Image source={require('../../assets/images/cramr_logo.png')} style={[styles.logoContainer]} />
@@ -161,9 +173,11 @@ export default function Saved() {
                         (rsvpedEvents.map((event) => (
                             <EventCollapsible
                                 key={event.id}
+                                eventId={event.id}
                                 title={event.title}
                                 bannerColor={bannerColors[event.banner_color || 1]}
                                 ownerId={event.creator_id}
+                                ownerProfile={event.creator_profile_picture || 'https://via.placeholder.com/30'}
                                 tag1={event.tags[0] || null}
                                 tag2={event.tags[1] || null}
                                 tag3={event.tags[2] || null}
@@ -173,9 +187,47 @@ export default function Saved() {
                                 time={event.time}
                                 rsvpedCount={event.rsvped_count}
                                 capacity={event.capacity}
-                                acceptedIds={event.rsvped_ids}
-                                isDarkMode={isDarkMode}
                                 isOwner={false}
+                                isSaved={event.saved_ids && event.saved_ids.includes(userId)}
+                                onSavedChange={async (saved) => {
+                                    if (!userId) return;
+                                    try {
+                                        const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`;
+                                        const method = saved ? 'POST' : 'DELETE';
+                                        const body = saved ? { event_id: event.id } : undefined;
+                                        const deleteUrl = saved ? url : `${url}/${event.id}`;
+                                        
+                                        const response = await fetch(deleteUrl, { 
+                                            method, 
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: body ? JSON.stringify(body) : undefined
+                                        });
+                                        if (!response.ok) throw new Error(`Failed to ${saved ? 'save' : 'unsave'} event`);
+                                        refreshEvents();
+                                    } catch (error) {
+                                        console.error(`Error ${saved ? 'saving' : 'unsaving'} event:`, error);
+                                    }
+                                }}
+                                isRsvped={event.rsvped_ids && event.rsvped_ids.includes(userId)}
+                                onRsvpedChange={async (rsvped) => {
+                                    if (!userId) return;
+                                    try {
+                                        const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd`;
+                                        const method = rsvped ? 'POST' : 'DELETE';
+                                        const body = rsvped ? { user_id: userId, status: 'accepted' } : { user_id: userId };
+                                        
+                                        const response = await fetch(url, {
+                                            method,
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(body)
+                                        });
+                                        if (!response.ok) throw new Error(`Failed to ${rsvped ? 'RSVP' : 'unRSVP'} event`);
+                                        refreshEvents();
+                                    } catch (error) {
+                                        console.error(`Error ${rsvped ? 'RSVPing' : 'unRSVPing'} event:`, error);
+                                    }
+                                }}
+                                isDarkMode={isDarkMode}
                                 style={{}}
                             />
                         )))
@@ -190,9 +242,11 @@ export default function Saved() {
                         (savedEvents.map((event) => (
                             <EventCollapsible
                                 key={event.id}
+                                eventId={event.id}
                                 title={event.title}
                                 bannerColor={bannerColors[event.banner_color || 1]}
                                 ownerId={event.creator_id}
+                                ownerProfile={event.creator_profile_picture || 'https://via.placeholder.com/30'}
                                 tag1={event.tags[0] || null}
                                 tag2={event.tags[1] || null}
                                 tag3={event.tags[2] || null}
@@ -202,8 +256,46 @@ export default function Saved() {
                                 time={event.time}
                                 rsvpedCount={event.rsvped_count}
                                 capacity={event.capacity}
-                                acceptedIds={event.rsvped_ids}
                                 isOwner={false}
+                                isSaved={event.saved_ids && event.saved_ids.includes(userId)}
+                                onSavedChange={async (saved) => {
+                                    if (!userId) return;
+                                    try {
+                                        const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`;
+                                        const method = saved ? 'POST' : 'DELETE';
+                                        const body = saved ? { event_id: event.id } : undefined;
+                                        const deleteUrl = saved ? url : `${url}/${event.id}`;
+                                        
+                                        const response = await fetch(deleteUrl, { 
+                                            method, 
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: body ? JSON.stringify(body) : undefined
+                                        });
+                                        if (!response.ok) throw new Error(`Failed to ${saved ? 'save' : 'unsave'} event`);
+                                        refreshEvents();
+                                    } catch (error) {
+                                        console.error(`Error ${saved ? 'saving' : 'unsaving'} event:`, error);
+                                    }
+                                }}
+                                isRsvped={event.rsvped_ids && event.rsvped_ids.includes(userId)}
+                                onRsvpedChange={async (rsvped) => {
+                                    if (!userId) return;
+                                    try {
+                                        const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd`;
+                                        const method = rsvped ? 'POST' : 'DELETE';
+                                        const body = rsvped ? { user_id: userId, status: 'accepted' } : { user_id: userId };
+                                        
+                                        const response = await fetch(url, {
+                                            method,
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(body)
+                                        });
+                                        if (!response.ok) throw new Error(`Failed to ${rsvped ? 'RSVP' : 'unRSVP'} event`);
+                                        refreshEvents();
+                                    } catch (error) {
+                                        console.error(`Error ${rsvped ? 'RSVPing' : 'unRSVPing'} event:`, error);
+                                    }
+                                }}
                                 isDarkMode={isDarkMode}
                                 style={{marginBottom: 10}}
                             />
@@ -271,8 +363,7 @@ export default function Saved() {
                     {currentPage === 'profile' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
             </View>
-        </View>
-        
+        </SafeAreaView>
     );
 }
 

@@ -199,6 +199,14 @@ app.get('/events', async (req, res) => {
         );
         const declined_ids = declinedUsersResult.rows.map(row => row.user_id);
 
+        // Get saved event user IDs
+        const savedUsersResult = await client.query(
+          "SELECT user_id FROM saved_events WHERE event_id = $1",
+          [event.id]
+        );
+        const saved_ids = savedUsersResult.rows.map(row => row.user_id);
+        const saved_count = saved_ids.length;
+
         const eventWithAttendees = {
           ...event,
           invited_ids,
@@ -207,6 +215,11 @@ app.get('/events', async (req, res) => {
           accepted_count,
           declined_ids,
           declined_count,
+          saved_ids,
+          saved_count,
+          // Map accepted_ids to rsvped_ids for frontend compatibility
+          rsvped_ids: accepted_ids,
+          rsvped_count: accepted_count,
         };
         
         console.log(`Event ${event.id} attendee data:`, {
@@ -379,15 +392,19 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid password' });
     }
     
+    const responseUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      full_name: user.full_name
+    };
+    
+    console.log('Login successful for user:', responseUser);
+    
     res.json({
       success: true,
       message: 'Login successful',
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        full_name: user.full_name
-      }
+      user: responseUser
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to log in. Please try again.' });
@@ -1585,8 +1602,19 @@ app.post('/events/:eventId/rsvpd', async (req, res) => {
   }
   
   try {
+    console.log('RSVP request details:', { 
+      eventId, 
+      user_id, 
+      status,
+      requestBody: req.body,
+      requestParams: req.params,
+      requestHeaders: req.headers,
+      extractedUserId: user_id,
+      userIdType: typeof user_id
+    });
+    
     // Check if event exists
-    const eventResult = await client.query('SELECT id, creator_id FROM events WHERE id = $1', [eventId]);
+    const eventResult = await client.query('SELECT id, creator_id, rsvped_ids FROM events WHERE id = $1', [eventId]);
     if (eventResult.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
@@ -1599,9 +1627,7 @@ app.post('/events/:eventId/rsvpd', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-
-    
-    // Insert or update RSVP
+    // Insert or update RSVP in event_attendees table
     const result = await client.query(`
       INSERT INTO event_attendees (event_id, user_id, status, rsvp_date) 
       VALUES ($1, $2, $3, NOW())
@@ -1610,38 +1636,30 @@ app.post('/events/:eventId/rsvpd', async (req, res) => {
       RETURNING *
     `, [eventId, user_id, status]);
     
-    // Create notification for event creator if user RSVPs
-    if (status === 'accepted' || status === 'declined') {
-      const eventResult = await client.query('SELECT creator_id, title FROM events WHERE id = $1', [eventId]);
-      if (eventResult.rows.length > 0) {
-        const event = eventResult.rows[0];
-        const userResult = await client.query('SELECT username FROM users WHERE id = $1', [user_id]);
-        
-        if (userResult.rows.length > 0 && event.creator_id !== user_id) {
-          const action = status === 'accepted' ? 'RSVPed to' : 'declined';
-          
-          // Notification for event creator
-          await createNotification(
-            event.creator_id,
-            user_id,
-            'event_rsvp',
-            `${userResult.rows[0].username} ${action} ${event.title}`,
-            eventId,
-            { event_title: event.title, status: status }
-          );
-          
-          // Self notification for the user who RSVP'd
-          await createNotification(
-            user_id,
-            user_id,
-            'event_rsvp',
-            `You ${action} ${event.title}`,
-            eventId,
-            { event_title: event.title, status: status }
-          );
-        }
+    // Update rsvped_ids array in events table
+    let currentRsvpedIds = event.rsvped_ids || [];
+    let updatedRsvpedIds;
+    
+    if (status === 'accepted') {
+      // Add user to rsvped_ids if not already there
+      if (!currentRsvpedIds.includes(user_id)) {
+        updatedRsvpedIds = [...currentRsvpedIds, user_id];
+      } else {
+        updatedRsvpedIds = currentRsvpedIds;
       }
+    } else {
+      // Remove user from rsvped_ids for declined/pending
+      updatedRsvpedIds = currentRsvpedIds.filter(id => id !== user_id);
     }
+    
+    // Update the events table with new rsvped_ids
+    await client.query(`
+      UPDATE events 
+      SET rsvped_ids = $1 
+      WHERE id = $2
+    `, [updatedRsvpedIds, eventId]);
+    
+    console.log('Updated rsvped_ids:', { eventId, old: currentRsvpedIds, new: updatedRsvpedIds });
     
     res.json({
       success: true,
@@ -1695,6 +1713,17 @@ app.delete('/events/:eventId/rsvpd', async (req, res) => {
   }
   
   try {
+    console.log('Delete RSVP request:', { eventId, user_id });
+    
+    // First get current rsvped_ids from events table
+    const eventResult = await client.query('SELECT rsvped_ids FROM events WHERE id = $1', [eventId]);
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    const currentRsvpedIds = eventResult.rows[0].rsvped_ids || [];
+    
+    // Delete from event_attendees table
     const result = await client.query(
       'DELETE FROM event_attendees WHERE event_id = $1 AND user_id = $2 RETURNING *',
       [eventId, user_id]
@@ -1703,6 +1732,17 @@ app.delete('/events/:eventId/rsvpd', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'RSVP not found' });
     }
+    
+    // Remove user from rsvped_ids array in events table
+    const updatedRsvpedIds = currentRsvpedIds.filter(id => id !== user_id);
+    
+    await client.query(`
+      UPDATE events 
+      SET rsvped_ids = $1 
+      WHERE id = $2
+    `, [updatedRsvpedIds, eventId]);
+    
+    console.log('Updated rsvped_ids after delete:', { eventId, old: currentRsvpedIds, new: updatedRsvpedIds });
     
     res.json({
       success: true,
@@ -1728,11 +1768,15 @@ app.put('/events/:eventId/rsvpd', async (req, res) => {
   }
   
   try {
-    // Check if event exists
-    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [eventId]);
+    console.log('Update RSVP request:', { eventId, user_id, status });
+    
+    // Check if event exists and get current rsvped_ids
+    const eventResult = await client.query('SELECT id, rsvped_ids FROM events WHERE id = $1', [eventId]);
     if (eventResult.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
+    
+    const currentRsvpedIds = eventResult.rows[0].rsvped_ids || [];
     
     // Check if user exists
     const userResult = await client.query('SELECT id FROM users WHERE id = $1', [user_id]);
@@ -1750,13 +1794,37 @@ app.put('/events/:eventId/rsvpd', async (req, res) => {
       return res.status(404).json({ error: 'RSVP not found. User must have an existing RSVP to update.' });
     }
     
-    // Update RSVP status
+    // Update RSVP status in event_attendees table
     const result = await client.query(`
       UPDATE event_attendees 
       SET status = $1, rsvp_date = NOW()
       WHERE event_id = $2 AND user_id = $3
       RETURNING *
     `, [status, eventId, user_id]);
+    
+    // Update rsvped_ids array in events table
+    let updatedRsvpedIds;
+    
+    if (status === 'accepted') {
+      // Add user to rsvped_ids if not already there
+      if (!currentRsvpedIds.includes(user_id)) {
+        updatedRsvpedIds = [...currentRsvpedIds, user_id];
+      } else {
+        updatedRsvpedIds = currentRsvpedIds;
+      }
+    } else {
+      // Remove user from rsvped_ids for declined/pending
+      updatedRsvpedIds = currentRsvpedIds.filter(id => id !== user_id);
+    }
+    
+    // Update the events table with new rsvped_ids
+    await client.query(`
+      UPDATE events 
+      SET rsvped_ids = $1 
+      WHERE id = $2
+    `, [updatedRsvpedIds, eventId]);
+    
+    console.log('Updated rsvped_ids after status change:', { eventId, old: currentRsvpedIds, new: updatedRsvpedIds });
     
     res.json({
       success: true,
@@ -1806,17 +1874,29 @@ app.post('/users/:id/saved-events', async (req, res) => {
   }
   
   try {
+    console.log('Save event request details:', { 
+      userId: id, 
+      eventId: event_id,
+      requestBody: req.body,
+      requestParams: req.params,
+      requestHeaders: req.headers,
+      extractedUserId: id,
+      userIdType: typeof id
+    });
+    
     // Check if user exists
     const userResult = await client.query('SELECT id FROM users WHERE id = $1', [id]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Check if event exists
-    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [event_id]);
+    // Check if event exists and get current saved_ids
+    const eventResult = await client.query('SELECT id, saved_ids FROM events WHERE id = $1', [event_id]);
     if (eventResult.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
+    
+    const currentSavedIds = eventResult.rows[0].saved_ids || [];
     
     // First, let's create a saved_events table if it doesn't exist
     console.log('Creating saved_events table if it doesn\'t exist...');
@@ -1830,7 +1910,7 @@ app.post('/users/:id/saved-events', async (req, res) => {
     `);
     console.log('saved_events table ready');
     
-    // Insert saved event
+    // Insert saved event into saved_events table
     const result = await client.query(`
       INSERT INTO saved_events (user_id, event_id) 
       VALUES ($1, $2)
@@ -1845,6 +1925,17 @@ app.post('/users/:id/saved-events', async (req, res) => {
         saved: true
       });
     }
+    
+    // Update saved_ids array in events table
+    const updatedSavedIds = [...currentSavedIds, id];
+    
+    await client.query(`
+      UPDATE events 
+      SET saved_ids = $1 
+      WHERE id = $2
+    `, [updatedSavedIds, event_id]);
+    
+    console.log('Updated saved_ids:', { eventId: event_id, old: currentSavedIds, new: updatedSavedIds });
     
     res.json({
       success: true,
@@ -1913,13 +2004,32 @@ app.delete('/users/:id/saved-events/:eventId', async (req, res) => {
     
     console.log('Found record to delete:', checkResult.rows[0]);
     
-    // Now delete it
+    // Get current saved_ids from events table
+    const eventResult = await client.query('SELECT saved_ids FROM events WHERE id = $1', [eventId]);
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    const currentSavedIds = eventResult.rows[0].saved_ids || [];
+    
+    // Now delete from saved_events table
     const deleteResult = await client.query(
       'DELETE FROM saved_events WHERE user_id = $1 AND event_id = $2',
       [id, eventId]
     );
 
     console.log('Delete result:', deleteResult);
+    
+    // Remove user from saved_ids array in events table
+    const updatedSavedIds = currentSavedIds.filter(savedId => savedId !== id);
+    
+    await client.query(`
+      UPDATE events 
+      SET saved_ids = $1 
+      WHERE id = $2
+    `, [updatedSavedIds, eventId]);
+    
+    console.log('Updated saved_ids after delete:', { eventId, old: currentSavedIds, new: updatedSavedIds });
 
     res.json({
       success: true,
