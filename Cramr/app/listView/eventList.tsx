@@ -378,18 +378,15 @@ export default function EventList({
       const eventIndex = searchedEvents.findIndex(event => event.id === selectedEventId);
       if (eventIndex !== -1) {
         setTimeout(() => {
-          // Calculate position dynamically based on actual event heights and collapse state
           let scrollPosition = 0;
           for (let i = 0; i < eventIndex; i++) {
             const event = searchedEvents[i];
             
-            // Base height for event banner (always visible)
-            let eventHeight = 60; // banner height + margins
+            // Base height for event banner 
+            let eventHeight = 60; 
             
-            // Add height for expanded content if not collapsed
             if (!collapsedEvents.has(event.id)) {
-              eventHeight += 120; // approximate expanded content height
-              // Add height for tags if they exist
+              eventHeight += 120; 
               if (event.tags?.length) {
                 eventHeight += 30;
               }
@@ -397,8 +394,7 @@ export default function EventList({
             
             scrollPosition += eventHeight;
           }
-          
-                     // Scroll to the calculated position with offset for better visibility
+      
            scrollViewRef.current?.scrollTo({ 
              y: Math.max(0, scrollPosition - 60), 
              animated: true 

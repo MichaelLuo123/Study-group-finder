@@ -55,7 +55,7 @@ export default function MapScreen() {
   const [currentPage, setCurrentPage] = useState('map');
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const translateY = useSharedValue(50); // Start at middle position instead of -100
+  const translateY = useSharedValue(50);
   const mapRef = useRef<MapView>(null);
 
   useLayoutEffect(() => {
