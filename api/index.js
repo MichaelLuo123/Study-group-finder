@@ -618,8 +618,7 @@ app.get('/users/search', async (req, res) => {
       FROM users 
       WHERE 
         LOWER(username) LIKE LOWER($1) OR 
-        LOWER(full_name) LIKE LOWER($1) OR
-        LOWER(email) LIKE LOWER($1)
+        LOWER(full_name) LIKE LOWER($1)
       ORDER BY 
         CASE 
           WHEN LOWER(username) = LOWER($1) THEN 1

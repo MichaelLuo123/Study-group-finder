@@ -26,13 +26,14 @@ echo "CRAMR_DB_POSTGRES_PASSWORD=\"$CRAMR_DB_POSTGRES_PASSWORD\"" >> .env
 echo "Debug: Contents of .env file:"
 cat .env
 
-# Stop existing containers
-echo "Stopping existing containers..."
+# Stop existing containers and remove old images
+echo "Stopping existing containers and cleaning up..."
 sudo docker-compose down
+sudo docker system prune -f
 
-# Build and start containers (with caching for speed)
-echo "Building and starting containers..."
-sudo docker-compose build
+# Force complete rebuild (no cache)
+echo "Building containers with no cache..."
+sudo docker-compose build --no-cache
 sudo docker-compose up -d
 
 # Check status
