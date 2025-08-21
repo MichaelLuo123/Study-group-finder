@@ -34,7 +34,7 @@ interface EventCollapsibleProps {
     onSavedChange?: (saved: boolean) => void;
     isRsvped: boolean;
     onRsvpedChange?: (rsvped: boolean) => void;
-    isDistanceVisible: boolean;
+    isDistanceVisible?: boolean | false;
     distanceUnit?: 'km' | 'mi';
     distance?: number | null;
     isDarkMode: boolean;

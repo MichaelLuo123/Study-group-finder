@@ -1,3 +1,4 @@
+import Slider from '@/components/Slider';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
@@ -153,38 +154,15 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: backgroundColor}]}>
       {/* Toggle Switch */}
-      <View style={styles.toggleContainer}>
-        <View style={styles.toggleSwitch}>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              searchMode === 'events' && styles.toggleButtonActive
-            ]}
-            onPress={() => setSearchMode('events')}
-          >
-            <Text style={[
-              styles.toggleText,
-              searchMode === 'events' && styles.toggleTextActive
-            ]}>
-              Events
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              searchMode === 'people' && styles.toggleButtonActive
-            ]}
-            onPress={() => setSearchMode('people')}
-          >
-            <Text style={[
-              styles.toggleText,
-              searchMode === 'people' && styles.toggleTextActive
-            ]}>
-              People
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Slider
+        rightLabel="People"
+        leftLabel="Events"
+        width={175}
+        onChangeSlider={(value) => !value ? setSearchMode('events') : setSearchMode('people')}
+        lightMode={!isDarkMode}
+        value={sliderValue}
+        style={{marginBottom: 5, marginTop: -10, alignSelf: 'center'}}
+      />
 
       {/* Search Bar + Filter (filter only shows on Events) */}
       <View style={styles.searchRow}>
