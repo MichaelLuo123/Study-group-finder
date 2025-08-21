@@ -138,8 +138,10 @@ export default function Saved() {
     };
 
     return (
-        <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
+        <SafeAreaView style={[styles.container, {backgroundColor: backgroundColor}]}>
             <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
                 refreshControl={
                     <RefreshControl
                         refreshing={loading}
@@ -368,6 +370,17 @@ export default function Saved() {
 }
 
 const styles = StyleSheet.create({
+    // Container styles
+    container: {
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        paddingBottom: Platform.OS === 'ios' ? 100 : 80, // Add padding to account for bottom nav
+    },
+
     // Text
     headerText: {
         fontFamily: 'Poppins-SemiBold',
@@ -390,11 +403,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
 
-    // idk
+    // Logo
     logoContainer: {
         height: 27,
         width: 120
     },
+    
+    // Navigation
     bottomNav: {
         position: 'absolute',
         bottom: 0,
@@ -407,7 +422,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         borderTopWidth: 1,
         paddingBottom: Platform.OS === 'ios' ? 34 : 12,
-        zIndex: 1001,
         elevation: 5,
     },
     navButton: {

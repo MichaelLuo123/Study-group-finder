@@ -12,6 +12,7 @@ import {
   View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Colors } from '../../constants/Colors';
 
 const { width } = Dimensions.get('window');
 
@@ -43,6 +44,13 @@ interface RSVP {
 
 const EventViewScreen = () => {
   const { isDarkMode, toggleDarkMode, user } = useUser();
+  // Colors
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
+  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+
   const userId = user?.id; // Use logged-in user's ID
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);

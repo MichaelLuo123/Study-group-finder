@@ -3,7 +3,7 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Bell, Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import EventList from '../listView/eventList';
 
@@ -349,7 +349,7 @@ export default function Internal() {
       </ScrollView>
 
       {/* Bottom Navigation Bar - Same as Map */}
-      <View style={[styles.bottomNav, { backgroundColor: true ? '#ffffff' : '#2d2d2d', borderTopColor: true ? '#e0e0e0' : '#4a5568' }]}> 
+      <View style={[styles.bottomNav, { backgroundColor: textInputColor, borderTopColor: !isDarkMode ? '#e0e0e0' : '#4a5568' }]}> 
         <TouchableOpacity 
           style={styles.navButton}
           onPress={() => handleNavigation('listView')}
@@ -357,7 +357,7 @@ export default function Internal() {
           <MaterialCommunityIcons 
             name="clipboard-list-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'listView' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -368,7 +368,7 @@ export default function Internal() {
           <Ionicons 
             name="map-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'map' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -379,7 +379,7 @@ export default function Internal() {
           <Feather 
             name="plus-square" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'addEvent' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -390,7 +390,7 @@ export default function Internal() {
           <Feather 
             name="bookmark" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -401,7 +401,7 @@ export default function Internal() {
           <Ionicons 
             name="person-circle-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'profile' && <View style={styles.activeDot} />}
         </TouchableOpacity>
