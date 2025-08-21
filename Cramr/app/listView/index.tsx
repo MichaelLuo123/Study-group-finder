@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   toggleContainer: {
     alignItems: 'center',
     marginTop: 2,
-    marginBottom: -10,
+    marginBottom: 10,
   },
   toggleSwitch: {
     flexDirection: 'row',
