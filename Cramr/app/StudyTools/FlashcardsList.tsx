@@ -2,16 +2,16 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
 
-export default function StudyTools() {
+export default function FlashcardsList() {
   const router = useRouter();
 
   // Colors
@@ -32,35 +32,7 @@ export default function StudyTools() {
           />
         </TouchableOpacity>
 
-        <Text style={[styles.heading, { color: textColor }]}>Study Tools</Text>
-
-        <TouchableOpacity
-        style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('./Pomodoro')}
-        >
-        <Text style={[styles.itemText, { color: textColor }]}>Pomodoro</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-        style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('./MindMapList')}
-        >
-        <Text style={[styles.itemText, { color: textColor }]}>Mind Maps</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-        style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('./FlashcardsList')}
-        >
-        <Text style={[styles.itemText, { color: textColor }]}>Flashcards</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-        style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('./NotesList')}
-        >
-        <Text style={[styles.itemText, { color: textColor }]}>Notes</Text>
-        </TouchableOpacity>
+        <Text style={[styles.heading, { color: textColor }]}>Flashcards</Text>
       </ScrollView>
     </SafeAreaView>
   );

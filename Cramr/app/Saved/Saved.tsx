@@ -23,7 +23,7 @@ interface Event {
     tags: string[];
     rsvped_count: number;
     rsvped_ids: string[];
-    saved_ids: string[]
+    saved_ids: string[];
     class: string;
     creator_profile_picture: string;
 }
@@ -32,14 +32,15 @@ export default function Saved() {
     const router = useRouter();
 
     // Colors
-    const {isDarkMode, toggleDarkMode, user} = useUser();
-    const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
-    const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
-    const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
-    const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+    const { isDarkMode, toggleDarkMode, user } = useUser();
+    const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background);
+    const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
+    const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
+    const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3'];
 
     const [isSwitch, setIsSwitch] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState('bookmarks');
+    const [isMounted, setIsMounted] = useState(false);
     
     // User
     const userId = user?.id;
@@ -59,99 +60,275 @@ export default function Saved() {
         nodeEnv: process.env.NODE_ENV
     });
 
-    // Redirect to login if not logged in
-    useEffect(() => {
-        if (!user) {
-            router.push('/Login/Loginscreen');
-        }
-    }, [user, router]);
-
     // Events
     const [loading, setLoading] = useState<boolean>(true);
+    const [refreshing, setRefreshing] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [events, setEvents] = useState<Event[]>([]);
     const [rsvpedEvents, setRsvpedEvents] = useState<Event[]>([]);
     const [savedEvents, setSavedEvents] = useState<Event[]>([]);
 
-    // Show loading or redirect if user not loaded
-    if (!user) {
-        return null; // Will redirect in useEffect
-    }
+    // Wait for component to mount before checking navigation
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
-    // 1. Fetch all events
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-        if (!response.ok) throw new Error('Failed to fetch events');
-        const data: Event[] = await response.json();
-        setEvents(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load events');
-      }
-    };
+    // Redirect to login if not logged in (only after mounting)
+    useEffect(() => {
+        if (isMounted && !user) {
+            // Add a small delay to ensure router is ready
+            const timer = setTimeout(() => {
+                router.replace('/Login/Loginscreen');
+            }, 100);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [user, router, isMounted]);
 
-    fetchEvents();
-  }, []);
+    // Fetch events and filter in a single useEffect
+    useEffect(() => {
+        if (!isMounted || (!user && isMounted)) {
+            return;
+        }
+        const fetchAndFilterEvents = async () => {
+            if (!userId) {
+                setLoading(false);
+                return;
+            }
 
-  // 2. Filter RSVP'd and saved events from the fetched events
-  useEffect(() => {
-    if (!events.length || !userId) return;
+            try {
+                setError(null);
+                const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+                
+                if (!backendUrl) {
+                    throw new Error('Backend URL is not configured');
+                }
 
-    // Filter events where the current user is in rsvped_ids
-    const rsvped = events.filter(event => 
-      event.rsvped_ids && event.rsvped_ids.includes(userId)
-    );
-    setRsvpedEvents(rsvped);
+                const response = await fetch(`${backendUrl}/events`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data: Event[] = await response.json();
+                setEvents(data);
 
-    // Filter events where the current user is in saved_ids
-    const saved = events.filter(event => 
-      event.saved_ids && event.saved_ids.includes(userId)
-    );
-    setSavedEvents(saved);
+                // Filter events immediately after fetching
+                const rsvped = data.filter(event => 
+                    event.rsvped_ids && event.rsvped_ids.includes(userId)
+                );
+                setRsvpedEvents(rsvped);
 
-    setLoading(false);
-  }, [events, userId]);
+                const saved = data.filter(event => 
+                    event.saved_ids && event.saved_ids.includes(userId)
+                );
+                setSavedEvents(saved);
 
-  // Function to refresh events
-  const refreshEvents = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-      if (!response.ok) throw new Error('Failed to fetch events');
-      const data: Event[] = await response.json();
-      setEvents(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load events');
-    }
-  };
+                setLoading(false);
+            } catch (err) {
+                console.error('Error fetching events:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load events');
+                setLoading(false);
+            }
+        };
 
-    const handleNavigation = (page: string) => {
-        if (currentPage !== page) {
-            setCurrentPage(page);
-            if (page === 'listView') router.push('/listView');
-            if (page === 'map') router.push('/Map/map');
-            if (page === 'addEvent') router.push('/CreateEvent/createevent');
-            if (page === 'bookmarks') router.push('/Saved/Saved');
-            if (page === 'profile') router.push('/Profile/Internal');
+        if (isMounted && userId) {
+            fetchAndFilterEvents();
+        }
+    }, [userId, isMounted]); // Only depend on userId and isMounted
+
+    // Function to refresh events with proper loading states
+    const refreshEvents = async () => {
+        if (!userId) return;
+        
+        setRefreshing(true);
+        try {
+            setError(null);
+            const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+            
+            if (!backendUrl) {
+                throw new Error('Backend URL is not configured');
+            }
+
+            const response = await fetch(`${backendUrl}/events`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data: Event[] = await response.json();
+            setEvents(data);
+
+            // Filter events immediately after fetching
+            const rsvped = data.filter(event => 
+                event.rsvped_ids && event.rsvped_ids.includes(userId)
+            );
+            setRsvpedEvents(rsvped);
+
+            const saved = data.filter(event => 
+                event.saved_ids && event.saved_ids.includes(userId)
+            );
+            setSavedEvents(saved);
+
+        } catch (err) {
+            console.error('Error fetching events:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load events');
+        } finally {
+            setRefreshing(false);
         }
     };
 
+    const handleNavigation = (page: string) => {
+        if (currentPage !== page && isMounted) {
+            setCurrentPage(page);
+            // Add timeout to ensure navigation is safe
+            setTimeout(() => {
+                switch (page) {
+                    case 'listView':
+                        router.push('/listView');
+                        break;
+                    case 'map':
+                        router.push('/Map/map');
+                        break;
+                    case 'addEvent':
+                        router.push('/CreateEvent/createevent');
+                        break;
+                    case 'bookmarks':
+                        router.push('/Saved/Saved');
+                        break;
+                    case 'profile':
+                        router.push('/Profile/Internal');
+                        break;
+                }
+            }, 50);
+        }
+    };
+
+    // Handle saved change with error handling
+    const handleSavedChange = async (eventId: string, saved: boolean) => {
+        if (!userId) return;
+        
+        try {
+            const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+            if (!backendUrl) {
+                throw new Error('Backend URL is not configured');
+            }
+
+            const url = `${backendUrl}/users/${userId}/saved-events`;
+            const method = saved ? 'POST' : 'DELETE';
+            const body = saved ? { event_id: eventId } : undefined;
+            const deleteUrl = saved ? url : `${url}/${eventId}`;
+            
+            const response = await fetch(deleteUrl, { 
+                method, 
+                headers: { 'Content-Type': 'application/json' },
+                body: body ? JSON.stringify(body) : undefined
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            await refreshEvents();
+        } catch (error) {
+            console.error(`Error ${saved ? 'saving' : 'unsaving'} event:`, error);
+            // Could add toast notification here
+        }
+    };
+
+    // Handle RSVP change with error handling
+    const handleRsvpChange = async (eventId: string, rsvped: boolean) => {
+        if (!userId) return;
+        
+        try {
+            const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+            if (!backendUrl) {
+                throw new Error('Backend URL is not configured');
+            }
+
+            const url = `${backendUrl}/events/${eventId}/rsvpd`;
+            const method = rsvped ? 'POST' : 'DELETE';
+            const body = rsvped ? { user_id: userId, status: 'accepted' } : { user_id: userId };
+            
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            await refreshEvents();
+        } catch (error) {
+            console.error(`Error ${rsvped ? 'RSVPing' : 'unRSVPing'} event:`, error);
+            // Could add toast notification here
+        }
+    };
+
+    // Render event list
+    const renderEventList = (eventList: Event[], emptyMessage: string) => {
+        if (loading) {
+            return <Text style={[styles.normalText, {color: textColor}]}>Loading {emptyMessage.toLowerCase()}...</Text>;
+        }
+        
+        if (eventList.length === 0) {
+            return <Text style={[styles.normalText, {color: textColor}]}>{emptyMessage}</Text>;
+        }
+        
+        return eventList.map((event) => (
+            <EventCollapsible
+                key={event.id}
+                eventId={event.id}
+                title={event.title}
+                bannerColor={bannerColors[event.banner_color % bannerColors.length]}
+                ownerId={event.creator_id}
+                ownerProfile={event.creator_profile_picture || 'https://via.placeholder.com/30'}
+                tag1={event.tags?.[0] || null}
+                tag2={event.tags?.[1] || null}
+                tag3={event.tags?.[2] || null}
+                subject={event.class}
+                location={event.location}
+                date={event.date}
+                time={event.time}
+                rsvpedCount={event.rsvped_count}
+                capacity={event.capacity}
+                isOwner={false}
+                isSaved={event.saved_ids?.includes(userId || '') || false}
+                onSavedChange={(saved) => handleSavedChange(event.id, saved)}
+                isRsvped={event.rsvped_ids?.includes(userId || '') || false}
+                onRsvpedChange={(rsvped) => handleRsvpChange(event.id, rsvped)}
+                isDarkMode={isDarkMode}
+                style={{marginBottom: 10}}
+            />
+        ));
+    };
+
     return (
-        <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
+        <SafeAreaView style={{backgroundColor: backgroundColor, flex: 1}}>
             <ScrollView
+                style={{flex: 1}}
                 refreshControl={
                     <RefreshControl
-                        refreshing={loading}
+                        refreshing={refreshing}
                         onRefresh={refreshEvents}
                         colors={[isDarkMode ? '#ffffff' : '#000000']}
                         tintColor={isDarkMode ? '#ffffff' : '#000000'}
                     />
                 }
             >
-                <View style={{padding: 20, backgroundColor: backgroundColor}}>
-                    <TouchableOpacity onPress={() => router.back()}>
-                        <Image source={require('../../assets/images/cramr_logo.png')} style={[styles.logoContainer]} />
+                <View style={{padding: 20, backgroundColor: backgroundColor, minHeight: '100%'}}>
+                    <TouchableOpacity onPress={() => {
+                        if (isMounted) {
+                            setTimeout(() => router.back(), 50);
+                        }
+                    }}>
+                        <Image 
+                            source={require('../../assets/images/cramr_logo.png')} 
+                            style={styles.logoContainer} 
+                            resizeMode="contain"
+                        />
                     </TouchableOpacity>
                 
                     <View style={{alignItems: 'center', marginTop: 20, marginBottom: 20}}>
@@ -164,152 +341,27 @@ export default function Saved() {
                         />
                     </View>
 
-                    {isSwitch === false && (
-                        loading ? 
-                        (<Text style={[styles.normalText, {color: textColor}]}> Loading RSVPed events... </Text>) 
-                        : rsvpedEvents.length === 0 ? 
-                        (<Text style={[styles.normalText, {color: textColor}]}> No RSVPed events... </Text>) 
-                        : 
-                        (rsvpedEvents.map((event) => (
-                            <EventCollapsible
-                                key={event.id}
-                                eventId={event.id}
-                                title={event.title}
-                                bannerColor={bannerColors[event.banner_color || 1]}
-                                ownerId={event.creator_id}
-                                ownerProfile={event.creator_profile_picture || 'https://via.placeholder.com/30'}
-                                tag1={event.tags[0] || null}
-                                tag2={event.tags[1] || null}
-                                tag3={event.tags[2] || null}
-                                subject={event.class}
-                                location={event.location}
-                                date={event.date}
-                                time={event.time}
-                                rsvpedCount={event.rsvped_count}
-                                capacity={event.capacity}
-                                isOwner={false}
-                                isSaved={event.saved_ids && event.saved_ids.includes(userId)}
-                                onSavedChange={async (saved) => {
-                                    if (!userId) return;
-                                    try {
-                                        const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`;
-                                        const method = saved ? 'POST' : 'DELETE';
-                                        const body = saved ? { event_id: event.id } : undefined;
-                                        const deleteUrl = saved ? url : `${url}/${event.id}`;
-                                        
-                                        const response = await fetch(deleteUrl, { 
-                                            method, 
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: body ? JSON.stringify(body) : undefined
-                                        });
-                                        if (!response.ok) throw new Error(`Failed to ${saved ? 'save' : 'unsave'} event`);
-                                        refreshEvents();
-                                    } catch (error) {
-                                        console.error(`Error ${saved ? 'saving' : 'unsaving'} event:`, error);
-                                    }
-                                }}
-                                isRsvped={event.rsvped_ids && event.rsvped_ids.includes(userId)}
-                                onRsvpedChange={async (rsvped) => {
-                                    if (!userId) return;
-                                    try {
-                                        const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd`;
-                                        const method = rsvped ? 'POST' : 'DELETE';
-                                        const body = rsvped ? { user_id: userId, status: 'accepted' } : { user_id: userId };
-                                        
-                                        const response = await fetch(url, {
-                                            method,
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(body)
-                                        });
-                                        if (!response.ok) throw new Error(`Failed to ${rsvped ? 'RSVP' : 'unRSVP'} event`);
-                                        refreshEvents();
-                                    } catch (error) {
-                                        console.error(`Error ${rsvped ? 'RSVPing' : 'unRSVPing'} event:`, error);
-                                    }
-                                }}
-                                isDarkMode={isDarkMode}
-                                style={{}}
-                            />
-                        )))
+                    {error && (
+                        <Text style={[styles.normalText, {color: 'red', marginBottom: 10}]}>
+                            Error: {error}
+                        </Text>
                     )}
 
-                    {isSwitch === true && (
-                        loading ? 
-                        (<Text style={[styles.normalText, {color: textColor}]}> Loading saved events... </Text>) 
-                        : savedEvents.length === 0 ? 
-                        (<Text style={[styles.normalText, {color: textColor}]}> No saved events.. </Text>) 
-                        : 
-                        (savedEvents.map((event) => (
-                            <EventCollapsible
-                                key={event.id}
-                                eventId={event.id}
-                                title={event.title}
-                                bannerColor={bannerColors[event.banner_color || 1]}
-                                ownerId={event.creator_id}
-                                ownerProfile={event.creator_profile_picture || 'https://via.placeholder.com/30'}
-                                tag1={event.tags[0] || null}
-                                tag2={event.tags[1] || null}
-                                tag3={event.tags[2] || null}
-                                subject={event.class}
-                                location={event.location}
-                                date={event.date}
-                                time={event.time}
-                                rsvpedCount={event.rsvped_count}
-                                capacity={event.capacity}
-                                isOwner={false}
-                                isSaved={event.saved_ids && event.saved_ids.includes(userId)}
-                                onSavedChange={async (saved) => {
-                                    if (!userId) return;
-                                    try {
-                                        const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`;
-                                        const method = saved ? 'POST' : 'DELETE';
-                                        const body = saved ? { event_id: event.id } : undefined;
-                                        const deleteUrl = saved ? url : `${url}/${event.id}`;
-                                        
-                                        const response = await fetch(deleteUrl, { 
-                                            method, 
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: body ? JSON.stringify(body) : undefined
-                                        });
-                                        if (!response.ok) throw new Error(`Failed to ${saved ? 'save' : 'unsave'} event`);
-                                        refreshEvents();
-                                    } catch (error) {
-                                        console.error(`Error ${saved ? 'saving' : 'unsaving'} event:`, error);
-                                    }
-                                }}
-                                isRsvped={event.rsvped_ids && event.rsvped_ids.includes(userId)}
-                                onRsvpedChange={async (rsvped) => {
-                                    if (!userId) return;
-                                    try {
-                                        const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd`;
-                                        const method = rsvped ? 'POST' : 'DELETE';
-                                        const body = rsvped ? { user_id: userId, status: 'accepted' } : { user_id: userId };
-                                        
-                                        const response = await fetch(url, {
-                                            method,
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(body)
-                                        });
-                                        if (!response.ok) throw new Error(`Failed to ${rsvped ? 'RSVP' : 'unRSVP'} event`);
-                                        refreshEvents();
-                                    } catch (error) {
-                                        console.error(`Error ${rsvped ? 'RSVPing' : 'unRSVPing'} event:`, error);
-                                    }
-                                }}
-                                isDarkMode={isDarkMode}
-                                style={{marginBottom: 10}}
-                            />
-                        )))
-                    )}
-
+                    {!isSwitch && renderEventList(rsvpedEvents, 'No RSVPed events...')}
+                    {isSwitch && renderEventList(savedEvents, 'No saved events...')}
                 </View>
             </ScrollView>
 
-            {/* Bottom Navigation Bar - Same as Map */}
-            <View style={[styles.bottomNav, { backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' }]}> 
+            {/* Bottom Navigation Bar */}
+            <View style={[styles.bottomNav, { 
+                backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', 
+                borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' 
+            }]}> 
                 <TouchableOpacity 
                     style={styles.navButton}
                     onPress={() => handleNavigation('listView')}
+                    accessible={true}
+                    accessibilityLabel="List View"
                 >
                     <MaterialCommunityIcons 
                         name="clipboard-list-outline" 
@@ -318,9 +370,12 @@ export default function Saved() {
                     />
                     {currentPage === 'listView' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
+                
                 <TouchableOpacity 
                     style={styles.navButton}
                     onPress={() => handleNavigation('map')}
+                    accessible={true}
+                    accessibilityLabel="Map View"
                 >
                     <Ionicons 
                         name="map-outline" 
@@ -329,9 +384,12 @@ export default function Saved() {
                     />
                     {currentPage === 'map' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
+                
                 <TouchableOpacity 
                     style={styles.navButton}
                     onPress={() => handleNavigation('addEvent')}
+                    accessible={true}
+                    accessibilityLabel="Add Event"
                 >
                     <Feather 
                         name="plus-square" 
@@ -340,9 +398,12 @@ export default function Saved() {
                     />
                     {currentPage === 'addEvent' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
+                
                 <TouchableOpacity 
                     style={styles.navButton}
                     onPress={() => handleNavigation('bookmarks')}
+                    accessible={true}
+                    accessibilityLabel="Bookmarks"
                 >
                     <Feather 
                         name="bookmark" 
@@ -351,9 +412,12 @@ export default function Saved() {
                     />
                     {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
+                
                 <TouchableOpacity 
                     style={styles.navButton}
                     onPress={() => handleNavigation('profile')}
+                    accessible={true}
+                    accessibilityLabel="Profile"
                 >
                     <Ionicons 
                         name="person-circle-outline" 
@@ -390,16 +454,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
 
-    // idk
+    // Layout
     logoContainer: {
         height: 27,
         width: 120
     },
     bottomNav: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
         flexDirection: 'row',
         justifyContent: 'space-around',
         alignItems: 'center',
@@ -407,7 +467,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         borderTopWidth: 1,
         paddingBottom: Platform.OS === 'ios' ? 34 : 12,
-        zIndex: 1001,
         elevation: 5,
     },
     navButton: {
