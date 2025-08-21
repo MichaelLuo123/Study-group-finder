@@ -618,8 +618,7 @@ app.get('/users/search', async (req, res) => {
       FROM users 
       WHERE 
         LOWER(username) LIKE LOWER($1) OR 
-        LOWER(full_name) LIKE LOWER($1) OR
-        LOWER(email) LIKE LOWER($1)
+        LOWER(full_name) LIKE LOWER($1)
       ORDER BY 
         CASE 
           WHEN LOWER(username) = LOWER($1) THEN 1
@@ -1584,6 +1583,123 @@ app.delete('/events/:id', async (req, res) => {
     });
   } catch (err) {
     console.error('Delete event error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Comments endpoints
+// Get comments for an event
+app.get('/events/:eventId/comments', async (req, res) => {
+  const { eventId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        c.*,
+        u.username,
+        u.full_name,
+        u.profile_picture_url
+      FROM comments c
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE c.event_id = $1
+      ORDER BY c.created_at ASC
+    `, [eventId]);
+    
+    res.json({
+      success: true,
+      comments: result.rows
+    });
+  } catch (err) {
+    console.error('Get comments error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Add a comment to an event
+app.post('/events/:eventId/comments', async (req, res) => {
+  const { eventId } = req.params;
+  const { user_id, content } = req.body;
+  
+  if (!user_id || !content) {
+    return res.status(400).json({ error: 'user_id and content are required' });
+  }
+  
+  if (content.trim().length === 0) {
+    return res.status(400).json({ error: 'Comment cannot be empty' });
+  }
+  
+  try {
+    // Check if event exists
+    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [eventId]);
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    // Check if user exists
+    const userResult = await client.query('SELECT id FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Insert comment
+    const result = await client.query(`
+      INSERT INTO comments (event_id, user_id, content)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [eventId, user_id, content.trim()]);
+    
+    // Get the comment with user info
+    const commentWithUser = await client.query(`
+      SELECT 
+        c.*,
+        u.username,
+        u.full_name,
+        u.profile_picture_url
+      FROM comments c
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE c.id = $1
+    `, [result.rows[0].id]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Comment added successfully',
+      comment: commentWithUser.rows[0]
+    });
+  } catch (err) {
+    console.error('Add comment error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Delete a comment
+app.delete('/events/:eventId/comments/:commentId', async (req, res) => {
+  const { eventId, commentId } = req.params;
+  const { user_id } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  try {
+    // Check if comment exists and belongs to user
+    const commentResult = await client.query(`
+      SELECT * FROM comments 
+      WHERE id = $1 AND event_id = $2 AND user_id = $3
+    `, [commentId, eventId, user_id]);
+    
+    if (commentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Comment not found or not authorized' });
+    }
+    
+    // Delete comment
+    await client.query('DELETE FROM comments WHERE id = $1', [commentId]);
+    
+    res.json({
+      success: true,
+      message: 'Comment deleted successfully'
+    });
+  } catch (err) {
+    console.error('Delete comment error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });

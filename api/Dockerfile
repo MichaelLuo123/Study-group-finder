@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies - force fresh install
-RUN rm -rf node_modules && npm ci --only=production
+RUN rm -rf node_modules && npm install --only=production --legacy-peer-deps
 
 # Copy application code
 COPY . .
