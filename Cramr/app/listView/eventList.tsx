@@ -155,11 +155,13 @@ export default function EventList({
       
       // 3. Sort events by distance
       const sortedEvents = processedEvents.sort((a, b) => {
+        console.log("sorting the thing");
         const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
         const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
         return aDistance - bDistance;
       });
       
+      console.log("Showing the thing");
       setEvents(sortedEvents);
       
     } catch (mainError) {
