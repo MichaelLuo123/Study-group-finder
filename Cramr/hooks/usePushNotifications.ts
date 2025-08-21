@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+//import Constants from 'expo-constants';
 import * as Device from "expo-device";
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
@@ -41,10 +41,13 @@ export const usePushNotifications = (): PushNotificationState => {
                 alert("Failed to get push token");
             }
 
-            token = await Notifications.getExpoPushTokenAsync({
-                projectId: Constants.expoConfig?.extra?.eas?.projectID,
-            });
+            // Uncomment this if we're using EAS to build
+            // token = await Notifications.getExpoPushTokenAsync({
+            //     projectId: Constants.expoConfig?.extra?.eas?.projectID, 
+            // });
 
+            token = await Notifications.getExpoPushTokenAsync(); //It's not generating a token and I don't know why
+            console.log(`Notification token: ${token.data}`);
             if (Platform.OS === 'android') {
                 Notifications.setNotificationChannelAsync("default", {
                     name: "default",
@@ -53,7 +56,7 @@ export const usePushNotifications = (): PushNotificationState => {
                     lightColor: "#FF2321F7C",
                 });
             }
-
+            
             return token;
         } else {
             console.log("Notifications can't be used on an emulator");
@@ -63,6 +66,7 @@ export const usePushNotifications = (): PushNotificationState => {
     useEffect(() => {
         registerForPushNotificationsAsync().then((token) => {
             setExpoPushToken(token);
+            console.log(`Push Token Saved ${token?.data}`)
         });
 
         notificationListener.current = 
