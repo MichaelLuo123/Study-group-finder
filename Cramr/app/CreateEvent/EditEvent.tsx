@@ -3,13 +3,17 @@ import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import FollowersDropdown from '../../components/FollowersDropdown';
 import { Colors } from '../../constants/Colors';
 
 const CreateEventScreen = () => {
+  const router = useRouter();
+  // Hardcoded event ID for testing
+  const eventId = 'c9b3343a-538f-4cfd-8739-30b4f093f545';
+  
   // Predefined study session tags
   const studyTags = [
     'Pomodoro',
@@ -27,7 +31,7 @@ const CreateEventScreen = () => {
   ];
 
   // State for theme
-  const {isDarkMode, toggleDarkMode} = useUser();
+  const {isDarkMode, toggleDarkMode, user} = useUser();
   
   // Consistent color usage from Colors.ts
   const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
@@ -44,6 +48,7 @@ const CreateEventScreen = () => {
   const [location, setLocation] = useState('');
   const [studyRoom, setStudyRoom] = useState('');
   const [classField, setClassField] = useState('');
+  const [classNumber, setClassNumber] = useState('');
   const [date, setDate] = useState(new Date());
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // Changed from tags string to selectedTags array
   const [capacity, setCapacity] = useState('');
@@ -52,8 +57,6 @@ const CreateEventScreen = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentPage, setCurrentPage] = useState('addEvent');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const router = useRouter();
-  const { user: loggedInUser } = useUser();
 
   // Theme object using consistent Colors.ts values
   const theme = {
@@ -79,8 +82,96 @@ const CreateEventScreen = () => {
     });
   };
 
+  // Load event data when component mounts
+  useEffect(() => {
+    loadEventData();
+  }, []);
+
+  const loadEventData = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load event');
+      }
+      const eventData = await response.json();
+      
+      // Populate form fields with event data
+      setTitle(eventData.title || '');
+      setDescription(eventData.description || '');
+      setLocation(eventData.location || '');
+      
+      // Handle class field (split into department and number)
+      if (eventData.class) {
+        const classParts = eventData.class.split(' ');
+        setClassField(classParts[0] || '');
+        setClassNumber(classParts.slice(1).join(' ') || '');
+      } else {
+        setClassField('');
+        setClassNumber('');
+      }
+      
+      setCapacity(eventData.capacity?.toString() || '');
+      setSelectedTags(eventData.tags || []);
+      
+      if (eventData.date_and_time) {
+        setDate(new Date(eventData.date_and_time));
+      }
+      
+      // Set online/offline based on location
+      setIsOnline(eventData.location?.includes('http') || false);
+      
+    } catch (error) {
+      console.error('Error loading event:', error);
+      Alert.alert('Error', 'Failed to load event data');
+    }
+  };
+
   const handleSave = async () => {
-    // handle save functionality here
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please enter an event title');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const eventData = {
+        title: title.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        class: `${classField.trim()} ${classNumber.trim()}`.trim(),
+        date_and_time: date.toISOString(),
+        tags: selectedTags,
+        capacity: parseInt(capacity) || 5
+      };
+
+      console.log('Saving event data:', { eventId, eventData, user: user?.id });
+
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      console.log('Save response status:', response.status);
+      const responseText = await response.text();
+      console.log('Save response body:', responseText);
+
+      if (!response.ok) {
+        throw new Error('Failed to update event');
+      }
+
+      const result = JSON.parse(responseText);
+      Alert.alert('Success', 'Event updated successfully', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+    } catch (error) {
+      console.error('Error updating event:', error);
+      Alert.alert('Error', 'Failed to update event');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -89,13 +180,31 @@ const CreateEventScreen = () => {
     setIsDeleteModalVisible(true);
   };
 
-
   const handleCancelDelete = async () => {
     setIsDeleteModalVisible(false);
   };
 
   const handleDelete = async () => {
-    // handle save functionality here
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete event');
+      }
+
+      Alert.alert('Success', 'Event deleted successfully', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      Alert.alert('Error', 'Failed to delete event');
+    } finally {
+      setIsSubmitting(false);
+      setIsDeleteModalVisible(false);
+    }
   };
 
   const handleNavigation = (page: string) => {
@@ -221,8 +330,8 @@ const CreateEventScreen = () => {
             <TextInput
             placeholder="100"
             placeholderTextColor={placeholderColor}
-            value={classField}
-            onChangeText={setClassField}
+            value={classNumber}
+            onChangeText={setClassNumber}
             style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 50 }]}
             />
           </View>
