@@ -614,7 +614,7 @@ app.get('/users/search', async (req, res) => {
   
   try {
     const result = await client.query(`
-      SELECT id, username, full_name, email
+      SELECT id, username, full_name, email, profile_picture_url
       FROM users 
       WHERE 
         LOWER(username) LIKE LOWER($1) OR 

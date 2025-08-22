@@ -218,7 +218,7 @@ export default function Internal() {
 
   return (
     <View style={[styles.container, {backgroundColor: backgroundColor}]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 30 }}>
         <View>
           {/* Show message if no user is logged in */}
           {!loggedInUser && (

@@ -4,6 +4,7 @@ import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Use
 import { useEffect, useState } from 'react';
 import {
   Dimensions,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -367,13 +368,13 @@ const EventViewScreen = () => {
 
             {/* Comments List */}
             {comments.map((comment) => (
-              <View key={comment.id} style={styles.commentItem}>
+              <View key={comment.id} style={[styles.commentItem, {borderBottomColor: placeholderTextColor,}]}>
                 <View style={styles.commentHeader}>
                   <Image 
                     source={comment.profile_picture_url ? 
                       { uri: comment.profile_picture_url } : 
                       require('../../assets/images/default_profile.jpg')
-                    } 
+                    }
                     style={styles.commentAvatar} 
                   />
                   <View style={styles.commentInfo}>
@@ -606,7 +607,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: placeholderTextColor,
   },
   commentHeader: {
     flexDirection: 'row',
