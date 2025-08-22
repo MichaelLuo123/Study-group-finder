@@ -11,7 +11,7 @@ import FilterModal, { Filters } from './filter';
 
 export default function HomeScreen() {
   // Colors
-  const {isDarkMode, toggleDarkMode, user} = useUser();
+  const {isDarkMode, toggleDarkMode, user, updateUserData} = useUser();
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
@@ -91,7 +91,10 @@ export default function HomeScreen() {
     }
     setSearchLoading(true);
     try {
-      const response = await fetch(`http://132.249.242.182:8080/users/search?q=${encodeURIComponent(query)}`);
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const searchUrl = `${backendUrl}/users/search?q=${encodeURIComponent(query)}${currentUserId ? `&currentUserId=${currentUserId}` : ''}`;
+      
+      const response = await fetch(searchUrl);
       if (response.ok) {
         const data = await response.json();
         setPeopleResults(data || []);
@@ -112,37 +115,78 @@ export default function HomeScreen() {
 
   const followUser = async (userId: string) => {
     try {
-      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/follow`, {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${backendUrl}/users/${currentUserId}/follow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
       if (response.ok) {
         const userToFollow = peopleResults.find(p => p.id === userId);
-        if (userToFollow) setFollowing(prev => [...prev, userToFollow]);
+        if (userToFollow) {
+          setFollowing(prev => [...prev, userToFollow]);
+          // Update the peopleResults to reflect the new follower count
+          setPeopleResults(prev => prev.map(person => 
+            person.id === userId 
+              ? { ...person, followers: (person.followers || 0) + 1 }
+              : person
+          ));
+          // Refresh current user's data to update following count
+          refreshCurrentUserData();
+        }
       }
     } catch {}
   };
 
   const unfollowUser = async (userId: string) => {
     try {
-      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/follow/${userId}`, {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${backendUrl}/users/${currentUserId}/follow/${userId}`, {
         method: 'DELETE',
       });
       if (response.ok) {
         setFollowing(prev => prev.filter(p => p.id !== userId));
+        // Update the peopleResults to reflect the new follower count
+        setPeopleResults(prev => prev.map(person => 
+          person.id === userId 
+            ? { ...person, followers: Math.max((person.followers || 0) - 1, 0) }
+            : person
+        ));
+        // Refresh current user's data to update following count
+        refreshCurrentUserData();
       }
     } catch {}
   };
 
   const loadFollowing = async () => {
     try {
-      const response = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/following`);
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${backendUrl}/users/${currentUserId}/following`);
       if (response.ok) {
         const data = await response.json();
         setFollowing(data.following || []);
       }
     } catch {}
+  };
+
+  // Function to refresh current user's data (including following/followers counts)
+  const refreshCurrentUserData = async () => {
+    try {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${backendUrl}/users/${currentUserId}`);
+      if (response.ok) {
+        const userData = await response.json();
+        // Update the user context with new data
+        if (userData.following !== undefined || userData.followers !== undefined) {
+          updateUserData({
+            following: userData.following,
+            followers: userData.followers
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing current user data:', error);
+    }
   };
 
   const isFollowing = (userId: string) => following.some(user => user.id === userId);
@@ -213,11 +257,9 @@ export default function HomeScreen() {
             </View>
           ) : peopleResults.length > 0 ? (
             <ScrollView style={styles.peopleList}>
-              {peopleResults
-                .filter(person => person.id !== currentUserId)
-                .map((person: any) => {
-                  const following = isFollowing(person.id);
-                  return (
+              {peopleResults.map((person: any) => {
+                const following = isFollowing(person.id);
+                return (
                     <TouchableOpacity
                       key={person.id}
                       style={[styles.personCard, {backgroundColor: textInputColor}]}
@@ -235,6 +277,9 @@ export default function HomeScreen() {
                         <View style={styles.personDetails}>
                           <Text style={[styles.personName, {color:textColor, fontFamily: 'Poppins-Regular'}]}>{person.full_name || 'Unknown'}</Text>
                           <Text style={[styles.personUsername, {color:textColor, fontFamily: 'Poppins-Regular'}]}>@{person.username}</Text>
+                          <Text style={[styles.personStats, {color: textColor, fontFamily: 'Poppins-Regular'}]}>
+                            {person.following || 0} following • {person.followers || 0} followers
+                          </Text>
                         </View>
                       </View>
                       <TouchableOpacity
@@ -446,7 +491,8 @@ const styles = StyleSheet.create({
   },
   personDetails: { flex: 1 },
   personName: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 2 },
-  personUsername: { fontSize: 14, color: '#666' },
+  personUsername: { fontSize: 14, color: '#666', marginBottom: 2 },
+  personStats: { fontSize: 12, color: '#888' },
   followButton: { backgroundColor: '#5CAEF1', padding: 10, borderRadius: 10 },
   followButtonText: { color: '#fff', fontSize: 14, fontFamily: 'Poppins-Regular',},
   followingButton: { backgroundColor: '#e0e0e0' },

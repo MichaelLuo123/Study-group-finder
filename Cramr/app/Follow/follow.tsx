@@ -4,16 +4,16 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Modal,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-    useColorScheme,
+  Alert,
+  FlatList,
+  Modal,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  useColorScheme,
 } from 'react-native';
 import Slider from '../../components/Slider'; // ✅ import your custom Slider
 import { Colors } from '../../constants/Colors';
@@ -41,7 +41,7 @@ const FollowList = () => {
   const router = useRouter();
   const scheme = useColorScheme();
   const lightMode = scheme !== 'dark';
-  const { user } = useUser();
+  const { user, updateUserData } = useUser();
 
   const [activeTab, setActiveTab] = useState<'following' | 'followers'>('following');
   const [searchQuery, setSearchQuery] = useState('');
@@ -121,6 +121,12 @@ const FollowList = () => {
         setFollowers(prev => prev.filter(u => u.id !== userId));
         setRemoveFollowerModalVisible(false);
         setUserToRemoveFollower(null);
+        
+        // Update the UserContext to reflect the new followers count immediately
+        if (user) {
+          const newFollowersCount = Math.max((user.followers || 0) - 1, 0);
+          updateUserData({ followers: newFollowersCount });
+        }
       } else {
         Alert.alert('Error', 'Failed to remove follower');
       }
@@ -140,6 +146,12 @@ const FollowList = () => {
         setFollowing(prev => prev.filter(u => u.id !== userId));
         setUnfollowModalVisible(false);
         setUserToUnfollow(null);
+        
+        // Update the UserContext to reflect the new following count immediately
+        if (user) {
+          const newFollowingCount = Math.max((user.following || 0) - 1, 0);
+          updateUserData({ following: newFollowingCount });
+        }
       } else {
         Alert.alert('Error', 'Failed to unfollow user');
       }
