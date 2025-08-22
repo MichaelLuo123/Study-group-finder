@@ -31,7 +31,7 @@ interface User {
 export default function External() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { user: loggedInUser } = useUser();
+  const { user: loggedInUser, updateUserData } = useUser();
   const profileId = params.userId as string || loggedInUser?.id; // Use logged-in user's ID as fallback
 
   // Debug logging
@@ -281,6 +281,12 @@ export default function External() {
           setFollowersIds(userData.follower_ids);
           setFollowingIds(userData.following_ids);
         }
+        
+        // Update the logged-in user's following count in UserContext
+        if (loggedInUser) {
+          const newFollowingCount = (loggedInUser.following || 0) + 1;
+          updateUserData({ following: newFollowingCount });
+        }
       } else {
         Alert.alert('Error', 'Failed to follow user');
       }
@@ -320,6 +326,12 @@ export default function External() {
           setFollowing(userData.following);
           setFollowersIds(userData.follower_ids);
           setFollowingIds(userData.following_ids);
+        }
+        
+        // Update the logged-in user's following count in UserContext
+        if (loggedInUser) {
+          const newFollowingCount = Math.max((loggedInUser.following || 0) - 1, 0);
+          updateUserData({ following: newFollowingCount });
         }
       } else {
         Alert.alert('Error', 'Failed to unfollow user');

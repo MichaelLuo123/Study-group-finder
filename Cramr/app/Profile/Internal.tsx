@@ -3,7 +3,7 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Bell, Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import EventList from '../listView/eventList';
 
@@ -155,8 +155,8 @@ export default function Internal() {
           setUserEvents(filteredEvents);
           
           console.log(`Found ${filteredEvents.length} events created by user ${userId}`);
-          console.log('All events:', eventsData.map(e => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
-          console.log('Filtered events:', filteredEvents.map(e => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
+          console.log('All events:', eventsData.map((e: any) => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
+          console.log('Filtered events:', filteredEvents.map((e: any) => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
         } else {
           console.error('Failed to fetch events data');
         }
@@ -167,6 +167,8 @@ export default function Internal() {
 
     fetchAllEventsAndFilter();
   }, [userId]);
+
+
 
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
@@ -247,7 +249,7 @@ export default function Internal() {
             </TouchableOpacity>
             
             <View style={styles.notificationsAndSettingsButtonContainer}>
-              <TouchableOpacity onPress={() => router.push('')}>
+              <TouchableOpacity onPress={() => router.push('/Profile/NotificationsPage')}>
                 <Bell size={24} color={textColor} style={styles.iconContainer} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/Settings/SettingsFrontPage')}>
@@ -265,13 +267,21 @@ export default function Internal() {
               <Text style={[styles.headerText, {color: textColor}]}>{name}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>@{username}</Text>
               <TouchableOpacity onPress={() => router.push('/Follow/follow')}>
-                <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>
-                <Text style={[styles.subheaderBoldText, {color: textColor}]}>{followers}</Text> Followers
-                <View style={styles.dotContainer}>
-                  <View style={[styles.dot, {backgroundColor: textColor}]} />
+                <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 3}}>
+                  <Text style={[styles.subheaderText, {color: textColor}]}>
+                    <Text style={[styles.subheaderBoldText, {color: textColor}]}>
+                      {loggedInUser?.followers || 0}
+                    </Text> Followers
+                  </Text>
+                  <View style={styles.dotContainer}>
+                    <View style={[styles.dot, {backgroundColor: textColor}]} />
+                  </View>
+                  <Text style={[styles.subheaderText, {color: textColor}]}>
+                    <Text style={[styles.subheaderBoldText, {color: textColor}]}>
+                      {loggedInUser?.following || 0}
+                    </Text> Following
+                  </Text>
                 </View>
-                <Text style={[styles.subheaderBoldText, {color: textColor}]}>{following}</Text> Following
-                </Text>
               </TouchableOpacity>
               <View style={[styles.tagContainer, {marginTop: 3}]}>
                 <View style={[styles.tag, {backgroundColor: textInputColor}]}>

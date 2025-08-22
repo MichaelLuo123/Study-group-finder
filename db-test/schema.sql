@@ -29,7 +29,11 @@ CREATE TABLE users (
     email_notifications_enabled BOOLEAN DEFAULT true,
     sms_notifications_enabled BOOLEAN DEFAULT false,
     verification_code VARCHAR(255), -- Stores 6-digit verification code or temporary reset token
-    verification_code_expiry TIMESTAMP -- Expiry time for verification code (10 min) or reset token (5 min)
+    verification_code_expiry TIMESTAMP, -- Expiry time for verification code (10 min) or reset token (5 min)
+    following_ids UUID[] DEFAULT '{}', -- Array of user IDs that this user is following
+    followers_ids UUID[] DEFAULT '{}', -- Array of user IDs that are following this user
+    following INTEGER DEFAULT 0, -- Count of users this user is following
+    followers INTEGER DEFAULT 0 -- Count of users following this user
 );
 
 -- Create events table

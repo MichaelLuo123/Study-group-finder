@@ -396,7 +396,9 @@ app.post('/login', async (req, res) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      full_name: user.full_name
+      full_name: user.full_name,
+      following: user.following || 0,
+      followers: user.followers || 0
     };
     
     console.log('Login successful for user:', responseUser);
@@ -606,19 +608,30 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
 
 // Search users
 app.get('/users/search', async (req, res) => {
-  const { q } = req.query;
+  const { q, currentUserId } = req.query;
   
   if (!q || q.length < 2) {
     return res.status(400).json({ error: 'Search query must be at least 2 characters' })
   }
   
   try {
-    const result = await client.query(`
-      SELECT id, username, full_name, email
+    let query = `
+      SELECT id, username, full_name, email, following, followers
       FROM users 
       WHERE 
-        LOWER(username) LIKE LOWER($1) OR 
-        LOWER(full_name) LIKE LOWER($1)
+        (LOWER(username) LIKE LOWER($1) OR 
+         LOWER(full_name) LIKE LOWER($1))
+    `;
+    
+    let params = [`%${q}%`];
+    
+    // Exclude current user from search results if currentUserId is provided
+    if (currentUserId) {
+      query += ` AND id != $2`;
+      params.push(currentUserId);
+    }
+    
+    query += `
       ORDER BY 
         CASE 
           WHEN LOWER(username) = LOWER($1) THEN 1
@@ -627,7 +640,9 @@ app.get('/users/search', async (req, res) => {
         END,
         username
       LIMIT 20
-    `, [`%${q}%`]);
+    `;
+    
+    const result = await client.query(query, params);
     
     res.json(result.rows);
   } catch (err) {
@@ -748,6 +763,24 @@ app.post('/users/:id/follow', async (req, res) => {
       RETURNING *
     `, [id, userId]);
     
+    // Update follower's following_ids array and following count
+    await client.query(`
+      UPDATE users 
+      SET following_ids = array_append(following_ids, $1), 
+          following = following + 1,
+          updated_at = NOW()
+      WHERE id = $2
+    `, [userId, id]);
+    
+    // Update followed user's followers_ids array and followers count
+    await client.query(`
+      UPDATE users 
+      SET followers_ids = array_append(followers_ids, $1), 
+          followers = followers + 1,
+          updated_at = NOW()
+      WHERE id = $2
+    `, [id, userId]);
+    
     // Create notification for the user being followed
     const followerUser = await client.query('SELECT username FROM users WHERE id = $1', [id]);
     if (followerUser.rows.length > 0) {
@@ -784,6 +817,24 @@ app.delete('/users/:id/follow/:userId', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Follow relationship not found' });
     }
+    
+    // Update follower's following_ids array and following count
+    await client.query(`
+      UPDATE users 
+      SET following_ids = array_remove(following_ids, $1), 
+          following = GREATEST(following - 1, 0),
+          updated_at = NOW()
+      WHERE id = $2
+    `, [userId, id]);
+    
+    // Update followed user's followers_ids array and followers count
+    await client.query(`
+      UPDATE users 
+      SET followers_ids = array_remove(followers_ids, $1), 
+          followers = GREATEST(followers - 1, 0),
+          updated_at = NOW()
+      WHERE id = $2
+    `, [id, userId]);
     
     res.json({
       success: true,
