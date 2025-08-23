@@ -19,7 +19,8 @@ export default function HomeScreen() {
     { title: 'Sign up success', route: '/SignUp/signupsuccess' },
     { title: 'Sign up fail', route: '/signupfail' },
     { title: '2-Factor Authentication', route: '/TwoFactor/TwoFAPage'},
-    
+    { title: 'Forgot Password', route: '/PasswordRecovery/pwRecovery' },
+
     // Home
     { title: 'Home/List', route: '/listView' },
 

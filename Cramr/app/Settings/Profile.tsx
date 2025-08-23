@@ -37,6 +37,7 @@ export default function Profile() {
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
   const bannerColors = Colors.bannerColors
 
   // User
@@ -242,6 +243,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your name."
+            placeholderTextColor={placeholderColor}
             value={name}
             onChangeText={setName}
             textAlign="left"
@@ -256,6 +258,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your username."
+            placeholderTextColor={placeholderColor}
             value={username}
             onChangeText={setUsername}
             textAlign="left"
@@ -270,6 +273,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your school."
+            placeholderTextColor={placeholderColor}
             value={school}
             onChangeText={setSchool}
             textAlign="left"
@@ -284,6 +288,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your major."
+            placeholderTextColor={placeholderColor}
             value={major}
             onChangeText={setMajor}
             textAlign="left"
@@ -298,6 +303,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your class level."
+            placeholderTextColor={placeholderColor}
             value={classLevel}
             onChangeText={setClassLevel}
             textAlign="left"
@@ -312,6 +318,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your pronouns."
+            placeholderTextColor={placeholderColor}
             value={pronouns}
             onChangeText={setPronouns}
             textAlign="left"
@@ -338,6 +345,7 @@ export default function Profile() {
           <TextInput
             style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter bio."
+            placeholderTextColor={placeholderColor}
             value={bio}
             onChangeText={setBio}
             textAlign="left"
@@ -438,7 +446,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    height: 45,
+    padding: 10,
     borderRadius: 10,
     backgroundColor: '#5CAEF1',
     alignItems: 'center',

@@ -3,14 +3,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+    Keyboard,
     SafeAreaView,
     StatusBar,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View
 } from 'react-native';
+import { Colors } from '../../constants/Colors';
 
 const PasswordRecoveryScreen = () => {
     const [email, setEmail] = useState('');
@@ -20,6 +23,12 @@ const PasswordRecoveryScreen = () => {
     const [message, setMessage] = useState({ text: '', type: '' }); // 'success', 'error', 'info'
     const { isDarkMode } = useUser();
     const router = useRouter();
+
+    const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
+    const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
+    const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
+    const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
+    const cancelButtonColor = isDarkMode ? Colors.dark.cancelButton : Colors.light.cancelButton;
 
     const handleSendCode = async () => {
         if (!email.trim()) {
@@ -50,6 +59,7 @@ const PasswordRecoveryScreen = () => {
                     type: 'success' 
                 });
                 setIsCodeSent(true);
+                console.log('verification code: ' +verificationCode);
                 setTimeout(() => {
                     setMessage({ text: '', type: '' });
                 }, 3000);
@@ -71,7 +81,7 @@ const PasswordRecoveryScreen = () => {
 
     const handleVerifyCode = async () => {
         if (!verificationCode.trim()) {
-            setMessage({ text: 'Please enter the verification code', type: 'error' });
+            setMessage({ text: 'Please enter the verification code', type: 'error'});
             return;
         }
 
@@ -126,7 +136,7 @@ const PasswordRecoveryScreen = () => {
     const handleResendCode = async () => {
         setVerificationCode('');
         setMessage({ text: 'Resending verification code...', type: 'info' });
-        
+
         try {
             const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/auth/reset-password`, {
                 method: 'POST',
@@ -141,6 +151,7 @@ const PasswordRecoveryScreen = () => {
                     text: 'New verification code sent! Please check your email.', 
                     type: 'success' 
                 });
+                console.log('verification code: ' + verificationCode);
                 setTimeout(() => {
                     setMessage({ text: '', type: '' });
                 }, 3000);
@@ -158,41 +169,141 @@ const PasswordRecoveryScreen = () => {
         }
     };
 
-    const getMessageStyle = () => {
-        if (!message.text) return null;
-        
+    const getMessageColor = () => {
         switch (message.type) {
             case 'success':
-                return styles.successMessage;
+                return '#369942';
             case 'error':
-                return styles.errorMessage;
+                return '#E36062';
             case 'info':
-                return styles.infoMessage;
+                return '#5CAEF1';
             default:
-                return styles.infoMessage;
+                return textColor;
         }
     };
 
-    const styles = getStyles(isDarkMode);
+    const styles = StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: backgroundColor,
+        },
+        header: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 15,
+            paddingTop: 5,
+        },
+        backButton: {
+            padding: 8,
+            marginRight: 16,
+        },
+        title: {
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: textColor,
+        },
+        card: {
+            padding: 20,
+            marginTop: 150,
+        },
+        cardTitle: {
+            fontSize: 28,
+            fontWeight: 'bold',
+            color: textColor,
+            textAlign: 'center',
+            marginBottom: 16,
+            fontFamily: 'Poppins-SemiBold',
+        },
+        description: {
+            fontSize: 16,
+            color: placeholderColor,
+            textAlign: 'center',
+            marginBottom: 20,
+            lineHeight: 22,
+            fontFamily: 'Poppins-Regular',
+        },
+        fieldContainer: {
+            marginBottom: 20,
+        },
+        label: {
+            fontSize: 14,
+            fontWeight: '500',
+            color: textColor,
+            marginBottom: 8,
+        },
+        inputContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: textInputColor,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: isDarkMode ? '#404040' : '#e0e0e0',
+            padding: 10,
+        },
+        inputIcon: {
+            marginRight: 8,
+        },
+        input: {
+            flex: 1,
+            fontSize: 16,
+            color: textColor,
+            fontFamily: 'Poppins-Regular',
+        },
+        resendButton: {
+            alignSelf: 'center',
+            marginTop: 20,
+            marginBottom: 5,
+            flexDirection: 'row',
+        },
+        resendButtonText: {
+            color: '#5CAEF1',
+            fontSize: 16,
+            fontWeight: '500',
+            fontFamily: 'Poppins-SemiBold',
+        },
+        resetButton: {
+            backgroundColor: '#5CAEF1',
+            padding: 10,
+            borderRadius: 10,
+            alignItems: 'center',
+            marginBottom: 16,
+        },
+        resetButtonDisabled: {
+            backgroundColor: cancelButtonColor,
+        },
+        resetButtonText: {
+            fontSize: 16,
+            fontFamily: 'Poppins-Regular',
+            color: textColor,
+        },
+        messageText: {
+            fontSize: 16,
+            fontFamily: 'Poppins-Regular',
+            textAlign: 'center',
+            marginTop: 10,
+        },
+    });
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: styles.container.backgroundColor }]}>
+        <SafeAreaView style={styles.container}>
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
             
-            <View style={styles.header}>
-                <TouchableOpacity 
-                    style={styles.backButton} 
-                    onPress={() => router.back()}
-                >
-                    <Ionicons 
-                        name="arrow-back" 
-                        size={24} 
-                        color={isDarkMode ? '#FFFFFF' : '#111827'} 
-                    />
-                </TouchableOpacity>
-            </View>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.container}>
+                    <View style={styles.header}>
+                        <TouchableOpacity 
+                            style={styles.backButton} 
+                            onPress={() => router.back()}
+                        >
+                            <Ionicons 
+                                name="arrow-back" 
+                                size={24} 
+                                color={textColor} 
+                            />
+                        </TouchableOpacity>
+                    </View>
 
-            <View style={styles.card}>
+                    <View style={styles.card}>
                 <Text style={styles.cardTitle}>Reset Password</Text>
                 <Text style={styles.description}>
                     {isCodeSent 
@@ -204,12 +315,11 @@ const PasswordRecoveryScreen = () => {
                 {!isCodeSent ? (
                     // Email input state
                     <View style={styles.fieldContainer}>
-                        <Text style={styles.label}>Email address</Text>
                         <View style={styles.inputContainer}>
                             <Ionicons 
                                 name="mail-outline" 
-                                size={16} 
-                                color="#9CA3AF" 
+                                size={20} 
+                                color={placeholderColor} 
                                 style={styles.inputIcon} 
                             />
                             <TextInput
@@ -224,8 +334,8 @@ const PasswordRecoveryScreen = () => {
                                 }}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
-                                placeholder="your.email@school.edu"
-                                placeholderTextColor="#9CA3AF"
+                                placeholder="Email address (.edu)"
+                                placeholderTextColor={placeholderColor}
                                 editable={!isLoading}
                             />
                         </View>
@@ -233,12 +343,11 @@ const PasswordRecoveryScreen = () => {
                 ) : (
                     // Code verification state
                     <View style={styles.fieldContainer}>
-                        <Text style={styles.label}>Verification Code</Text>
                         <View style={styles.inputContainer}>
                             <Ionicons 
                                 name="key-outline" 
-                                size={16} 
-                                color="#9CA3AF" 
+                                size={20} 
+                                color={placeholderColor} 
                                 style={styles.inputIcon} 
                             />
                             <TextInput
@@ -253,8 +362,8 @@ const PasswordRecoveryScreen = () => {
                                     }
                                 }}
                                 keyboardType="numeric"
-                                placeholder="Enter 6-digit code"
-                                placeholderTextColor="#9CA3AF"
+                                placeholder="6-digit verification code"
+                                placeholderTextColor={placeholderColor}
                                 maxLength={6}
                                 editable={!isLoading}
                             />
@@ -264,6 +373,7 @@ const PasswordRecoveryScreen = () => {
                             onPress={handleResendCode}
                             disabled={isLoading}
                         >
+                            <Text style={{ color: placeholderColor, fontFamily: 'Poppins-Regular', fontSize: 16 }}>Didn't receive the code? </Text>
                             <Text style={styles.resendButtonText}>Resend Code</Text>
                         </TouchableOpacity>
                     </View>
@@ -277,167 +387,22 @@ const PasswordRecoveryScreen = () => {
                     <Text style={styles.resetButtonText}>
                         {isLoading 
                             ? (isCodeSent ? 'Verifying...' : 'Sending...') 
-                            : (isCodeSent ? 'Verify Code' : 'Send Code')
+                            : (isCodeSent ? 'Verify' : 'Send')
                         }
                     </Text>
                 </TouchableOpacity>
 
-                {/* Message display */}
+                {/* Simple message display */}
                 {message.text && (
-                    <View style={[styles.messageContainer, getMessageStyle()]}>
-                        <Ionicons 
-                            name={
-                                message.type === 'success' ? 'checkmark-circle' : 
-                                message.type === 'error' ? 'close-circle' : 
-                                'information-circle'
-                            } 
-                            size={16} 
-                            color={
-                                message.type === 'success' ? '#10B981' : 
-                                message.type === 'error' ? '#EF4444' : 
-                                '#3B82F6'
-                            } 
-                            style={styles.messageIcon}
-                        />
-                        <Text style={[styles.messageText, getMessageStyle()]}>
-                            {message.text}
-                        </Text>
-                    </View>
+                    <Text style={[styles.messageText, { color: getMessageColor() }]}>
+                        {message.text}
+                    </Text>
                 )}
-            </View>
+                    </View>
+                </View>
+            </TouchableWithoutFeedback>
         </SafeAreaView>
     );
 };
-
-const getStyles = (isDarkMode: boolean) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: isDarkMode ? '#1F2937' : '#F3F4F6',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        paddingTop: 20,
-    },
-    backButton: {
-        padding: 8,
-        marginRight: 16,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: isDarkMode ? '#FFFFFF' : '#111827',
-    },
-    card: {
-        backgroundColor: isDarkMode ? '#374151' : '#FFFFFF',
-        borderRadius: 24,
-        padding: 32,
-        margin: 16,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-        borderWidth: 1,
-        borderColor: isDarkMode ? '#4B5563' : '#E5E7EB',
-    },
-    cardTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: isDarkMode ? '#FFFFFF' : '#111827',
-        textAlign: 'center',
-        marginBottom: 16,
-    },
-    description: {
-        fontSize: 16,
-        color: isDarkMode ? '#9CA3AF' : '#6B7280',
-        textAlign: 'center',
-        marginBottom: 32,
-        lineHeight: 22,
-    },
-    fieldContainer: {
-        marginBottom: 32,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: isDarkMode ? '#FFFFFF' : '#111827',
-        marginBottom: 8,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: isDarkMode ? '#4B5563' : '#F3F4F6',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: isDarkMode ? '#6B5563' : '#D1D5DB',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-    },
-    inputIcon: {
-        marginRight: 8,
-    },
-    input: {
-        flex: 1,
-        fontSize: 16,
-        color: isDarkMode ? '#FFFFFF' : '#111827',
-    },
-    resendButton: {
-        alignSelf: 'flex-end',
-        marginTop: 8,
-        padding: 8,
-    },
-    resendButtonText: {
-        color: '#3B82F6',
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    resetButton: {
-        backgroundColor: '#3B82F6',
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    resetButtonDisabled: {
-        backgroundColor: '#9CA3AF',
-    },
-    resetButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    messageContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderRadius: 8,
-        borderWidth: 1,
-    },
-    messageIcon: {
-        marginRight: 8,
-    },
-    messageText: {
-        flex: 1,
-        fontSize: 14,
-        lineHeight: 20,
-    },
-    successMessage: {
-        backgroundColor: isDarkMode ? '#064E3B' : '#ECFDF5',
-        borderColor: '#10B981',
-    },
-    errorMessage: {
-        backgroundColor: isDarkMode ? '#7F1D1D' : '#FEF2F2',
-        borderColor: '#EF4444',
-    },
-    infoMessage: {
-        backgroundColor: isDarkMode ? '#1E3A8A' : '#EFF6FF',
-        borderColor: '#3B82F6',
-    },
-});
 
 export default PasswordRecoveryScreen;

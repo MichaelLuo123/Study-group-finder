@@ -295,7 +295,7 @@ app.get('/events', async (req, res) => {
 
 // Create new event
 app.post('/events', async (req, res) => {
-  const { title, description, location, class: classField, date, tags, capacity, invitePeople, creator_id } = req.body;
+  const { title, description, location, class: classField, date_and_time, tags, capacity, invitePeople, creator_id } = req.body;
   
   // Validate required fields
   if (!title || !creator_id) {
@@ -316,7 +316,7 @@ app.post('/events', async (req, res) => {
     // First create the event
     const result = await client.query(
       'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, creator_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
-      [title, description, location, classField, date, tags, capacity, creator_id]
+      [title, description, location, classField, date_and_time, tags, capacity, creator_id]
     );
     
     const event = result.rows[0];
@@ -344,7 +344,7 @@ app.post('/events', async (req, res) => {
             'event_invite',
             `You've been invited to ${title}`,
             event.id,
-            { event_title: title, location: location, date: date }
+            { event_title: title, location: location, date: date_and_time }
           );
         }
       }

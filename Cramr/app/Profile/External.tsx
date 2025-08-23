@@ -107,8 +107,6 @@ export default function External() {
           setPrompt3Answer(userData.prompt_3_answer || null);
           setFollowers(userData.followers);
           setFollowing(userData.following);
-          setFollowersIds(userData.follower_ids);
-          setFollowingIds(userData.following_ids);
         } else {
           console.error('Failed to fetch user data. Status:', response.status);
           const errorText = await response.text();
@@ -120,7 +118,7 @@ export default function External() {
     };
 
     fetchUserData();
-  }, [profileId]);
+  }, [profileId, userId]);
 
   // More Modal
   const [isMoreModalVisible, setIsMoreModalVisible] = useState(false);
@@ -246,17 +244,38 @@ export default function External() {
   // Following logic
   const [isFollowing, setIsFollowing] = useState(false);
 
-  // Check if current user is following this profile
   useEffect(() => {
-    const checkFollowingStatus = () => {
-      if (followingIds != null) {
-        const isCurrentlyFollowing = followingIds.some(followingId => followingId === profileId);
-        setIsFollowing(isCurrentlyFollowing);
+    const checkFollowingStatus = async () => {
+      try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/followers`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Check if the current user is in the followers list of the profile
+          const isUserFollowing = data.followers.some(
+            (user: { id: string }) => user.id === userId
+          );
+          
+          setIsFollowing(isUserFollowing);
+          console.log('is following? ', isUserFollowing);
+        } else {
+          Alert.alert('Error', 'Failed to check following status');
+        }
+      } catch (error) {
+        console.error('Follow error:', error);
+        Alert.alert('Error', 'Network error occurred');
       }
     };
     
-    checkFollowingStatus();
-  }, [followingIds, profileId]);
+    if (profileId && userId) {
+      checkFollowingStatus();
+    }
+  }, [profileId, userId]);
 
   const handleFollow = async () => {
     try {
@@ -343,7 +362,7 @@ export default function External() {
   }
 
   return (
-    <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
+    <SafeAreaView style={{backgroundColor: backgroundColor, height: 1000}}>
       <ScrollView>
         <View style={[styles.container, {backgroundColor: backgroundColor}]}>
           <View style={styles.topButtonsContainer}>
@@ -373,12 +392,13 @@ export default function External() {
                   </View>
                   <Text style={[styles.subheaderBoldText, {color: textColor}]}>{following}</Text> Following
                 </Text>
-                <View style={[styles.tagContainer, {marginTop: 3}]}>
-                  {school && (
-                    <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                      <Text style={[styles.normalText, {color: textColor}]}>
-                        {school}
-                      </Text>
+                {school === '' || major === '' || classLevel === '' || pronouns === '' ? (
+                  <View style={[styles.tagContainer, {marginTop: 3}]}>
+                    {school && (
+                      <View style={[styles.tag, {backgroundColor: textInputColor}]}>
+                        <Text style={[styles.normalText, {color: textColor}]}>
+                          {school}
+                        </Text>
                     </View>
                   )}
                   {major && (
@@ -409,17 +429,17 @@ export default function External() {
                       </Text>
                     </View>
                   )}
-                </View>
+                </View>) : (<View> </View>)}
               </View>
             </View>
 
             {isFollowing ? (
               <TouchableOpacity onPress={handleUnfollowCheck} style={[styles.buttonContainer, {backgroundColor: cancelButtonColor}]}>
-                <Text style={[styles.normalText, {color: textColor}]}>Following</Text>
+                <Text style={[styles.subheaderText, {color: textColor}]}>Following</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity onPress={handleFollow} style={[styles.buttonContainer, {backgroundColor: buttonColor}]}>
-                <Text style={[styles.normalText, {color: textColor}]}>Follow</Text>
+                <Text style={[styles.subheaderText, {color: textColor}]}>Follow</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -629,7 +649,7 @@ const styles = StyleSheet.create({
 
   container: {
     padding: 20,
-    height: 1000
+    height: 1000,
   },
   logoContainer: {
     height: 27,

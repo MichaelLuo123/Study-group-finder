@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { Colors } from '../../constants/Colors';
 
 const ResetPasswordScreen = () => {
     const [newPassword, setNewPassword] = useState('');
@@ -26,6 +27,13 @@ const ResetPasswordScreen = () => {
     const { isDarkMode } = useUser();
     const router = useRouter();
     const { token } = useLocalSearchParams();
+
+     const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
+        const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
+        const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
+        const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
+        const cancelButtonColor = isDarkMode ? Colors.dark.cancelButton : Colors.light.cancelButton;
+    
 
     // Validates password using the same logic as signup screen
     const validatePassword = (pwd: string) => {
@@ -55,7 +63,7 @@ const ResetPasswordScreen = () => {
             newErrors.confirmPassword = 'Please confirm your password';
             hasError = true;
         } else if (newPassword !== confirmPassword) {
-            newErrors.confirmPassword = 'Passwords do not match';
+            newErrors.confirmPassword = 'Passwords do not match!';
             hasError = true;
         }
 
@@ -129,7 +137,7 @@ const ResetPasswordScreen = () => {
     const styles = getStyles(isDarkMode);
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: styles.container.backgroundColor }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
             
             <View style={styles.header}>
@@ -140,24 +148,23 @@ const ResetPasswordScreen = () => {
                     <Ionicons 
                         name="arrow-back" 
                         size={24} 
-                        color={isDarkMode ? '#FFFFFF' : '#111827'} 
+                        color={textColor} 
                     />
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.card}>
-                <Text style={styles.cardTitle}>Set New Password</Text>
-                <Text style={styles.description}>
+            <View style={[styles.card, {backgroundColor: backgroundColor}]}>
+                <Text style={[styles.cardTitle, {color: textColor}]}>Reset Password</Text>
+                <Text style={[styles.description, {color: textColor}]}>
                     Enter your new password below.
                 </Text>
 
                 <View style={styles.fieldContainer}>
-                    <Text style={styles.label}>New Password</Text>
-                    <View style={[styles.inputContainer, errors.newPassword ? styles.inputError : null]}>
+                    <View style={[styles.inputContainer, {backgroundColor: textInputColor}]}>
                         <Ionicons 
                             name="lock-closed-outline" 
-                            size={16} 
-                            color="#9CA3AF" 
+                            size={20} 
+                            color={textColor}
                             style={styles.inputIcon} 
                         />
                         <TextInput
@@ -173,7 +180,7 @@ const ResetPasswordScreen = () => {
                             }}
                             secureTextEntry={!showNewPassword}
                             placeholder="Enter new password"
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor={placeholderColor}
                         />
                         <TouchableOpacity 
                             style={styles.eyeIcon} 
@@ -181,8 +188,8 @@ const ResetPasswordScreen = () => {
                         >
                             <Ionicons 
                                 name={showNewPassword ? "eye-off-outline" : "eye-outline"} 
-                                size={16} 
-                                color="#9CA3AF" 
+                                size={20} 
+                                color={textColor}
                             />
                         </TouchableOpacity>
                     </View>
@@ -190,12 +197,11 @@ const ResetPasswordScreen = () => {
                 </View>
 
                 <View style={styles.fieldContainer}>
-                    <Text style={styles.label}>Confirm New Password</Text>
-                    <View style={[styles.inputContainer, errors.confirmPassword ? styles.inputError : null]}>
+                    <View style={[styles.inputContainer, errors.confirmPassword ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                         <Ionicons 
                             name="lock-closed-outline" 
-                            size={16} 
-                            color="#9CA3AF" 
+                            size={20} 
+                            color={textColor}
                             style={styles.inputIcon} 
                         />
                         <TextInput
@@ -211,7 +217,7 @@ const ResetPasswordScreen = () => {
                             }}
                             secureTextEntry={!showConfirmPassword}
                             placeholder="Confirm new password"
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor={placeholderColor}
                         />
                         <TouchableOpacity 
                             style={styles.eyeIcon} 
@@ -219,8 +225,8 @@ const ResetPasswordScreen = () => {
                         >
                             <Ionicons 
                                 name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
-                                size={16} 
-                                color="#9CA3AF" 
+                                size={20} 
+                                color={textColor}
                             />
                         </TouchableOpacity>
                     </View>
@@ -232,7 +238,7 @@ const ResetPasswordScreen = () => {
                     onPress={handleResetPassword}
                     disabled={isLoading}
                 >
-                    <Text style={styles.resetButtonText}>
+                    <Text style={[styles.resetButtonText, { color: textColor }]}>
                         {isLoading ? 'Changing Password...' : 'Change Password'}
                     </Text>
                 </TouchableOpacity>
@@ -276,41 +282,28 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         paddingTop: 20,
     },
     backButton: {
-        padding: 8,
-        marginRight: 16,
+        marginRight: 10,
     },
     card: {
-        backgroundColor: isDarkMode ? '#374151' : '#FFFFFF',
-        borderRadius: 24,
-        padding: 32,
-        margin: 16,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-        borderWidth: 1,
-        borderColor: isDarkMode ? '#4B5563' : '#E5E7EB',
+        padding: 20,
+        marginTop: 100,
     },
     cardTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
+        fontSize: 24,
         color: isDarkMode ? '#FFFFFF' : '#111827',
         textAlign: 'center',
         marginBottom: 16,
+        fontFamily: 'Poppins-SemiBold',
     },
     description: {
         fontSize: 16,
         color: isDarkMode ? '#9CA3AF' : '#6B7280',
         textAlign: 'center',
-        marginBottom: 32,
-        lineHeight: 22,
+        marginBottom: 20,
+        fontFamily: 'Poppins-Regular',
     },
     fieldContainer: {
-        marginBottom: 32,
+        marginBottom: 20,
     },
     label: {
         fontSize: 14,
@@ -321,12 +314,8 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: isDarkMode ? '#4B5563' : '#F3F4F6',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: isDarkMode ? '#6B5563' : '#D1D5DB',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
+        padding: 10,
+        borderRadius: 10,
     },
     inputError: {
         borderColor: '#EF4444',
@@ -338,6 +327,7 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         flex: 1,
         fontSize: 16,
         color: isDarkMode ? '#FFFFFF' : '#111827',
+        fontFamily: 'Poppins-Regular',
     },
     passwordInput: {
         paddingRight: 40,
@@ -352,9 +342,10 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         fontSize: 12,
         marginTop: 4,
         marginLeft: 4,
+        fontFamily: 'Poppins-Regular',
     },
     resetButton: {
-        backgroundColor: '#3B82F6',
+        backgroundColor: '#5CAEF1',
         paddingVertical: 16,
         borderRadius: 8,
         alignItems: 'center',
@@ -364,9 +355,8 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         backgroundColor: '#9CA3AF',
     },
     resetButtonText: {
-        color: '#FFFFFF',
+        fontFamily: 'Poppins-SemiBold',
         fontSize: 16,
-        fontWeight: '600',
     },
     messageContainer: {
         flexDirection: 'row',

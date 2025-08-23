@@ -459,8 +459,7 @@ export default function EventList({
                 tag3={event.tags?.[2] || null}
                 subject={event.class || 'invalid'}
                 location={event.location || 'invalid'}
-                date={event.date}
-                time={event.time}
+                dateAndTime={event.date_and_time}
                 rsvpedCount={event.accepted_count || event.rsvped_count || 0}
                 capacity={event.capacity || '∞'}
                 isOwner={event.creator_id === userId}

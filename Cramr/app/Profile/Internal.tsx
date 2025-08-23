@@ -283,11 +283,12 @@ export default function Internal() {
                   </Text>
                 </View>
               </TouchableOpacity>
-              <View style={[styles.tagContainer, {marginTop: 3}]}>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {school}
-                  </Text>
+              {school === '' || major === '' || classLevel === '' || pronouns === '' ? (
+                <View style={[styles.tagContainer, {marginTop: 3}]}>
+                  <View style={[styles.tag, {backgroundColor: textInputColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {school}
+                    </Text>
                 </View>
                 <View style={[styles.tag, {backgroundColor: textInputColor}]}>
                   <Text style={[styles.normalText, {color: textColor}]}>
@@ -309,7 +310,8 @@ export default function Internal() {
                     Transfer
                   </Text>
                 </View>)}
-              </View>
+              </View>) :
+              <View></View>}
             </View>
           </View>
 
@@ -353,7 +355,7 @@ export default function Internal() {
             creatorUserId={userId}
           />
 
-            </> 
+          </> 
           )}
         </View>
       </ScrollView>

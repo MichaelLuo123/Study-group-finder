@@ -19,6 +19,7 @@ import { Colors } from '../../constants/Colors';
 const SignUpScreen = () => {
     // Colors
     const {isDarkMode, toggleDarkMode} = useUser();
+    const { setUser } = useUser();
 
     const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
     const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
@@ -112,7 +113,8 @@ const SignUpScreen = () => {
                 
                 if (response.ok && result.success) {
                     console.log('User registered successfully');
-                    router.push('/SignUp/signupsuccess');
+                    setUser(result.user);
+                    router.push('../Settings/ProfilePage');
                 } else {
                     // Handle different error cases
                     if (response.status === 409) {

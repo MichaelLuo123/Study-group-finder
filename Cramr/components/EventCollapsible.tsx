@@ -25,8 +25,7 @@ interface EventCollapsibleProps {
     tag3?: string | null;
     subject: string;
     location: string;
-    date: string;
-    time: string;
+    dateAndTime: Date;
     capacity: number | string;
     rsvpedCount: number;
     isOwner: boolean;
@@ -55,8 +54,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     tag3,
     subject,
     location,
-    date,
-    time,
+    dateAndTime,
     capacity,
     rsvpedCount,
     isOwner,
@@ -82,6 +80,36 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     const buttonColor = Colors.button;
 
     const [RSVPs, setRSVPs] = useState<RSVP[]>([]);
+
+    // Helper function to format date string
+  const formatDate = (dateAndTime: Date | string | null) => {
+    if (!dateAndTime) return 'Invalid date';
+    try {
+      const date = new Date(dateAndTime);
+      // Check if date is valid
+      if (isNaN(date.getTime())) return 'Invalid date';
+      return date.toLocaleDateString();
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  // Helper function to format time string
+  const formatTime = (dateAndTime: Date | string | null) => {
+    if (!dateAndTime) return 'Invalid time';
+    try {
+      const date = new Date(dateAndTime);
+      // Check if date is valid
+      if (isNaN(date.getTime())) return 'Invalid time';
+      return date.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true  // This ensures AM/PM format
+      });
+    } catch {
+      return 'Invalid time';
+    }
+  };
 
     useEffect(() => {
         const fetchRSVPs = async () => {
@@ -189,11 +217,11 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                             </View>
                             <View style={[styles.iconTextContainer, {marginTop: 3}]}>
                                 <Calendar size={20} color={textColor} style={styles.eventIcon}/>
-                                <Text style={[styles.normalText, {color: textColor}]}>{date}</Text>
+                                <Text style={[styles.normalText, {color: textColor}]}>{formatDate(dateAndTime)}</Text>
                             </View>
                             <View style={[styles.iconTextContainer, {marginTop: 3}]}>
                                 <Clock size={20} color={textColor} style={styles.eventIcon}/>
-                                <Text style={[styles.normalText, {color: textColor}]}>{time}</Text>
+                                <Text style={[styles.normalText, {color: textColor}]}>{formatTime(dateAndTime)}</Text>
                             </View>
                             <View style={[styles.iconTextContainer, {marginTop: 3}]}>
                                 <Users size={20} color={textColor} style={styles.eventIcon}/>
