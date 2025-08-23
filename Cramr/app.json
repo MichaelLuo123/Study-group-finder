@@ -19,7 +19,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "config":{
+      "config": {
         "googleMaps": {
           "apiKey": "process.env.EXPO_PUBLIC_GOOGLE_API_KEY"
         }
@@ -45,6 +45,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "cd20bbd9-15ab-4580-80ea-8fbc851443cf"
+      }
     }
   }
 }
