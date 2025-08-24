@@ -1,11 +1,11 @@
 import React from 'react';
 import {
+  FlatList,
   Image,
+  Platform,
   StyleSheet,
   Text,
   View,
-  FlatList,
-  Platform,
 } from 'react-native';
 
 type Entry = {
@@ -110,7 +110,7 @@ function PodiumCol({
           source={
             avatarUri
               ? { uri: avatarUri }
-              : require('../assets/images/default-avatar.png')
+              : require('../assets/images/default_profile.jpg')
           }
           style={styles.avatar}
         />
