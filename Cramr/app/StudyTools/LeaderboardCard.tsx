@@ -110,7 +110,7 @@ function PodiumCol({
           source={
             avatarUri
               ? { uri: avatarUri }
-              : require('../../assets/images/default_profile.jpg')
+              : require('../assets/images/default_profile.jpg')
           }
           style={styles.avatar}
         />
