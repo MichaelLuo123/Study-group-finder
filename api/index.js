@@ -120,6 +120,57 @@ async function getUsersWhoBlocked(userId) {
   }
 }
 
+// Get all event IDs (for debugging)
+app.get('/events/ids', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT id, title, creator_id, created_at 
+      FROM events 
+      ORDER BY created_at DESC
+    `);
+    
+    res.json({
+      success: true,
+      events: result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        creator_id: row.creator_id,
+        created_at: row.created_at
+      }))
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get events by current user (for debugging)
+app.get('/users/:userId/events', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT id, title, creator_id, created_at 
+      FROM events 
+      WHERE creator_id = $1
+      ORDER BY created_at DESC
+    `, [userId]);
+    
+    res.json({
+      success: true,
+      events: result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        creator_id: row.creator_id,
+        created_at: row.created_at
+      }))
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 // Get all events (filtered by blocking)
 app.get('/events', async (req, res) => {
   try {
@@ -396,7 +447,9 @@ app.post('/login', async (req, res) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      full_name: user.full_name
+      full_name: user.full_name,
+      following: user.following || 0,
+      followers: user.followers || 0
     };
     
     console.log('Login successful for user:', responseUser);
@@ -606,19 +659,30 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
 
 // Search users
 app.get('/users/search', async (req, res) => {
-  const { q } = req.query;
+  const { q, currentUserId } = req.query;
   
   if (!q || q.length < 2) {
     return res.status(400).json({ error: 'Search query must be at least 2 characters' })
   }
   
   try {
-    const result = await client.query(`
-      SELECT id, username, full_name, email
+    let query = `
+      SELECT id, username, full_name, email, following, followers
       FROM users 
       WHERE 
-        LOWER(username) LIKE LOWER($1) OR 
-        LOWER(full_name) LIKE LOWER($1)
+        (LOWER(username) LIKE LOWER($1) OR 
+         LOWER(full_name) LIKE LOWER($1))
+    `;
+    
+    let params = [`%${q}%`];
+    
+    // Exclude current user from search results if currentUserId is provided
+    if (currentUserId) {
+      query += ` AND id != $2`;
+      params.push(currentUserId);
+    }
+    
+    query += `
       ORDER BY 
         CASE 
           WHEN LOWER(username) = LOWER($1) THEN 1
@@ -627,7 +691,9 @@ app.get('/users/search', async (req, res) => {
         END,
         username
       LIMIT 20
-    `, [`%${q}%`]);
+    `;
+    
+    const result = await client.query(query, params);
     
     res.json(result.rows);
   } catch (err) {
@@ -748,6 +814,24 @@ app.post('/users/:id/follow', async (req, res) => {
       RETURNING *
     `, [id, userId]);
     
+    // Update follower's following_ids array and following count
+    await client.query(`
+      UPDATE users 
+      SET following_ids = array_append(following_ids, $1), 
+          following = following + 1,
+          updated_at = NOW()
+      WHERE id = $2
+    `, [userId, id]);
+    
+    // Update followed user's followers_ids array and followers count
+    await client.query(`
+      UPDATE users 
+      SET followers_ids = array_append(followers_ids, $1), 
+          followers = followers + 1,
+          updated_at = NOW()
+      WHERE id = $2
+    `, [id, userId]);
+    
     // Create notification for the user being followed
     const followerUser = await client.query('SELECT username FROM users WHERE id = $1', [id]);
     if (followerUser.rows.length > 0) {
@@ -784,6 +868,24 @@ app.delete('/users/:id/follow/:userId', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Follow relationship not found' });
     }
+    
+    // Update follower's following_ids array and following count
+    await client.query(`
+      UPDATE users 
+      SET following_ids = array_remove(following_ids, $1), 
+          following = GREATEST(following - 1, 0),
+          updated_at = NOW()
+      WHERE id = $2
+    `, [userId, id]);
+    
+    // Update followed user's followers_ids array and followers count
+    await client.query(`
+      UPDATE users 
+      SET followers_ids = array_remove(followers_ids, $1), 
+          followers = GREATEST(followers - 1, 0),
+          updated_at = NOW()
+      WHERE id = $2
+    `, [id, userId]);
     
     res.json({
       success: true,
@@ -1534,6 +1636,108 @@ app.get('/events/:id', async (req, res) => {
       saved_count,
     });
   } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Update event (general endpoint)
+app.put('/events/:id', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    title, 
+    description, 
+    location, 
+    class: classField, 
+    date_and_time, 
+    tags, 
+    capacity 
+  } = req.body;
+  
+  console.log('PUT /events/:id request:', { id, body: req.body });
+  
+  try {
+    // Build dynamic query based on provided fields
+    let query = 'UPDATE events SET';
+    let params = [];
+    let paramIndex = 1;
+    let hasUpdates = false;
+    
+    if (title !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` title = $${paramIndex}`;
+      params.push(title);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (description !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` description = $${paramIndex}`;
+      params.push(description);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (location !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` location = $${paramIndex}`;
+      params.push(location);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (classField !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` class = $${paramIndex}`;
+      params.push(classField);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (date_and_time !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` date = $${paramIndex}`;
+      params.push(date_and_time);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (tags !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` tags = $${paramIndex}`;
+      params.push(tags);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (capacity !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` capacity = $${paramIndex}`;
+      params.push(capacity);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (!hasUpdates) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    
+    query += ` WHERE id = $${paramIndex} RETURNING *`;
+    params.push(id);
+    
+    const result = await client.query(query, params);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Event updated successfully',
+      event: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Update event error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
