@@ -405,4 +405,4 @@ const RequestPasswordResetScreen = () => {
     );
 };
 
-export default PasswordRecoveryScreen;
+export default RequestPasswordResetScreen;
