@@ -138,7 +138,7 @@ export default function Saved() {
     };
 
     return (
-        <SafeAreaView style={{backgroundColor: backgroundColor, height: 800}}>
+        <SafeAreaView style={{backgroundColor: backgroundColor, flex: 1}}>
             <ScrollView
                 refreshControl={
                     <RefreshControl
