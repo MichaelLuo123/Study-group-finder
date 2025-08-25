@@ -164,7 +164,7 @@ const LoginScreen = () => {
                    )}
 
                     <View style={styles.loginLinkContainer}>
-                        <TouchableOpacity onPress={() => router.push('/Login/passwordrecovery')}>
+                        <TouchableOpacity onPress={() => router.push('/Login/RequestPasswordReset')}>
                             <Text style={styles.signInText}>Forgot password?</Text>
                         </TouchableOpacity>
                     </View>

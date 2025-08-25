@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 
-const ResetPasswordScreen = () => {
+const SetNewPasswordScreen = () => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -387,4 +387,4 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
     },
 });
 
-export default ResetPasswordScreen;
+export default SetNewPasswordScreen;

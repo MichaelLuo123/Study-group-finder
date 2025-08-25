@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 
-const PasswordRecoveryScreen = () => {
+const RequestPasswordResetScreen = () => {
     const [email, setEmail] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -113,7 +113,7 @@ const PasswordRecoveryScreen = () => {
                 
                 setTimeout(() => {
                     router.push({
-                        pathname: '/Login/ResetPassword',
+                        pathname: '/Login/SetNewPassword',
                         params: { token: result.token }
                     });
                 }, 1500);
