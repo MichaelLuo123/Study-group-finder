@@ -1,4 +1,5 @@
 import EventCollapsible from '@/components/EventCollapsible';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
@@ -56,11 +57,12 @@ export default function EventList({
 
   const [busyEventId, setBusyEventId] = useState<string | null>(null);
   const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
-
+  const { expoPushToken, scheduleEventReminder } = usePushNotifications();
   const fetchEvents = async () => {
     try {
       setLoading(true);
       setError(null);
+      const factory = new PublicStudySessionFactory(); // create the study session factory for ALL the events from the database to use
       
       // 1. Fetch events from backend
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
@@ -85,8 +87,8 @@ export default function EventList({
             // Try geocoding if location exists
             if (event.location) {
               try {
-                const factory = new PublicStudySessionFactory();
-                const geocodeResult = await factory.addressToCoordinates(event.location);
+                const studySession = factory.createStudySession(event.location, event.date_and_time, event.title); //you use the factory to build the study session object
+                const geocodeResult = await studySession.addressToCoordinates(); //the factory doesn't have this functionality. the Study Session object does.
                 
                 if (geocodeResult?.geometry?.location) {
                   coordinates = {
@@ -153,11 +155,13 @@ export default function EventList({
       
       // 3. Sort events by distance
       const sortedEvents = processedEvents.sort((a, b) => {
+        //console.log("sorting the thing");
         const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
         const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
         return aDistance - bDistance;
       });
       
+      //console.log("Showing the thing");
       setEvents(sortedEvents);
       
     } catch (mainError) {
@@ -183,6 +187,19 @@ export default function EventList({
     }
     getCurrentLocation();
   }, []);
+
+  const scheduleRSVPNotifications = (events:any[]) => {
+    const rsvpEvents = events.filter(event => event.isRSVPed); // checked if it is RSVPed
+    
+    rsvpEvents.forEach(event => {
+      const eventDate = event.date_and_time;
+      if(eventDate){
+        const reminderTime = eventDate.getTime() -  60 * 60 * 1000 // 1 hour before the event
+
+        scheduleEventReminder?.(reminderTime, event.id);
+      }
+    });
+  }
 
   const toggleRSVP = async (eventId: string, currentStatus: boolean) => {
     if (busyEventId) return; 
@@ -453,14 +470,15 @@ export default function EventList({
                 ownerId={event.creator_id}
                 ownerProfile={event.creator_profile_picture}
                 title={event.title}
-                bannerColor={bannerColors[event.banner_color || 1]}
                 tag1={event.tags?.[0] || null}
                 tag2={event.tags?.[1] || null}
                 tag3={event.tags?.[2] || null}
                 subject={event.class || 'invalid'}
+                isOnline={event.event_format === 'Online'}
                 location={event.location || 'invalid'}
-                date={event.date}
-                time={event.time}
+                studyRoom={event.study_room || null}
+                virtualRoomLink={event.virtual_room_link || null}
+                dateAndTime={event.date_and_time}
                 rsvpedCount={event.accepted_count || event.rsvped_count || 0}
                 capacity={event.capacity || '∞'}
                 isOwner={event.creator_id === userId}

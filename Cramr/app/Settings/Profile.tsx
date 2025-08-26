@@ -37,6 +37,7 @@ export default function Profile() {
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
   const bannerColors = Colors.bannerColors
 
   // User
@@ -78,51 +79,6 @@ export default function Profile() {
   const [prompt3, setPrompt3] = useState<string | null>(null);
   const [prompt3Answer, setPrompt3Answer] = useState<string | null>(null);
 
-  // Handle profile picture upload
-  const handleProfilePictureChange = async (imageUri: string | null) => {
-    if (!imageUri || !loggedInUser?.id) {
-      setProfilePicture(imageUri);
-      return;
-    }
-
-    // Check if it's a local file (starts with file://)
-    if (imageUri.startsWith('file://')) {
-      try {
-        // Create form data for upload
-        const formData = new FormData();
-        formData.append('profile_picture', {
-          uri: imageUri,
-          type: 'image/jpeg', // You might want to detect the actual type
-          name: 'profile_picture.jpg'
-        } as any);
-
-        // Upload to backend
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}/profile-picture`, {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          setProfilePicture(result.profile_picture_url);
-          console.log('Profile picture uploaded successfully');
-        } else {
-          console.error('Failed to upload profile picture');
-          setProfilePicture(imageUri); // Keep the local image for now
-        }
-      } catch (error) {
-        console.error('Error uploading profile picture:', error);
-        setProfilePicture(imageUri); // Keep the local image for now
-      }
-    } else {
-      // It's already a URL, just set it
-      setProfilePicture(imageUri);
-    }
-  };
-
   // pull user data from database
   useEffect(() => {
     const fetchUserData = async () => {
@@ -141,7 +97,7 @@ export default function Profile() {
           
           // Populate form fields with database data
           setProfilePicture(userData.profile_picture_url || null);
-          setBannerColor(Number(userData.banner_color) || null);
+          setBannerColor(Number(userData.banner_color) || 0);
           setName(userData.full_name);
           setUsername(userData.username);
           setSchool(userData.school || null);
@@ -242,7 +198,7 @@ export default function Profile() {
                 onPress={() => router.back()}
               />
 
-              <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: 10}]}>
+              <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: -25}]}>
                 Profile
               </Text>
 
@@ -251,7 +207,7 @@ export default function Profile() {
           </Text>
           <ImageUpload 
             value={profilePicture}
-            onChangeImage={handleProfilePictureChange}
+            onChangeImage={setProfilePicture}
             isDarkMode={isDarkMode}
           />
 
@@ -260,24 +216,24 @@ export default function Profile() {
           </Text>
             <View style={styles.bannerColorContainer}>
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 1 && styles.ring]}
+              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 0 && styles.ring]}
+              onPress={() => setBannerColor(0)} 
+            />
+            <TouchableOpacity 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 1 && styles.ring]} 
               onPress={() => setBannerColor(1)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 2 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 2 && styles.ring]} 
               onPress={() => setBannerColor(2)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 3 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 3 && styles.ring]} 
               onPress={() => setBannerColor(3)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 4 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 4 && styles.ring]} 
               onPress={() => setBannerColor(4)} 
-            />
-            <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 5 && styles.ring]} 
-              onPress={() => setBannerColor(5)} 
             />
             </View>
 
@@ -287,6 +243,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your name."
+            placeholderTextColor={placeholderColor}
             value={name}
             onChangeText={setName}
             textAlign="left"
@@ -301,6 +258,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your username."
+            placeholderTextColor={placeholderColor}
             value={username}
             onChangeText={setUsername}
             textAlign="left"
@@ -315,6 +273,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your school."
+            placeholderTextColor={placeholderColor}
             value={school}
             onChangeText={setSchool}
             textAlign="left"
@@ -329,6 +288,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your major."
+            placeholderTextColor={placeholderColor}
             value={major}
             onChangeText={setMajor}
             textAlign="left"
@@ -343,6 +303,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your class level."
+            placeholderTextColor={placeholderColor}
             value={classLevel}
             onChangeText={setClassLevel}
             textAlign="left"
@@ -357,6 +318,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your pronouns."
+            placeholderTextColor={placeholderColor}
             value={pronouns}
             onChangeText={setPronouns}
             textAlign="left"
@@ -369,8 +331,8 @@ export default function Profile() {
             Transfer?
           </Text>
           <Slider
-            leftLabel="Yes"
-            rightLabel="No"
+            leftLabel="No"
+            rightLabel="Yes"
             width={125}
             value={isTransfer}
             onChangeSlider={setIsTransfer}
@@ -383,6 +345,7 @@ export default function Profile() {
           <TextInput
             style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter bio."
+            placeholderTextColor={placeholderColor}
             value={bio}
             onChangeText={setBio}
             textAlign="left"
@@ -429,7 +392,7 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   headerText: {
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
   },
   subheaderText: {
@@ -483,7 +446,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    height: 45,
+    padding: 10,
     borderRadius: 10,
     backgroundColor: '#5CAEF1',
     alignItems: 'center',

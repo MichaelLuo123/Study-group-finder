@@ -1,22 +1,37 @@
-import React, { useMemo, useState, useEffect } from "react";
+import { useUser } from '@/contexts/UserContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
-  Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
-  View,
-  LayoutAnimation,
+  TouchableOpacity,
   UIManager,
+  View
 } from "react-native";
+import { Colors } from '../../constants/Colors';
 
 export default function PasswordRecoveryScreen({ onBack }: { onBack?: () => void }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  
+  const { isDarkMode } = useUser();
+
+  // Consistent color usage from Colors.ts
+  const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
+  const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
+  const textInputColor = isDarkMode ? Colors.dark.textInput : Colors.light.textInput;
+  const placeholderColor = isDarkMode ? Colors.dark.placeholderText : Colors.light.placeholderText;
+  const cancelButtonColor = isDarkMode ? Colors.dark.cancelButton : Colors.light.cancelButton;
 
   // enable LayoutAnimation on Android
   useEffect(() => {
@@ -47,36 +62,35 @@ export default function PasswordRecoveryScreen({ onBack }: { onBack?: () => void
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.cardWrapper}>
-          <View style={styles.card}>
-            {/* Header */}
-            <View style={styles.headerRow}>
-              <Pressable
-                onPress={handleBack}
-                style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
-              >
-                <Text style={styles.backIcon}>{"\u2190"}</Text>
-              </Pressable>
-            </View>
+        {/* Back Button - Top Left Corner */}
+        <View style={styles.headerRow}>
+          <ArrowLeft 
+            size={24} 
+            color={textColor}
+            onPress={() => router.back()}
+          />
+        </View>
 
-            {/* Title */}
-            <View style={styles.titleBlock}>
-              <Text style={styles.title}>Password Recovery</Text>
-              <Text style={styles.subtitle}>
-                Enter your email address to receive your password.
-              </Text>
-            </View>
+        <View style={[styles.cardWrapper, { backgroundColor }]}>
+          {/* Title */}
+          <View style={styles.titleBlock}>
+            <Text style={[styles.title, { color: textColor }]}>Password Recovery</Text>
+            <Text style={[styles.subtitle, { color: placeholderColor }]}>
+              Enter your email address to receive your password.
+            </Text>
+          </View>
 
-            {/* Form */}
-            <View>
-              <View style={styles.fieldBlock}>
+          {/* Form */}
+          <View>
+            {/* First Email Input */}
+            <View style={styles.fieldBlock}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={20} color={textColor} style={styles.inputIcon} />
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
@@ -84,15 +98,22 @@ export default function PasswordRecoveryScreen({ onBack }: { onBack?: () => void
                   autoCapitalize="none"
                   autoCorrect={false}
                   placeholder="Email address"
-                  placeholderTextColor="#6B7280"
-                  style={styles.input}
+                  placeholderTextColor={placeholderColor}
+                  style={[styles.input, { 
+                    backgroundColor: textInputColor, 
+                    color: textColor,
+                  }]}
                 />
-                {submitted && !emailValid && (
-                  <Text style={styles.errorText}>Please enter a valid email.</Text>
-                )}
               </View>
+              {submitted && !emailValid && (
+                <Text style={styles.errorText}>Please enter a valid email.</Text>
+              )}
+            </View>
 
-              <View style={styles.fieldBlock}>
+            {/* Confirm Email Input */}
+            <View style={styles.fieldBlock}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={20} color={textColor} style={styles.inputIcon} />
                 <TextInput
                   value={confirm}
                   onChangeText={setConfirm}
@@ -100,35 +121,44 @@ export default function PasswordRecoveryScreen({ onBack }: { onBack?: () => void
                   autoCapitalize="none"
                   autoCorrect={false}
                   placeholder="Confirm email address"
-                  placeholderTextColor="#6B7280"
-                  style={styles.input}
+                  placeholderTextColor={placeholderColor}
+                  style={[styles.input, { 
+                    backgroundColor: textInputColor, 
+                    color: textColor,
+                  }]}
                 />
-                {submitted && !emailsMatch && (
-                  <Text style={styles.errorText}>Emails don’t match.</Text>
-                )}
               </View>
-
-              <Pressable
-                onPress={handleSubmit}
-                disabled={!canSubmit}
-                style={({ pressed }) => [
-                  styles.primaryBtn,
-                  !canSubmit && styles.btnDisabled,
-                  pressed && canSubmit && styles.pressed,
-                ]}
-              >
-                <Text style={styles.primaryBtnText}>Recover Password</Text>
-              </Pressable>
-
-              {successMessage ? (
-                <Text style={styles.successText}>{successMessage}</Text>
-              ) : (
-                <Text style={styles.finePrint}>
-                  We’ll send a password reset link to your email if it’s associated with an
-                  account.
-                </Text>
+              {submitted && !emailsMatch && (
+                <Text style={styles.errorText}>Emails do not match.</Text>
               )}
             </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+              style={[
+                styles.primaryBtn,
+                !canSubmit && { backgroundColor: cancelButtonColor, opacity: 0.6 }
+              ]}
+            >
+              <Text style={[
+                [styles.primaryBtnText, {color: textColor}],
+                !canSubmit && { opacity: 0.7, color: textColor }
+              ]}>
+                Recover Password
+              </Text>
+            </TouchableOpacity>
+
+            {/* Success/Info Message */}
+            {successMessage ? (
+              <Text style={[styles.successText, { color: '#369942' }]}>{successMessage}</Text>
+            ) : (
+              <Text style={[styles.finePrint, { color: placeholderColor }]}>
+                We'll send a password reset link to your email if it's associated with an
+                account.
+              </Text>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -137,103 +167,98 @@ export default function PasswordRecoveryScreen({ onBack }: { onBack?: () => void
 }
 
 const styles = StyleSheet.create({
-  // LIGHT THEME
   safeArea: {
     flex: 1,
-    backgroundColor: "#F3F4F6", // neutral-100
   },
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-  },
-  cardWrapper: {
-    width: "100%",
-    maxWidth: 420,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 28,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderWidth: 1,
-    borderColor: "#D1D5DB", // neutral-300
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
   },
   headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 10 : 40,
+    left: 20,
+    zIndex: 1,
   },
   backBtn: {
     padding: 8,
-    borderRadius: 999,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backIcon: {
-    color: "#111827", // neutral-900
-    fontSize: 20,
-    lineHeight: 20,
+  cardWrapper: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'ios' ? 120 : 100,
+    justifyContent: 'flex-start',
   },
-  pressed: { opacity: 0.9 },
   titleBlock: {
-    alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 20,
+    alignItems: 'center',
   },
   title: {
-    color: "#111827",
-    fontWeight: "800",
-    fontSize: 22,
+    fontSize: 28,
+    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
+    marginBottom: 10,
+    marginTop: 50,
+    textAlign: 'center',
   },
   subtitle: {
-    marginTop: 8,
-    color: "#6B7280", // neutral-500
-    textAlign: "center",
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
   },
-  fieldBlock: { marginBottom: 12 },
+  fieldBlock: {
+    marginBottom: 20,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  inputIcon: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 1,
+  },
   input: {
-    width: "100%",
-    borderRadius: 14,
+    flex: 1,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    color: "#111827",
-    borderWidth: 1,
-    borderColor: "#E5E7EB", // neutral-200
+    paddingVertical: 14,
+    paddingLeft: 48, // Make room for the icon
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
   },
   errorText: {
+    color: '#E36062',
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
     marginTop: 6,
-    color: "#EF4444", // red-500
-    fontSize: 12,
   },
   primaryBtn: {
+    backgroundColor: '#5CAEF1',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
     marginTop: 8,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#60A5FA", // blue-400
+    marginBottom: 20,
   },
   primaryBtnText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-  btnDisabled: { opacity: 0.6 },
-  finePrint: {
-    marginTop: 16,
-    fontSize: 12,
-    color: "#6B7280",
-    textAlign: "center",
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins-Regular',
   },
   successText: {
-    marginTop: 16,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  finePrint: {
     fontSize: 14,
-    color: "#4B5563", // neutral-600
-    fontWeight: "600",
-    textAlign: "center",
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

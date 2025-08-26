@@ -138,6 +138,8 @@ const TwoFAPage = () => {
             {code.map((digit, idx) => (
                 <TextInput
                 key={idx}
+                autoComplete="off"
+                autoCorrect={false}
                 ref={(ref) => {
                     if (ref) inputs.current[idx] = ref;
                 }}
@@ -224,6 +226,7 @@ const styles = StyleSheet.create({
         textAlignVertical: 'center',
         includeFontPadding: false,
         padding: 0,
+        backgroundColor: 'transparent',
     },
     submitButton: {
         padding: 12,

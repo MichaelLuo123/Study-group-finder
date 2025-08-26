@@ -150,7 +150,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     alignSelf: 'center',
     marginBottom: 20,
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
+    marginTop: -25,
   },
   input: {
     borderWidth: 1,

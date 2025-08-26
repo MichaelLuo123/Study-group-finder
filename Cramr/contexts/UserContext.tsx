@@ -7,11 +7,14 @@ interface User {
   username: string;
   email: string;
   full_name: string;
+  following?: number;
+  followers?: number;
 }
 
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
+  updateUserData: (updates: Partial<User>) => void;
   isLoggedIn: boolean;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
@@ -87,6 +90,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     saveUserData();
   }, [user]);
 
+
+
   const toggleDarkMode = async () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
@@ -97,6 +102,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       console.error('Error saving theme to AsyncStorage', error);
     }
   };
+
+  const updateUserData = (updates: Partial<User>) => {
+    if (user) {
+      setUser({ ...user, ...updates });
+    }
+  };
+
+
 
   const logout = async () => {
     try {
@@ -110,6 +123,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const value = {
     user,
     setUser,
+    updateUserData,
     isLoggedIn: user !== null,
     isDarkMode,
     toggleDarkMode,
