@@ -25,7 +25,7 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
   const { user } = useUser();
   // const userId = 'a163cdc9-6db7-4498-a73b-a439ed221dec';
   // Use actual user ID from context, fallback to hardcoded for testing
-  const userId = user?.id || 'a163cdc9-6db7-4498-a73b-a439ed221dec';
+  const userId = user?.id;
 
   useEffect(() => {
     fetchNotifications();
