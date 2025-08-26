@@ -34,7 +34,10 @@ export default function HomeScreen() {
     { title: 'Create event', route: '/CreateEvent/createevent' },
     { title: 'Edit event', route: '/CreateEvent/EditEvent' },
 
+    //Messages
+    { title: 'Messages', route: '/Messages/messages' },
 
+   
     // Saved/RSVPed Events
     { title: 'Saved/RSVPed Events', route: '/Saved/Saved' },
 
@@ -43,6 +46,7 @@ export default function HomeScreen() {
     { title: 'Settings', route: '/Settings/SettingsFrontPage' },
     { title: 'Profile Page (External)', route: '/Profile/External' },
     { title: 'Follow Page', route: '/Follow/follow' },
+    { title: 'Notifications', route: '/Profile/NotificationsPage' },
 
     // Study Tools
     { title: 'Study Tools', route: '/StudyTools/StudyTools' }
