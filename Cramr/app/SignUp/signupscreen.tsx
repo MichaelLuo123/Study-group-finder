@@ -340,7 +340,7 @@ const SignUpScreen = () => {
                     {/* Login Link */}
                     <View style={styles.loginLinkContainer}>
                         <Text style={[styles.loginText, {color: textColor}]}>Already have an account? </Text>
-                        <TouchableOpacity onPress={() => router.push('/Login/Loginscreen')}>
+                        <TouchableOpacity onPress={() => router.push('/SignIn/Loginscreen')}>
                             <Text style={styles.signInText}> Sign in</Text>
                         </TouchableOpacity>
                     </View>

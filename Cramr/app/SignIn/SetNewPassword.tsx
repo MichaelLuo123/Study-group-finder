@@ -101,7 +101,7 @@ const SetNewPasswordScreen = () => {
                 
                 setTimeout(() => {
                     setMessage({ text: '', type: '' });
-                    router.push('/Login/Loginscreen');
+                    router.push('/SignIn/Loginscreen');
                 }, 2000);
             } else {
                 setMessage({ 

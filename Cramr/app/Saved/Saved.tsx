@@ -78,7 +78,7 @@ export default function Saved() {
         if (isMounted && !user) {
             // Add a small delay to ensure router is ready
             const timer = setTimeout(() => {
-                router.replace('/Login/Loginscreen');
+                router.replace('/SignIn/Loginscreen');
             }, 100);
             
             return () => clearTimeout(timer);
