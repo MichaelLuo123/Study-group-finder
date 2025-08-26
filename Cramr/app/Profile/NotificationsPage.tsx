@@ -1,5 +1,6 @@
 import { useUser } from '@/contexts/UserContext';
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
