@@ -37,8 +37,6 @@ export default function RootLayout() {
                 'ViewEvent/viewvent',
                 'Settings'
               ]);
-              console.log(route.name);
-              console.log(swipeRightSet.has(route.name));
               return {
                 headerShown: false,
                 animation: swipeRightSet.has(route.name)
