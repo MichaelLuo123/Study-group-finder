@@ -1,6 +1,5 @@
-import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, View } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView, ScrollView, StyleSheet,
@@ -27,16 +26,6 @@ const PreferencesPage = () => {
   const [switch3, setSwitch3] = useState(false);
 
   const styles = getStyles(isDarkMode, backgroundColor, textColor);
-
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
-    'Poppins-Bold': require('../../assets/fonts/Poppins/Poppins-Bold.ttf'),
-    'Poppins-SemiBold': require('../../assets/fonts/Poppins/Poppins-SemiBold.ttf'),
-  });
-
-  if (!fontsLoaded) {
-    return null; 
-  }
 
   const { user: loggedInUser } = useUser();
   const userId = loggedInUser?.id;
@@ -105,7 +94,6 @@ const PreferencesPage = () => {
         <Text style={styles.heading}>Preferences</Text>
 
         {/* Toggles */}
-        <View style={styles.toggleGroup}>
           <Text style={styles.toggleLabel}>Push Notifications</Text>
           <TouchableOpacity onPress={() => setSwitch1(!switch1)}>
             <Switch
@@ -115,7 +103,6 @@ const PreferencesPage = () => {
             thumbColor={thumbColor}
             />
           </TouchableOpacity>
-        </View>
         {/*
         <View style={styles.toggleGroup}>
           <Text style={styles.toggleLabel}>Email Notifications</Text>
@@ -138,7 +125,7 @@ const PreferencesPage = () => {
         </View>
         */}
 
-        <Text style={styles.sectionTitle}>Theme</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 15 }]}>Theme</Text>
         <Slider
           leftLabel="Light"
           rightLabel="Dark"

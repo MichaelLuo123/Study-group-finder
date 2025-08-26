@@ -358,8 +358,7 @@ export default function Profile() {
             Prompts
           </Text>
           < Dropdown
-            options={prompts.filter(option => option.label !== prompt1 && option.label !==prompt2 && option.label !== prompt3)}
-            onSelect={(value) => setPrompt1(value)}
+            options={prompts}
             style = {{marginLeft: 20, marginRight: 20}}
             option1={prompt1}
             onChangeOption1={setPrompt1}

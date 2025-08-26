@@ -429,8 +429,8 @@ export default function EventList({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#5CAEF1" />
-        <Text style={styles.loadingText}>Loading events...</Text>
+        <ActivityIndicator size="small" color="#5CAEF1" />
+        <Text style={[styles.loadingText, { color: textColor, fontFamily: 'Poppins-Regular' }]}>Loading events...</Text>
       </View>
     );
   }
@@ -527,8 +527,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
   },
   errorContainer: {
     flex: 1,

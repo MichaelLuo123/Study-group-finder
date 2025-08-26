@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import EventList from '../listView/eventList';
+import Saved from '../Saved/Saved';
 
 // Define user interface
 interface User {
@@ -62,6 +63,7 @@ export default function Internal() {
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const bannerColors = Colors.bannerColors
+  const sliderBackgroundColor = (!isDarkMode ? Colors.light.sliderBackground : Colors.dark.sliderBackground)
 
   // User
   const [user, setUser] = useState<User | null>(null);
@@ -218,6 +220,8 @@ export default function Internal() {
     }
   };
 
+  const [visibleEvents, setVisibleEvents] = useState<'rsvped' | 'saved' | 'own'>('saved');
+
   return (
     <View style={[styles.container, {backgroundColor: backgroundColor}]}>
       <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 30 }}>
@@ -356,14 +360,50 @@ export default function Internal() {
             </View>)}
           </View>)}
           
+          <View style={{flexDirection: 'row', justifyContent: 'space-around', marginTop: 15, backgroundColor: sliderBackgroundColor, borderRadius: 25, marginBottom: 10}}>
+            <TouchableOpacity onPress={() => setVisibleEvents('own')}>
+              <View style={{borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 10, ...(visibleEvents === 'own' ? {backgroundColor: textInputColor,} : {})}}>
+                <Text style={[styles.normalText, {color: textColor}]}> My Events </Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setVisibleEvents('rsvped')}>
+              <View style={{borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 10, ...(visibleEvents === 'rsvped' ? {backgroundColor: textInputColor,} : {})}}>
+                <Text style={[styles.normalText, {color: textColor}]}> RSVPed Events </Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setVisibleEvents('saved')}>
+              <View style={{borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 10, ...(visibleEvents === 'saved' ? {backgroundColor: textInputColor,} : {})}}>
+                <Text style={[styles.normalText, {color: textColor}]}> Saved Events </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
 
-          <Text style={[styles.subheaderBoldText, {color: textColor, marginTop: 10}]}>{name}'s Events</Text>
-          
-          <EventList
-            creatorUserId={userId}
-          />
-
-          </> 
+          {visibleEvents === 'own' && (
+            <>
+              <EventList
+                creatorUserId={userId}
+              />
+            </>
+          )}
+          {visibleEvents === 'rsvped' && (
+            <>
+              <Saved
+                userId={userId || null}
+                showSlider={false}
+                defaultView="saved"
+              />
+            </>
+          )}
+          {visibleEvents === 'saved' && (
+            <>
+              <Saved
+                userId={userId || null}
+                showSlider={false}
+                defaultView="rsvped"
+              />
+            </>
+          )}
+            </>
           )}
         </View>
       </ScrollView>
