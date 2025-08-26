@@ -28,15 +28,10 @@ export default function ImageUpload({value, onChangeImage, style, isDarkMode}: I
     setImage(value || null);
   }, [value]);
 
-  // Memoize the callback to prevent unnecessary re-renders
+  // Call onChangeImage only when user picks or removes an image
   const handleImageChange = useCallback((newImage: string | null) => {
     onChangeImage(newImage);
   }, [onChangeImage]);
-
-  // Call onChangeImage whenever image changes
-  useEffect(() => {
-    handleImageChange(image);
-  }, [image, handleImageChange]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -45,15 +40,33 @@ export default function ImageUpload({value, onChangeImage, style, isDarkMode}: I
     } else {
       const result = await ImagePicker.launchImageLibraryAsync();
       if (!result.canceled) {
-        setImage(result.assets[0].uri);
+        const newImageUri = result.assets[0].uri;
+        setImage(newImageUri);
         setError(null);
+        handleImageChange(newImageUri);
       }
     }
   };
 
   const removeImage = () => {
-    setImage(null); // Set to null instead of default image path
-    onChangeImage(null);
+    Alert.alert(
+      "Remove Profile Picture",
+      "Are you sure you want to remove your profile picture?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            setImage(null);
+            handleImageChange(null);
+          }
+        }
+      ]
+    );
   };
   
   // Function to determine image source

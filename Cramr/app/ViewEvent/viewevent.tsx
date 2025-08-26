@@ -65,6 +65,14 @@ const EventViewScreen = () => {
   const [currentPage, setCurrentPage] = useState('eventView');
   const [busy, setBusy] = useState(false);
 
+  // Theme colors
+  const backgroundColor = isDarkMode ? '#1a1a1a' : '#ffffff';
+  const textColor = isDarkMode ? '#ffffff' : '#000000';
+  const textInputColor = isDarkMode ? '#2a2a2a' : '#f5f5f5';
+  const placeholderTextColor = isDarkMode ? '#888888' : '#666666';
+  const rsvpedButtonColor = isDarkMode ? '#4CAF50' : '#4CAF50';
+  const bannerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
       setCurrentPage(page);
@@ -378,9 +386,16 @@ const EventViewScreen = () => {
                     style={styles.commentAvatar} 
                   />
                   <View style={styles.commentInfo}>
-                    <Text style={[styles.commentAuthor, { color: textColor }]}>
-                      {comment.full_name || comment.username}
-                    </Text>
+                    <View style={styles.commentAuthorRow}>
+                      <Text style={[styles.commentAuthor, { color: textColor }]}>
+                        {comment.full_name || comment.username}
+                      </Text>
+                      {comment.is_event_owner && (
+                        <View style={styles.eventOwnerTag}>
+                          <Text style={styles.eventOwnerTagText}>Event Owner</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={[styles.commentTime, { color: placeholderTextColor }]}>
                       {new Date(comment.created_at).toLocaleDateString()}
                     </Text>
@@ -607,6 +622,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
+    borderBottomColor: '#666666',
   },
   commentHeader: {
     flexDirection: 'row',
@@ -622,9 +638,25 @@ const styles = StyleSheet.create({
   commentInfo: {
     flex: 1,
   },
+  commentAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   commentAuthor: {
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
+  },
+  eventOwnerTag: {
+    backgroundColor: '#5CAEF1',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  eventOwnerTagText: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Medium',
+    color: '#fff',
   },
   commentTime: {
     fontSize: 12,

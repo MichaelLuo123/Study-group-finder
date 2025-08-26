@@ -1,6 +1,5 @@
 import { useUser } from '@/contexts/UserContext';
-import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
@@ -22,9 +21,10 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
 
   const [notifications, setNotifications] = useState<{ [date: string]: Notification[] }>({});
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Hardcoded user ID as requested
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const { user } = useUser();
+  // const userId = 'a163cdc9-6db7-4498-a73b-a439ed221dec';
+  // Use actual user ID from context, fallback to hardcoded for testing
+  const userId = user?.id || 'a163cdc9-6db7-4498-a73b-a439ed221dec';
 
   useEffect(() => {
     fetchNotifications();
