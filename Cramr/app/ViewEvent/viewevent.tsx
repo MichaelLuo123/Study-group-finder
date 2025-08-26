@@ -1,21 +1,19 @@
-import { Colors } from '@/constants/Colors';
 import { useUser } from '@/contexts/UserContext';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    SafeAreaView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Colors } from '../../constants/Colors';
 
 const { width } = Dimensions.get('window');
 
@@ -47,12 +45,20 @@ interface RSVP {
 
 const EventViewScreen = () => {
   const { isDarkMode, toggleDarkMode, user } = useUser();
+  // Colors
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
+  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+
   const userId = user?.id; // Use logged-in user's ID
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
+  const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const eventId = '3272c557-e2c8-451b-8114-e9b2d5269d0a';
   const router = useRouter();
@@ -96,9 +102,64 @@ const EventViewScreen = () => {
     }
   };
 
+  const fetchComments = async () => {
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/comments`);
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data.comments || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+    }
+  };
+
+  const addComment = async () => {
+    if (!comment.trim() || !userId) return;
+    
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, content: comment.trim() })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setComments(prev => [...prev, data.comment]);
+        setComment('');
+      } else {
+        console.error('Failed to add comment');
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    if (!userId) return;
+    
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+      });
+      
+      if (res.ok) {
+        setComments(prev => prev.filter(c => c.id !== commentId));
+      } else {
+        console.error('Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+    }
+  };
+
   useEffect(() => {
     fetchEvent();
     fetchRSVPs();
+    fetchComments();
   }, [eventId]);
 
   useEffect(() => {
@@ -302,8 +363,42 @@ const EventViewScreen = () => {
           {/* Comments Section */}
           <View style={styles.commentsSection}>
             <Text style={[styles.commentsTitle, { color: textColor }]}>
-              ... Comments
+              Comments ({comments.length})
             </Text>
+
+            {/* Comments List */}
+            {comments.map((comment) => (
+              <View key={comment.id} style={[styles.commentItem, {borderBottomColor: placeholderTextColor,}]}>
+                <View style={styles.commentHeader}>
+                  <Image 
+                    source={comment.profile_picture_url ? 
+                      { uri: comment.profile_picture_url } : 
+                      require('../../assets/images/default_profile.jpg')
+                    }
+                    style={styles.commentAvatar} 
+                  />
+                  <View style={styles.commentInfo}>
+                    <Text style={[styles.commentAuthor, { color: textColor }]}>
+                      {comment.full_name || comment.username}
+                    </Text>
+                    <Text style={[styles.commentTime, { color: placeholderTextColor }]}>
+                      {new Date(comment.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  {comment.user_id === userId && (
+                    <TouchableOpacity 
+                      onPress={() => deleteComment(comment.id)}
+                      style={styles.deleteButton}
+                    >
+                      <Text style={[styles.deleteButtonText, { color: '#ff4444' }]}>×</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <Text style={[styles.commentContent, { color: textColor }]}>
+                  {comment.content}
+                </Text>
+              </View>
+            ))}
 
             {/* Add Comment */}
             <View style={styles.addCommentContainer}>
@@ -314,11 +409,13 @@ const EventViewScreen = () => {
                 }]}
                 placeholder="Add a comment..."
                 placeholderTextColor={placeholderTextColor}
+                value={comment}
+                onChangeText={setComment}
                 multiline
               />
-              <TouchableOpacity>
-                <View style={styles.sendButton}>
-                  <Send size={20} color="#5CAEF1" strokeWidth={2} />
+              <TouchableOpacity onPress={addComment} disabled={!comment.trim()}>
+                <View style={[styles.sendButton, !comment.trim() && styles.sendButtonDisabled]}>
+                  <Send size={20} color={comment.trim() ? "#5CAEF1" : placeholderTextColor} strokeWidth={2} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -502,6 +599,49 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     padding: 8,
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
+  },
+  commentItem: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  commentInfo: {
+    flex: 1,
+  },
+  commentAuthor: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  commentTime: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+  },
+  commentContent: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    lineHeight: 20,
+    marginLeft: 40,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  deleteButtonText: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
   },
 });
 

@@ -1,4 +1,5 @@
 import EventCollapsible from '@/components/EventCollapsible';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
@@ -6,13 +7,13 @@ import { Colors } from '../../constants/Colors';
 
 import { useUser } from '@/contexts/UserContext';
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import type { Filters } from './filter';
 
@@ -21,13 +22,21 @@ interface EventListProps {
   selectedEventId?: string | null;
   searchQuery?: string;
   creatorUserId?: string; // New prop for filtering by creator
+  isDistanceVisible?: boolean;
+  eventDistances?: { [eventId: string]: number };
+  onClearSelectedEvent?: () => void; // Callback to clear selected event
+  onCenterMapOnEvent?: (eventId: string) => void; // Callback to center map on event
 }
 
 export default function EventList({ 
   filters, 
   selectedEventId, 
   searchQuery, 
-  creatorUserId 
+  creatorUserId,
+  isDistanceVisible,
+  eventDistances,
+  onClearSelectedEvent,
+  onCenterMapOnEvent,
 }: EventListProps) {
   // Colors
   const {isDarkMode, toggleDarkMode, user} = useUser();
@@ -48,11 +57,12 @@ export default function EventList({
 
   const [busyEventId, setBusyEventId] = useState<string | null>(null);
   const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
-
+  const { expoPushToken, scheduleEventReminder } = usePushNotifications();
   const fetchEvents = async () => {
     try {
       setLoading(true);
       setError(null);
+      const factory = new PublicStudySessionFactory(); // create the study session factory for ALL the events from the database to use
       
       // 1. Fetch events from backend
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
@@ -77,8 +87,8 @@ export default function EventList({
             // Try geocoding if location exists
             if (event.location) {
               try {
-                const factory = new PublicStudySessionFactory();
-                const geocodeResult = await factory.addressToCoordinates(event.location);
+                const studySession = factory.createStudySession(event.location, event.date_and_time, event.title); //you use the factory to build the study session object
+                const geocodeResult = await studySession.addressToCoordinates(); //the factory doesn't have this functionality. the Study Session object does.
                 
                 if (geocodeResult?.geometry?.location) {
                   coordinates = {
@@ -145,11 +155,13 @@ export default function EventList({
       
       // 3. Sort events by distance
       const sortedEvents = processedEvents.sort((a, b) => {
+        console.log("sorting the thing");
         const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
         const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
         return aDistance - bDistance;
       });
       
+      console.log("Showing the thing");
       setEvents(sortedEvents);
       
     } catch (mainError) {
@@ -175,6 +187,19 @@ export default function EventList({
     }
     getCurrentLocation();
   }, []);
+
+  const scheduleRSVPNotifications = (events:any[]) => {
+    const rsvpEvents = events.filter(event => event.isRSVPed); // checked if it is RSVPed
+    
+    rsvpEvents.forEach(event => {
+      const eventDate = event.date_and_time;
+      if(eventDate){
+        const reminderTime = eventDate.getTime() -  60 * 60 * 1000 // 1 hour before the event
+
+        scheduleEventReminder?.(reminderTime, event.id);
+      }
+    });
+  }
 
   const toggleRSVP = async (eventId: string, currentStatus: boolean) => {
     if (busyEventId) return; 
@@ -283,14 +308,23 @@ export default function EventList({
     return Math.sqrt(latDistance ** 2 + longDistance ** 2);
   };
 
-  const toggleEvent = (eventId: string) => {
+  const handleEventToggle = (eventId: string) => {
+    // Clear selectedEventId when user manually toggles events
+    if (selectedEventId && onClearSelectedEvent) {
+      onClearSelectedEvent();
+    }
+    
     setCollapsedEvents(prev => {
       const newSet = new Set(prev);
+      
+      // If this event is already collapsed, expand it
       if (newSet.has(eventId)) {
         newSet.delete(eventId);
       } else {
+        // Collapse this event
         newSet.add(eventId);
       }
+      
       return newSet;
     });
   };
@@ -357,7 +391,7 @@ export default function EventList({
           .filter(id => id !== selectedEventId)
       ));
     }
-  }, [selectedEventId, events]);
+  }, [selectedEventId]); // Remove 'events' dependency to prevent unnecessary re-runs
 
   // Scroll to selected event when selectedEventId changes
   useEffect(() => {
@@ -368,19 +402,24 @@ export default function EventList({
           let scrollPosition = 0;
           for (let i = 0; i < eventIndex; i++) {
             const event = searchedEvents[i];
-            const baseHeight = 80;
+            
+            // Base height for event banner 
+            let eventHeight = 60; 
+            
             if (!collapsedEvents.has(event.id)) {
-              scrollPosition += event.tags?.length ? 40 : 0;
-              scrollPosition += 60; 
+              eventHeight += 120; 
+              if (event.tags?.length) {
+                eventHeight += 30;
+              }
             }
-            scrollPosition += baseHeight; 
-            scrollPosition += 20; 
+            
+            scrollPosition += eventHeight;
           }
-          
-          scrollViewRef.current?.scrollTo({ 
-            y: Math.max(0, scrollPosition - 30), 
-            animated: true 
-          });
+      
+           scrollViewRef.current?.scrollTo({ 
+             y: Math.max(0, scrollPosition - 60), 
+             animated: true 
+           });
         }, 100); 
       }
     }
@@ -419,7 +458,7 @@ export default function EventList({
         bounces={true}
       >
         {searchedEvents.map((event: any) => {
-          const isOpen = collapsedEvents.has(event.id);
+          const isCollapsed = collapsedEvents.has(event.id);
 
           return (
             // Updated condition: when creatorUserId is provided, show only creator's events
@@ -431,22 +470,29 @@ export default function EventList({
                 ownerId={event.creator_id}
                 ownerProfile={event.creator_profile_picture}
                 title={event.title}
-                bannerColor={bannerColors[event.banner_color || 1]}
                 tag1={event.tags?.[0] || null}
                 tag2={event.tags?.[1] || null}
                 tag3={event.tags?.[2] || null}
                 subject={event.class || 'invalid'}
+                isOnline={event.event_format === 'Online'}
                 location={event.location || 'invalid'}
-                date={event.date}
-                time={event.time}
+                studyRoom={event.study_room || null}
+                virtualRoomLink={event.virtual_room_link || null}
+                dateAndTime={event.date_and_time}
                 rsvpedCount={event.accepted_count || event.rsvped_count || 0}
                 capacity={event.capacity || '∞'}
-                isDarkMode={isDarkMode}
                 isOwner={event.creator_id === userId}
                 isSaved={event.isSaved}
                 onSavedChange={() => toggleSave(event.id, event.isSaved)}
                 isRsvped={event.isRSVPed}
                 onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
+                isCollapsed={isCollapsed}
+                                 onToggleCollapse={() => handleEventToggle(event.id)}
+                 onCenterMapOnEvent={onCenterMapOnEvent}
+                 isDistanceVisible={isDistanceVisible ? true : false}
+                distanceUnit={filters?.unit || 'mi'}
+                distance={isDistanceVisible && eventDistances ? eventDistances[event.id] : null}
+                isDarkMode={isDarkMode}
                 style={{marginBottom: 5}}
               />
             )

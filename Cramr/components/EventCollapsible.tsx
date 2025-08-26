@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
-import { Bookmark, BookOpen, Calendar, Clock, Edit3, MapPin, Users } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Bookmark, BookOpen, Calendar, Clock, Dot, Edit3, Laptop, MapPin, Users } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
 
 interface RSVP {
@@ -19,14 +19,15 @@ interface EventCollapsibleProps {
     ownerId: string;
     ownerProfile: string;
     title: string;
-    bannerColor: string;
     tag1?: string | null;
     tag2?: string | null;
     tag3?: string | null;
     subject: string;
-    location: string;
-    date: string;
-    time: string;
+    isOnline: boolean;
+    location?: string | null;
+    studyRoom?: string | null;
+    virtualRoomLink?: string | null;
+    dateAndTime: Date;
     capacity: number | string;
     rsvpedCount: number;
     isOwner: boolean;
@@ -34,7 +35,13 @@ interface EventCollapsibleProps {
     onSavedChange?: (saved: boolean) => void;
     isRsvped: boolean;
     onRsvpedChange?: (rsvped: boolean) => void;
+    isDistanceVisible?: boolean | false;
+    distanceUnit?: 'km' | 'mi';
+    distance?: number | null;
     isDarkMode: boolean;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
+    onCenterMapOnEvent?: (eventId: string) => void;
     style?: object;
 }
 
@@ -43,14 +50,15 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     ownerId,
     ownerProfile,
     title,
-    bannerColor,
     tag1,
     tag2,
     tag3,
     subject,
+    isOnline,
     location,
-    date,
-    time,
+    studyRoom,
+    virtualRoomLink,
+    dateAndTime,
     capacity,
     rsvpedCount,
     isOwner,
@@ -58,7 +66,13 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     onSavedChange = () => {},
     isRsvped,
     onRsvpedChange = () => {},
+    isDistanceVisible,
+    distanceUnit,
+    distance,
     isDarkMode,
+    isCollapsed = false,
+    onToggleCollapse = () => {},
+    onCenterMapOnEvent = () => {},
     style,
 }) => {
     const router = useRouter();
@@ -66,55 +80,151 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
     // Colors
     const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
     const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
-     const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton);
+    const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton);
     const buttonColor = Colors.button;
+    const bannerColors = Colors.bannerColors;
 
     const [RSVPs, setRSVPs] = useState<RSVP[]>([]);
+    const [bannerColor, setBannerColor] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
+    // Helper function to format date string (use UTC)
+    const formatDate = (dateAndTime: Date | string | null) => {
+        if (!dateAndTime) return 'Invalid date';
+        try {
+            const date = new Date(dateAndTime);
+            if (isNaN(date.getTime())) return 'Invalid date';
+            
+            // Use UTC methods to get the original date
+            const year = date.getUTCFullYear();
+            const month = date.getUTCMonth() + 1;
+            const day = date.getUTCDate();
+            
+            return `${month}/${day}/${year}`;
+        } catch {
+            return 'Invalid date';
+        }
+    };
+
+    // Helper function to format time string (use UTC)
+    const formatTime = (dateAndTime: Date | string | null) => {
+        if (!dateAndTime) return 'Select Time';
+        try {
+            const date = new Date(dateAndTime);
+            if (isNaN(date.getTime())) return 'Select Time';
+            
+            // Use UTC methods to get the original time
+            const hours = date.getUTCHours();
+            const minutes = date.getUTCMinutes();
+            
+            const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const minutesStr = minutes.toString().padStart(2, '0');
+            
+            return `${hour12}:${minutesStr} ${ampm}`;
+        } catch {
+            return 'Select Time';
+        }
+    };
+
+    // Fetch RSVPs function
+    const fetchRSVPs = useCallback(async () => {
+        if (!eventId) return;
+        
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvps`);
+            if (response.ok) {
+                const data = await response.json();
+                setRSVPs(data.rsvps);
+            } else {
+                setRSVPs([]);
+            }
+        } catch (error) {
+            console.error('Error fetching RSVPs:', error);
+            setRSVPs([]);
+        }
+    }, [eventId]);
+
+    // Fetch banner color
     useEffect(() => {
-        const fetchRSVPs = async () => {
-            if (!eventId) return;
+        const fetchBannerColor = async () => {
+            if (!ownerId) return;
             
             try {
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvps`);
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${ownerId}`);
                 if (response.ok) {
                     const data = await response.json();
-                    setRSVPs(data.rsvps);
+                    setBannerColor(bannerColors[data.banner_color] || null);
                 } else {
-                    setRSVPs([]);
+                    setBannerColor(null);
                 }
             } catch (error) {
-                console.error('Error fetching RSVPs:', error);
-                setRSVPs([]);
+                console.error('Error fetching banner color:', error);
+                setBannerColor(null);
             }
         };
 
+        fetchBannerColor();
+    }, [bannerColors, ownerId]);
+
+    // Initial fetch of RSVPs
+    useEffect(() => {
         fetchRSVPs();
-    }, [eventId]);
+    }, [fetchRSVPs]);
     
     // Extract individual profile pictures for easier use
     const attendee1Profile = RSVPs && RSVPs[0] && RSVPs[0].profile_picture_url || null;
     const attendee2Profile = RSVPs && RSVPs[1] && RSVPs[1].profile_picture_url || null;
     const attendee3Profile = RSVPs && RSVPs[2] && RSVPs[2].profile_picture_url || null;
+    // Use the prop instead of local state
+    const isOpen = !isCollapsed;
 
-    const [isOpen, setIsOpen] = useState(false);
-
-    const handleRSVPPress = () => {
-        if (onRsvpedChange) {
-            onRsvpedChange(!isRsvped);
+    const handleRSVPPress = async () => {
+        if (isLoading) return; // Prevent multiple clicks
+        
+        setIsLoading(true);
+        
+        try {
+            // Call the parent component's RSVP handler
+            if (onRsvpedChange) {
+                onRsvpedChange(!isRsvped);
+            }
+            
+            // Wait a bit for the API call to complete, then refresh the data
+            setTimeout(async () => {
+                await fetchRSVPs(); // Refresh the RSVP data
+                setIsLoading(false);
+            }, 500); // Adjust delay as needed based on your API response time
+            
+        } catch (error) {
+            console.error('Error handling RSVP:', error);
+            setIsLoading(false);
         }
     };
     
     return (
-        <View style={[styles.eventContainer, {backgroundColor: textInputColor}, style]}>
-            <TouchableOpacity onPress={() => setIsOpen(!isOpen)} style={[styles.bannerContainer, {backgroundColor: bannerColor}]}>
+        <View style={[styles.eventContainer, {backgroundColor: textInputColor}, style]} data-event-id={eventId}>
+            <TouchableOpacity onPress={onToggleCollapse} style={[styles.bannerContainer, {backgroundColor: bannerColor || '#FFFFFF'}]}>
                 {/* Use white text on colored banner for better contrast */}
-                <Text style={[styles.normalBoldText, {color: textColor}]}>{title}</Text>
-                <Image source={{uri: ownerProfile}} style={styles.profilePictureContainer}/>
+                <Text style={[styles.normalBoldText, {color: textColor}]}>{title}
+                    {isDistanceVisible && (
+                        <>
+                            <Dot size={10} color={textColor} fontWeight={'bold'} />
+                            <Text style={[styles.normalText, {color: textColor, marginBottom: 5}]}>
+                                {distance} {distanceUnit} away
+                            </Text>
+                        </>
+                    )}
+                </Text>
+                <Image source={ownerProfile ? {uri: ownerProfile} : require('@/assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
             </TouchableOpacity>
 
             {isOpen && (
-                <View style={styles.contentContainer}>
+                <TouchableOpacity 
+                    style={styles.contentContainer} 
+                    onPress={() => onCenterMapOnEvent(eventId)}
+                    activeOpacity={0.7}
+                >
                     <View style={[styles.tagContainer, {marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between'}]}>
                         <View style={{flexDirection: 'row'}}>
                             {tag1 !== null && (
@@ -144,11 +254,11 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                                 onSavedChange(!isSaved);
                             }
                         }}>
-                            <Bookmark 
+                            {!isOwner && (<Bookmark 
                                 color={textColor} 
                                 fill={isSaved ? textColor : 'none'}
-                            />
-                        </TouchableOpacity>)}
+                            />)}
+                        </TouchableOpacity>
                     </View>
                     
                     <View style={styles.mainContentContainer}>
@@ -157,42 +267,58 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                                 <BookOpen size={20} color={textColor} style={styles.eventIcon}/>
                                 <Text style={[styles.normalText, {color: textColor}]}>{subject}</Text>
                             </View>
-                            <View style={[styles.iconTextContainer, {marginTop: 3}]}>
+                            {!isOnline && (<View style={[styles.iconTextContainer, {marginTop: 3}]}>
                                 <MapPin size={20} color={textColor} style={styles.eventIcon}/>
-                                <Text style={[styles.normalText, {color: textColor}]}>{location}</Text>
-                            </View>
+                                <Text style={[styles.normalText, {color: textColor}]}>{location} 
+                                    {studyRoom && 
+                                    (`${studyRoom}`)
+                                    }</Text>
+                            </View>)}
+                            {isOnline && (<View style={[styles.iconTextContainer, {marginTop: 3}]}>
+                                <Laptop size={20} color={textColor} style={styles.eventIcon}/>
+                                <TouchableOpacity onPress={() => virtualRoomLink ? Linking.openURL(virtualRoomLink.startsWith('http://') || virtualRoomLink.startsWith('https://') ? virtualRoomLink : `http://${virtualRoomLink}`) : null}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>{virtualRoomLink}</Text>
+                                </TouchableOpacity>
+                            </View>)}
+
                             <View style={[styles.iconTextContainer, {marginTop: 3}]}>
                                 <Calendar size={20} color={textColor} style={styles.eventIcon}/>
-                                <Text style={[styles.normalText, {color: textColor}]}>{date}</Text>
+                                <Text style={[styles.normalText, {color: textColor}]}>{formatDate(dateAndTime)}</Text>
                             </View>
                             <View style={[styles.iconTextContainer, {marginTop: 3}]}>
                                 <Clock size={20} color={textColor} style={styles.eventIcon}/>
-                                <Text style={[styles.normalText, {color: textColor}]}>{time}</Text>
+                                <Text style={[styles.normalText, {color: textColor}]}>{formatTime(dateAndTime)}</Text>
                             </View>
                             <View style={[styles.iconTextContainer, {marginTop: 3}]}>
                                 <Users size={20} color={textColor} style={styles.eventIcon}/>
                                 <Text style={[styles.normalText, {color: textColor}]}>{RSVPs.length}/{capacity}</Text>
-                                {attendee1Profile != null && (
+                                {attendee1Profile != null && RSVPs[0] != null &&(
                                     <Image source={{uri: attendee1Profile}} style={styles.smallProfilePictureContainer}/>
                                 )}
-                                {attendee2Profile != null && (
+                                {attendee1Profile == null && RSVPs[0] != null && (
+                                    <Image source={require('../assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
+                                )}
+                                {attendee2Profile != null && RSVPs[1] != null && (
                                     <Image source={{uri: attendee2Profile}} style={styles.smallProfilePictureContainer}/>
                                 )}
-                                {attendee3Profile != null && (
+                                {attendee2Profile == null &&  RSVPs[1] != null && (
+                                    <Image source={require('../assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
+                                )}
+                                {attendee3Profile != null && RSVPs[2] != null && (
                                     <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>
+                                )}
+                                {attendee3Profile == null &&  RSVPs[2] != null && (
+                                    <Image source={require('@/assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
                                 )}
                                 {RSVPs.length > 3 && (
                                     <Text style={[styles.normalText, {color: textColor, marginLeft: 5}]}>
-                                        +{RSVPs.length - 
-                                            (attendee1Profile != null ? 1 : 0) - 
-                                            (attendee2Profile != null ? 1 : 0) - 
-                                            (attendee3Profile != null ? 1 : 0)}
+                                        +{RSVPs.length - 3}
                                     </Text>
                                 )}
                             </View>
                             
                             {isOwner && (
-                                <TouchableOpacity onPress={() => router.push('/CreateEvent/EditEvent')} style={{marginTop: 10}}>
+                                <TouchableOpacity onPress={() => router.push({ pathname: '/CreateEvent/EditEvent', params: { eventId: eventId } })} style={{marginTop: 10}}>
                                     <View style={[styles.buttonContainer, {backgroundColor: buttonColor}]}>
                                         <Edit3 size={16} color={textColor} style={{marginRight: 5}}/>
                                         <Text style={[styles.normalText, {color: textColor}]}>Edit</Text>
@@ -201,15 +327,21 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                             )}
                         </View>
                         
-                        {!isOwner && (<TouchableOpacity onPress={handleRSVPPress} style={styles.rsvpButtonContainer}>
-                            <View style={[styles.rsvpButton, {backgroundColor: isRsvped ? cancelButtonColor : '#5CAEF1', marginTop: -50, marginRight: 3}]}>
-                                <Text style={[styles.subheaderText, {color: textColor}]}>
-                                    {isRsvped ? 'RSVPed' : 'RSVP'}
-                                </Text>
-                            </View>
-                        </TouchableOpacity>)}
+                        {!isOwner && (
+                            <TouchableOpacity 
+                                onPress={handleRSVPPress} 
+                                style={[styles.rsvpButtonContainer, { opacity: isLoading ? 0.6 : 1 }]}
+                                disabled={isLoading}
+                            >
+                                <View style={[styles.rsvpButton, {backgroundColor: isRsvped ? cancelButtonColor : '#5CAEF1', marginTop: -50, marginRight: 3}]}>
+                                    <Text style={[styles.subheaderText, {color: textColor}]}>
+                                        {(isRsvped ? 'RSVPed' : 'RSVP')}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        )}
                     </View>
-                </View>
+                </TouchableOpacity>
             )}
         </View>
     );

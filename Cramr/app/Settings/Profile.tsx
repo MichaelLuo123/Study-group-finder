@@ -37,6 +37,7 @@ export default function Profile() {
   const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const placeholderColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
   const bannerColors = Colors.bannerColors
 
   // User
@@ -96,7 +97,7 @@ export default function Profile() {
           
           // Populate form fields with database data
           setProfilePicture(userData.profile_picture_url || null);
-          setBannerColor(Number(userData.banner_color) || null);
+          setBannerColor(Number(userData.banner_color) || 0);
           setName(userData.full_name);
           setUsername(userData.username);
           setSchool(userData.school || null);
@@ -215,24 +216,24 @@ export default function Profile() {
           </Text>
             <View style={styles.bannerColorContainer}>
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 1 && styles.ring]}
+              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 0 && styles.ring]}
+              onPress={() => setBannerColor(0)} 
+            />
+            <TouchableOpacity 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 1 && styles.ring]} 
               onPress={() => setBannerColor(1)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 2 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 2 && styles.ring]} 
               onPress={() => setBannerColor(2)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 3 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 3 && styles.ring]} 
               onPress={() => setBannerColor(3)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 4 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 4 && styles.ring]} 
               onPress={() => setBannerColor(4)} 
-            />
-            <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 5 && styles.ring]} 
-              onPress={() => setBannerColor(5)} 
             />
             </View>
 
@@ -242,6 +243,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your name."
+            placeholderTextColor={placeholderColor}
             value={name}
             onChangeText={setName}
             textAlign="left"
@@ -256,6 +258,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your username."
+            placeholderTextColor={placeholderColor}
             value={username}
             onChangeText={setUsername}
             textAlign="left"
@@ -270,6 +273,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your school."
+            placeholderTextColor={placeholderColor}
             value={school}
             onChangeText={setSchool}
             textAlign="left"
@@ -284,6 +288,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your major."
+            placeholderTextColor={placeholderColor}
             value={major}
             onChangeText={setMajor}
             textAlign="left"
@@ -298,6 +303,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your class level."
+            placeholderTextColor={placeholderColor}
             value={classLevel}
             onChangeText={setClassLevel}
             textAlign="left"
@@ -312,6 +318,7 @@ export default function Profile() {
           <TextInput 
             style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter your pronouns."
+            placeholderTextColor={placeholderColor}
             value={pronouns}
             onChangeText={setPronouns}
             textAlign="left"
@@ -324,8 +331,8 @@ export default function Profile() {
             Transfer?
           </Text>
           <Slider
-            leftLabel="Yes"
-            rightLabel="No"
+            leftLabel="No"
+            rightLabel="Yes"
             width={125}
             value={isTransfer}
             onChangeSlider={setIsTransfer}
@@ -338,6 +345,7 @@ export default function Profile() {
           <TextInput
             style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
             placeholder="Enter bio."
+            placeholderTextColor={placeholderColor}
             value={bio}
             onChangeText={setBio}
             textAlign="left"
@@ -438,7 +446,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    height: 45,
+    padding: 10,
     borderRadius: 10,
     backgroundColor: '#5CAEF1',
     alignItems: 'center',

@@ -144,7 +144,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
                 step={1}
                 value={distance}
                 onValueChange={setDistance}
-                minimumTrackTintColor="#5caef1"
+                minimumTrackTintColor={textColor}
                 maximumTrackTintColor={placeholderTextColor}
               />
               <Text style={{ alignSelf: 'center', marginBottom: 24, fontSize: 14, fontFamily: 'Poppins-Regular', color: textColor }}>
@@ -163,7 +163,7 @@ export default function FilterModal({ visible, onClose, onSave }: Props) {
                 step={1}
                 value={attendees}
                 onValueChange={setAttendees}
-                minimumTrackTintColor="#5caef1"
+                minimumTrackTintColor={textColor}
                 maximumTrackTintColor="#eee"
               />
               <Text style={{ alignSelf: 'center', marginBottom: 24, color: textColor, fontFamily: 'Poppins-Regular', fontSize: 14 }}>

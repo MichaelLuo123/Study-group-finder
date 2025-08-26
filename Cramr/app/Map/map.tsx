@@ -2,20 +2,22 @@ import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation, useRouter } from 'expo-router';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import haversine from 'haversine';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import Animated, {
-    useAnimatedGestureHandler,
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
 import EventList from '../listView/eventList';
+import FilterModal, { Filters } from '../listView/filter';
 
 const { height: screenHeight } = Dimensions.get('window');
 const BOTTOM_SHEET_MIN_HEIGHT = 120; 
@@ -45,7 +47,7 @@ export default function MapScreen() {
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const bannerColors = Colors.bannerColors
 
   const theme = useTheme();
   const navigation = useNavigation();
@@ -55,7 +57,16 @@ export default function MapScreen() {
   const [currentPage, setCurrentPage] = useState('map');
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const translateY = useSharedValue(-100);
+  const translateY = useSharedValue(50);
+  const mapRef = useRef<MapView>(null);
+
+  // Map Filter
+  const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState<Filters | null>(null);
+  const handleSaveFilters = (filterData: Filters) => {
+    setFilters(filterData);
+    setShowFilter(false);
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -106,6 +117,19 @@ export default function MapScreen() {
     }
   };
 
+  // Function to center map on a specific event
+  const centerMapOnEvent = (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (event && event.coordinates && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: event.coordinates.lat,
+        longitude: event.coordinates.lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000);
+    }
+  };
+
   const gestureHandler = useAnimatedGestureHandler({
     onStart: (_, context: any) => {
       context.startY = translateY.value;
@@ -113,13 +137,13 @@ export default function MapScreen() {
     onActive: (event, context: any) => {
       const newTranslateY = context.startY + event.translationY;
       const maxUpward = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50); 
-      const maxDownward = 200; 
+      const maxDownward = 400; 
       translateY.value = Math.max(maxUpward, Math.min(maxDownward, newTranslateY));
     },
     onEnd: (event) => {
-      const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50);
-      const middlePosition = -100;
-      const bottomPosition = 200; 
+      const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50) + 100;
+      const middlePosition = 50;
+      const bottomPosition = 290; 
       const currentPosition = translateY.value;
       let currentState;
       if (currentPosition < topPosition / 2) {
@@ -170,56 +194,82 @@ export default function MapScreen() {
     getCurrentLocation();
   }, []);
 
-  // Fetch events and their coordinates
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const factory = new PublicStudySessionFactory();
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-        if (!response.ok) throw new Error('Failed to fetch events');
-        const data = await response.json();
 
-        const eventsWithCoordinates = await Promise.all(data.map(async (event: any) => {
-          console.log('Processing event:', event);
-          const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
-          const coords = await studySession.addressToCoordinates();
-          console.log('Event coordinates:', coords);
-          const processedEvent = {
-            ...event,
-            coordinates: coords.geometry.location,
-            remainingCapacity: event.capacity - (event.accepted_count || 0),
-            bannerColor: event.banner_color || 'transparent'
-          };
-          console.log('Processed event:', processedEvent);
-          return processedEvent;
-        }));
-
-        console.log('All events:', eventsWithCoordinates);
-        setEvents(eventsWithCoordinates);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-      }
-    };
-
-    fetchEvents();
-  }, []);
-
+  // calculating distance
+  const calculateDistance = (userLocation: any, eventCoordinates: any, unit: 'km' | 'mi' = 'km') => {
+  if (!userLocation || !eventCoordinates?.lat || !eventCoordinates?.lng) return 0;
   
+  const distance = haversine(
+    { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
+    { latitude: eventCoordinates.lat, longitude: eventCoordinates.lng },
+    { unit: unit } // 'km' or 'mile'
+  );
+  
+  return Math.round(distance * 10) / 10; // Round to 1 decimal
+};
+
+const [eventDistances, setEventDistances] = useState<{ [eventId: string]: number }>({});
+
+// Update your useEffect to build the distance dictionary:
+useEffect(() => {
+  const fetchEvents = async () => {
+    try {
+      const factory = new PublicStudySessionFactory();
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+      if (!response.ok) throw new Error('Failed to fetch events');
+      const data = await response.json();
+
+      const eventsWithCoordinates = [];
+      const distanceMap: { [eventId: string]: number } = {};
+
+      for (const event of data) {
+        const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
+        const coords = await studySession.addressToCoordinates();
+        
+        // Calculate distance
+        const distance = location ? calculateDistance(location, coords.geometry.location, 'km') : 0;
+        
+        // Store in distance map
+        distanceMap[event.id] = distance;
+        
+        const processedEvent = {
+          ...event,
+          coordinates: coords.geometry.location,
+          remainingCapacity: event.capacity - (event.accepted_count || 0),
+          bannerColor: event.banner_color || 'transparent'
+        };
+        
+        eventsWithCoordinates.push(processedEvent);
+      }
+
+      setEvents(eventsWithCoordinates);
+      setEventDistances(distanceMap); // Set the distance dictionary
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
+
+  if (location) {
+    fetchEvents();
+  }
+}, [location]);
+
   return (
     <View style={[styles.container, { backgroundColor: backgroundColor}]}>  
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-        <MapView 
-          style={styles.map}
-          provider={PROVIDER_GOOGLE} 
-          showsUserLocation={true}
-          initialRegion={location ? {
-            latitude: location.coords.latitude - .025,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421
-          } : undefined}
-        >
+                 <MapView 
+           ref={mapRef}
+           style={styles.map}
+           provider={PROVIDER_GOOGLE} 
+           showsUserLocation={true}
+           initialRegion={location ? {
+             latitude: location.coords.latitude - .025,
+             longitude: location.coords.longitude,
+             latitudeDelta: 0.0922,
+             longitudeDelta: 0.0421
+           } : undefined}
+         >
           {events.map((event, index) => {
             // Check if coordinates are valid
             if (!event.coordinates?.lat || !event.coordinates?.lng) {
@@ -239,7 +289,7 @@ export default function MapScreen() {
                 zIndex={index + 1}
               >
                 <StarMarker 
-                  color={event.bannerColor}
+                  color={bannerColors[event.bannerColor] || 'transparent'}
                   remainingCapacity={event.remainingCapacity}
                 />
               </Marker>
@@ -259,8 +309,10 @@ export default function MapScreen() {
             <View style={[styles.searchInputContainer, {backgroundColor: textInputColor}]}>
               <TextInput
                 mode="flat"
-                placeholder="Search"
+                placeholder="Search events..."
                 style={styles.searchInput}
+                contentStyle={[styles.searchInputContent, {color: textColor}]} // Add this for font styling
+                outlineStyle={styles.searchInputOutline} // Add this for border radius
                 left={<TextInput.Icon icon="magnify" color={textColor}/>}
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
@@ -271,15 +323,32 @@ export default function MapScreen() {
             <IconButton
               icon="filter"
               size={28}
-              onPress={() => {}}
+              onPress={() => setShowFilter(true)}
               style={[styles.filterButton, {backgroundColor: textInputColor}]}
               iconColor={textColor}
             />
           </View>
 
+          {/* Filter Modal */}
+          <FilterModal
+            visible={showFilter}
+            onClose={() => setShowFilter(false)}
+            onSave={handleSaveFilters}
+          />
+
           {/* Event List - Only visible when expanded */}
           <View style={styles.eventListContainer}>
-            <EventList filters={null} selectedEventId={selectedEventId} />
+                         <EventList 
+               
+              filters={filters}
+              
+               selectedEventId={selectedEventId}
+              isDistanceVisible={true}
+              eventDistances={eventDistances}
+            
+               onClearSelectedEvent={() => setSelectedEventId(null)}
+               onCenterMapOnEvent={centerMapOnEvent}
+             />
           </View>
         </Animated.View>
       </PanGestureHandler>
@@ -482,5 +551,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#5caef1',
     position: 'absolute',
     bottom: -5,
+  },
+  searchInputContent: {
+    fontFamily: 'Poppins-Regular', // This applies the font to the input text and placeholder
+  },
+  searchInputOutline: {
+    borderRadius: 10, // This ensures the outline respects the border radius
+    borderWidth: 0, // Remove any border if you don't want it
   },
 });

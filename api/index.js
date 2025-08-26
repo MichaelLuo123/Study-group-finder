@@ -295,7 +295,20 @@ app.get('/events', async (req, res) => {
 
 // Create new event
 app.post('/events', async (req, res) => {
-  const { title, description, location, class: classField, date, tags, capacity, invitePeople, creator_id } = req.body;
+  const { 
+    title, 
+    description, 
+    location, 
+    class: classField, 
+    date_and_time, 
+    tags, 
+    capacity, 
+    invitePeople, 
+    creator_id,
+    virtual_room_link,
+    study_room, 
+    event_format
+  } = req.body;
   
   // Validate required fields
   if (!title || !creator_id) {
@@ -313,10 +326,16 @@ app.post('/events', async (req, res) => {
       return res.status(400).json({ error: 'Invalid creator_id: user not found' });
     }
 
-    // First create the event
+    // Create the event with virtual_room_link and study_room
     const result = await client.query(
-      'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, creator_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
-      [title, description, location, classField, date, tags, capacity, creator_id]
+      `INSERT INTO events (
+        title, description, location, class, date_and_time, tags, capacity, 
+        creator_id, virtual_room_link, study_room, event_format, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) RETURNING *`,
+      [
+        title, description, location, classField, date_and_time, tags, capacity, 
+        creator_id, virtual_room_link, study_room, event_format
+      ]
     );
     
     const event = result.rows[0];
@@ -344,7 +363,7 @@ app.post('/events', async (req, res) => {
             'event_invite',
             `You've been invited to ${title}`,
             event.id,
-            { event_title: title, location: location, date: date }
+            { event_title: title, location: location, date: date_and_time }
           );
         }
       }
@@ -447,7 +466,9 @@ app.post('/login', async (req, res) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      full_name: user.full_name
+      full_name: user.full_name,
+      following: user.following || 0,
+      followers: user.followers || 0
     };
     
     console.log('Login successful for user:', responseUser);
@@ -657,20 +678,30 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
 
 // Search users
 app.get('/users/search', async (req, res) => {
-  const { q } = req.query;
+  const { q, currentUserId } = req.query;
   
   if (!q || q.length < 2) {
     return res.status(400).json({ error: 'Search query must be at least 2 characters' })
   }
   
   try {
-    const result = await client.query(`
-      SELECT id, username, full_name, email
+    let query = `
+      SELECT id, username, full_name, email, following, followers
       FROM users 
       WHERE 
-        LOWER(username) LIKE LOWER($1) OR 
-        LOWER(full_name) LIKE LOWER($1) OR
-        LOWER(email) LIKE LOWER($1)
+        (LOWER(username) LIKE LOWER($1) OR 
+         LOWER(full_name) LIKE LOWER($1))
+    `;
+    
+    let params = [`%${q}%`];
+    
+    // Exclude current user from search results if currentUserId is provided
+    if (currentUserId) {
+      query += ` AND id != $2`;
+      params.push(currentUserId);
+    }
+    
+    query += `
       ORDER BY 
         CASE 
           WHEN LOWER(username) = LOWER($1) THEN 1
@@ -679,7 +710,9 @@ app.get('/users/search', async (req, res) => {
         END,
         username
       LIMIT 20
-    `, [`%${q}%`]);
+    `;
+    
+    const result = await client.query(query, params);
     
     res.json(result.rows);
   } catch (err) {
@@ -800,6 +833,24 @@ app.post('/users/:id/follow', async (req, res) => {
       RETURNING *
     `, [id, userId]);
     
+    // Update follower's following_ids array and following count
+    await client.query(`
+      UPDATE users 
+      SET following_ids = array_append(following_ids, $1), 
+          following = following + 1,
+          updated_at = NOW()
+      WHERE id = $2
+    `, [userId, id]);
+    
+    // Update followed user's followers_ids array and followers count
+    await client.query(`
+      UPDATE users 
+      SET followers_ids = array_append(followers_ids, $1), 
+          followers = followers + 1,
+          updated_at = NOW()
+      WHERE id = $2
+    `, [id, userId]);
+    
     // Create notification for the user being followed
     const followerUser = await client.query('SELECT username FROM users WHERE id = $1', [id]);
     if (followerUser.rows.length > 0) {
@@ -836,6 +887,24 @@ app.delete('/users/:id/follow/:userId', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Follow relationship not found' });
     }
+    
+    // Update follower's following_ids array and following count
+    await client.query(`
+      UPDATE users 
+      SET following_ids = array_remove(following_ids, $1), 
+          following = GREATEST(following - 1, 0),
+          updated_at = NOW()
+      WHERE id = $2
+    `, [userId, id]);
+    
+    // Update followed user's followers_ids array and followers count
+    await client.query(`
+      UPDATE users 
+      SET followers_ids = array_remove(followers_ids, $1), 
+          followers = GREATEST(followers - 1, 0),
+          updated_at = NOW()
+      WHERE id = $2
+    `, [id, userId]);
     
     res.json({
       success: true,
@@ -1041,7 +1110,7 @@ app.put('/users/:id/profile', async (req, res) => {
         major = COALESCE($2, major),
         year = COALESCE($3, year),
         bio = COALESCE($4, bio),
-        profile_picture_url = COALESCE($5, profile_picture_url),
+        profile_picture_url = $5,
         banner_color = COALESCE($6, banner_color),
         school = COALESCE($7, school),
         pronouns = COALESCE($8, pronouns),
@@ -1492,6 +1561,7 @@ app.get('/events/:id', async (req, res) => {
 });
 
 // Update event (general endpoint)
+// Update event (general endpoint)
 app.put('/events/:id', async (req, res) => {
   const { id } = req.params;
   const { 
@@ -1501,7 +1571,10 @@ app.put('/events/:id', async (req, res) => {
     class: classField, 
     date_and_time, 
     tags, 
-    capacity 
+    capacity,
+    virtual_room_link,
+    study_room,
+    event_format,
   } = req.body;
   
   console.log('PUT /events/:id request:', { id, body: req.body });
@@ -1547,7 +1620,7 @@ app.put('/events/:id', async (req, res) => {
     
     if (date_and_time !== undefined) {
       if (hasUpdates) query += ',';
-      query += ` date = $${paramIndex}`;
+      query += ` date_and_time = $${paramIndex}`;
       params.push(date_and_time);
       paramIndex++;
       hasUpdates = true;
@@ -1565,6 +1638,31 @@ app.put('/events/:id', async (req, res) => {
       if (hasUpdates) query += ',';
       query += ` capacity = $${paramIndex}`;
       params.push(capacity);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    // ADD THESE NEW FIELDS:
+    if (virtual_room_link !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` virtual_room_link = $${paramIndex}`;
+      params.push(virtual_room_link);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (study_room !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` study_room = $${paramIndex}`;
+      params.push(study_room);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (event_format !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` event_format = $${paramIndex}`;
+      params.push(event_format);
       paramIndex++;
       hasUpdates = true;
     }
@@ -1638,6 +1736,123 @@ app.delete('/events/:id', async (req, res) => {
     });
   } catch (err) {
     console.error('Delete event error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Comments endpoints
+// Get comments for an event
+app.get('/events/:eventId/comments', async (req, res) => {
+  const { eventId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        c.*,
+        u.username,
+        u.full_name,
+        u.profile_picture_url
+      FROM comments c
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE c.event_id = $1
+      ORDER BY c.created_at ASC
+    `, [eventId]);
+    
+    res.json({
+      success: true,
+      comments: result.rows
+    });
+  } catch (err) {
+    console.error('Get comments error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Add a comment to an event
+app.post('/events/:eventId/comments', async (req, res) => {
+  const { eventId } = req.params;
+  const { user_id, content } = req.body;
+  
+  if (!user_id || !content) {
+    return res.status(400).json({ error: 'user_id and content are required' });
+  }
+  
+  if (content.trim().length === 0) {
+    return res.status(400).json({ error: 'Comment cannot be empty' });
+  }
+  
+  try {
+    // Check if event exists
+    const eventResult = await client.query('SELECT id FROM events WHERE id = $1', [eventId]);
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    // Check if user exists
+    const userResult = await client.query('SELECT id FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Insert comment
+    const result = await client.query(`
+      INSERT INTO comments (event_id, user_id, content)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [eventId, user_id, content.trim()]);
+    
+    // Get the comment with user info
+    const commentWithUser = await client.query(`
+      SELECT 
+        c.*,
+        u.username,
+        u.full_name,
+        u.profile_picture_url
+      FROM comments c
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE c.id = $1
+    `, [result.rows[0].id]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Comment added successfully',
+      comment: commentWithUser.rows[0]
+    });
+  } catch (err) {
+    console.error('Add comment error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Delete a comment
+app.delete('/events/:eventId/comments/:commentId', async (req, res) => {
+  const { eventId, commentId } = req.params;
+  const { user_id } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  try {
+    // Check if comment exists and belongs to user
+    const commentResult = await client.query(`
+      SELECT * FROM comments 
+      WHERE id = $1 AND event_id = $2 AND user_id = $3
+    `, [commentId, eventId, user_id]);
+    
+    if (commentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Comment not found or not authorized' });
+    }
+    
+    // Delete comment
+    await client.query('DELETE FROM comments WHERE id = $1', [commentId]);
+    
+    res.json({
+      success: true,
+      message: 'Comment deleted successfully'
+    });
+  } catch (err) {
+    console.error('Delete comment error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });

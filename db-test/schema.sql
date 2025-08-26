@@ -29,7 +29,11 @@ CREATE TABLE users (
     email_notifications_enabled BOOLEAN DEFAULT true,
     sms_notifications_enabled BOOLEAN DEFAULT false,
     verification_code VARCHAR(255), -- Stores 6-digit verification code or temporary reset token
-    verification_code_expiry TIMESTAMP -- Expiry time for verification code (10 min) or reset token (5 min)
+    verification_code_expiry TIMESTAMP, -- Expiry time for verification code (10 min) or reset token (5 min)
+    following_ids UUID[] DEFAULT '{}', -- Array of user IDs that this user is following
+    followers_ids UUID[] DEFAULT '{}', -- Array of user IDs that are following this user
+    following INTEGER DEFAULT 0, -- Count of users this user is following
+    followers INTEGER DEFAULT 0 -- Count of users following this user
 );
 
 -- Create events table
@@ -93,6 +97,21 @@ CREATE TABLE notifications (
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX idx_notifications_is_read ON notifications(is_read);
+
+-- Create comments table
+CREATE TABLE comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for comments
+CREATE INDEX idx_comments_event_id ON comments(event_id);
+CREATE INDEX idx_comments_user_id ON comments(user_id);
+CREATE INDEX idx_comments_created_at ON comments(created_at);
 
 -- Insert sample data into users
 -- INSERT INTO users (username, password_hash, email, full_name, major, year, bio, profile_picture_url)
