@@ -611,7 +611,7 @@ export default function External() {
                     style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
                     onPress={handleUnfollow}
                   >
-                    <Text style={[styles.normalText, {color: 'white'}]}>Unfollow</Text>
+                    <Text style={[styles.normalText, {color: textColor}]}>Unfollow</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   leftOfBannerContainer: {
-    marginLeft: 10,
+    marginLeft: 5,
     marginRight: 10,
     justifyContent: 'center', // center vertically
     alignItems: 'center', // center horizontally

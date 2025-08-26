@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   leftOfBannerContainer: {
-    marginLeft: 10,
+    marginLeft: 5,
     marginRight: 10,
     justifyContent: 'center', // center vertically
     alignItems: 'center', // center horizontally

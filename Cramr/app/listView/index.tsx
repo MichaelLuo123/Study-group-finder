@@ -114,49 +114,55 @@ export default function HomeScreen() {
   };
 
   const followUser = async (userId: string) => {
-    try {
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      const response = await fetch(`${backendUrl}/users/${currentUserId}/follow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-      if (response.ok) {
-        const userToFollow = peopleResults.find(p => p.id === userId);
-        if (userToFollow) {
-          setFollowing(prev => [...prev, userToFollow]);
-          // Update the peopleResults to reflect the new follower count
-          setPeopleResults(prev => prev.map(person => 
-            person.id === userId 
-              ? { ...person, followers: (person.followers || 0) + 1 }
-              : person
-          ));
-          // Refresh current user's data to update following count
-          refreshCurrentUserData();
-        }
-      }
-    } catch {}
-  };
-
-  const unfollowUser = async (userId: string) => {
-    try {
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      const response = await fetch(`${backendUrl}/users/${currentUserId}/follow/${userId}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        setFollowing(prev => prev.filter(p => p.id !== userId));
+  try {
+    const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+    const response = await fetch(`${backendUrl}/users/${currentUserId}/follow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    if (response.ok) {
+      const userToFollow = peopleResults.find(p => p.id === userId);
+      if (userToFollow) {
+        setFollowing(prev => [...prev, userToFollow]);
         // Update the peopleResults to reflect the new follower count
         setPeopleResults(prev => prev.map(person => 
           person.id === userId 
-            ? { ...person, followers: Math.max((person.followers || 0) - 1, 0) }
+            ? { ...person, followers: (person.followers || 0) + 1 }
             : person
         ));
-        // Refresh current user's data to update following count
-        refreshCurrentUserData();
+        
+        // Update current user's following count
+        updateUserData({
+          following: (user?.following || 0) + 1 // Increment following count
+        });
       }
-    } catch {}
-  };
+    }
+  } catch {}
+};
+
+  const unfollowUser = async (userId: string) => {
+  try {
+    const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+    const response = await fetch(`${backendUrl}/users/${currentUserId}/follow/${userId}`, {
+      method: 'DELETE',
+    });
+    if (response.ok) {
+      setFollowing(prev => prev.filter(p => p.id !== userId));
+      // Update the peopleResults to reflect the new follower count
+      setPeopleResults(prev => prev.map(person => 
+        person.id === userId 
+          ? { ...person, followers: Math.max((person.followers || 0) - 1, 0) }
+          : person
+      ));
+      
+      // Update current user's following count
+      updateUserData({
+        following: Math.max((user?.following || 0) - 1, 0) // Decrement following count
+      });
+    }
+  } catch {}
+};
 
   const loadFollowing = async () => {
     try {
@@ -290,7 +296,7 @@ export default function HomeScreen() {
                           else followUser(person.id);
                         }}
                       >
-                        <Text style={[styles.followButtonText, (following && [styles.followingButtonText, {color: textColor}])]}>
+                        <Text style={[styles.followButtonText, {color: textColor}, (following && [styles.followingButtonText, {color: textColor}])]}>
                           {following ? 'Following' : 'Follow'}
                         </Text>
                       </TouchableOpacity>
