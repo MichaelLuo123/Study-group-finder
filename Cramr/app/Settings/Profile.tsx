@@ -79,6 +79,51 @@ export default function Profile() {
   const [prompt3, setPrompt3] = useState<string | null>(null);
   const [prompt3Answer, setPrompt3Answer] = useState<string | null>(null);
 
+  // Handle profile picture upload
+  const handleProfilePictureChange = async (imageUri: string | null) => {
+    if (!imageUri || !loggedInUser?.id) {
+      setProfilePicture(imageUri);
+      return;
+    }
+
+    // Check if it's a local file (starts with file://)
+    if (imageUri.startsWith('file://')) {
+      try {
+        // Create form data for upload
+        const formData = new FormData();
+        formData.append('profile_picture', {
+          uri: imageUri,
+          type: 'image/jpeg', // You might want to detect the actual type
+          name: 'profile_picture.jpg'
+        } as any);
+
+        // Upload to backend
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}/profile-picture`, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setProfilePicture(result.profile_picture_url);
+          console.log('Profile picture uploaded successfully');
+        } else {
+          console.error('Failed to upload profile picture');
+          setProfilePicture(imageUri); // Keep the local image for now
+        }
+      } catch (error) {
+        console.error('Error uploading profile picture:', error);
+        setProfilePicture(imageUri); // Keep the local image for now
+      }
+    } else {
+      // It's already a URL, just set it
+      setProfilePicture(imageUri);
+    }
+  };
+
   // pull user data from database
   useEffect(() => {
     const fetchUserData = async () => {
@@ -207,7 +252,7 @@ export default function Profile() {
           </Text>
           <ImageUpload 
             value={profilePicture}
-            onChangeImage={setProfilePicture}
+            onChangeImage={handleProfilePictureChange}
             isDarkMode={isDarkMode}
           />
 

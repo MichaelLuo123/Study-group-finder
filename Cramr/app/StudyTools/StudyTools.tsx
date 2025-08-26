@@ -36,7 +36,7 @@ export default function StudyTools() {
 
         <TouchableOpacity
         style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('./Pomodoro')}
+        onPress={() => router.push('/StudyTools/PomodoroTimer')}
         >
         <Text style={[styles.itemText, { color: textColor }]}>Pomodoro</Text>
         </TouchableOpacity>
