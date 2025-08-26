@@ -1,16 +1,16 @@
+import { UserProvider } from '@/contexts/UserContext';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
 
-import { UserProvider } from '@/contexts/UserContext';
-import { useColorScheme } from '@/hooks/useColorScheme';
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const pathname = usePathname();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     'Poppins-Regular': require('../assets/fonts/Poppins/Poppins-Regular.ttf'),
@@ -18,6 +18,8 @@ export default function RootLayout() {
     'Poppins-Bold': require('../assets/fonts/Poppins/Poppins-Bold.ttf'),
     'Poppins-Light': require('../assets/fonts/Poppins/Poppins-Light.ttf'),
   });
+
+  
 
   if (!loaded) {
     // Async font loading only occurs in development.
@@ -29,12 +31,21 @@ export default function RootLayout() {
       <UserProvider>
         <PaperProvider>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack screenOptions={{
-              headerShown: false,
-              animation: 'none'
+            <Stack screenOptions={({route}) => {
+              const swipeRightSet = new Set<string>([
+                'TwoFactor/TwoFAPage',
+                'ViewEvent/viewvent',
+                'Settings'
+              ]);
+              console.log(route.name);
+              console.log(swipeRightSet.has(route.name));
+              return {
+                headerShown: false,
+                animation: swipeRightSet.has(route.name)
+                  ? 'slide_from_right'
+                  : 'none'
+              };
             }}>
-              {/* <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" /> */}
             </Stack>
             <StatusBar style="auto" />
           </ThemeProvider>
