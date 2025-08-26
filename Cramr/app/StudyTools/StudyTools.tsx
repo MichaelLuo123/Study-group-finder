@@ -61,6 +61,13 @@ export default function StudyTools() {
         >
         <Text style={[styles.itemText, { color: textColor }]}>Notes</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+        style={[styles.item, { backgroundColor: textInputColor }]}
+        onPress={() => router.push('./AmbientNoise')}
+        >
+        <Text style={[styles.itemText, { color: textColor }]}>Ambient Noise Maker</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

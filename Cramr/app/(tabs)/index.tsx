@@ -14,12 +14,13 @@ export default function HomeScreen() {
 
   const navigationItems = [
     // Sign in and Sign up
-    { title: 'Sign in', route: '/Login/Loginscreen' },
+    { title: 'Sign in', route: '/SignIn/Loginscreen' },
     { title: 'Sign up', route: '/SignUp/signupscreen' },
     { title: 'Sign up success', route: '/SignUp/signupsuccess' },
     { title: 'Sign up fail', route: '/signupfail' },
     { title: '2-Factor Authentication', route: '/TwoFactor/TwoFAPage'},
-    
+    { title: 'Forgot Password', route: '/PasswordRecovery/pwRecovery' },
+
     // Home
     { title: 'Home/List', route: '/listView' },
 
