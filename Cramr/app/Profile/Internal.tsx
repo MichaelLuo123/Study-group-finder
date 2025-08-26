@@ -258,7 +258,7 @@ export default function Internal() {
             </View>
           </View>
 
-          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 1], marginTop: 20}]}>
+          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 0], marginTop: 20}]}>
             <View style={styles.leftOfBannerContainer}>
               <Image source={profilePicture ? {uri: profilePicture} : require('../../assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
             </View>
@@ -283,35 +283,43 @@ export default function Internal() {
                   </Text>
                 </View>
               </TouchableOpacity>
-              {school === '' || major === '' || classLevel === '' || pronouns === '' ? (
-                <View style={[styles.tagContainer, {marginTop: 3}]}>
-                  <View style={[styles.tag, {backgroundColor: textInputColor}]}>
+              <View style={[styles.tagContainer, {marginTop: 3}]}>
+                {school !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
                     <Text style={[styles.normalText, {color: textColor}]}>
                       {school}
                     </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {major}
-                  </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {classLevel}
-                  </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {pronouns}
-                  </Text>
-                </View>
-                {isTransfer && (<View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    Transfer
-                  </Text>
-                </View>)}
-              </View>) :
-              <View></View>}
+                  </View>
+                )}
+                {major !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {major}
+                    </Text>
+                  </View>
+                )}
+                {classLevel !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {classLevel}
+                    </Text>
+                  </View>
+                )}
+                {pronouns !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {pronouns}
+                    </Text>
+                  </View>
+                )}
+                {isTransfer && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      Transfer
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
 
@@ -509,12 +517,14 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   tagContainer: {
+    width: 230,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
   },
   tag: {
+    borderWidth: 1,
     borderRadius: 25,
     marginTop: 2,
     marginBottom: 2,

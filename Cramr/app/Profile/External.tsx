@@ -377,7 +377,7 @@ export default function External() {
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 1], marginTop: 20}]}>
+          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 0], marginTop: 20}]}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between',}}>
               <View style={styles.leftOfBannerContainer}>
                 <Image source={profilePicture ? {uri: profilePicture} : require('../../assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
@@ -392,44 +392,43 @@ export default function External() {
                   </View>
                   <Text style={[styles.subheaderBoldText, {color: textColor}]}>{following}</Text> Following
                 </Text>
-                {school === '' || major === '' || classLevel === '' || pronouns === '' ? (
-                  <View style={[styles.tagContainer, {marginTop: 3}]}>
-                    {school && (
-                      <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                        <Text style={[styles.normalText, {color: textColor}]}>
-                          {school}
-                        </Text>
-                    </View>
-                  )}
-                  {major && (
-                    <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                      <Text style={[styles.normalText, {color: textColor}]}>
-                        {major}
-                      </Text>
-                    </View>
-                  )}
-                  {classLevel && (
-                    <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                      <Text style={[styles.normalText, {color: textColor}]}>
-                        {classLevel}
-                      </Text>
-                    </View>
-                  )}
-                  {pronouns && (
-                    <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                      <Text style={[styles.normalText, {color: textColor}]}>
-                        {pronouns}
-                      </Text>
-                    </View>
-                  )}
-                  {isTransfer && (
-                    <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                      <Text style={[styles.normalText, {color: textColor}]}>
-                        Transfer
-                      </Text>
-                    </View>
-                  )}
-                </View>) : (<View> </View>)}
+                <View style={[styles.tagContainer, {marginTop: 3}]}>
+                                {school !== null && (
+                                  <View style={[styles.tag, {borderColor: textColor}]}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>
+                                      {school}
+                                    </Text>
+                                  </View>
+                                )}
+                                {major !== null && (
+                                  <View style={[styles.tag, {borderColor: textColor}]}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>
+                                      {major}
+                                    </Text>
+                                  </View>
+                                )}
+                                {classLevel !== null && (
+                                  <View style={[styles.tag, {borderColor: textColor}]}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>
+                                      {classLevel}
+                                    </Text>
+                                  </View>
+                                )}
+                                {pronouns !== null && (
+                                  <View style={[styles.tag, {borderColor: textColor}]}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>
+                                      {pronouns}
+                                    </Text>
+                                  </View>
+                                )}
+                                {isTransfer && (
+                                  <View style={[styles.tag, {borderColor: textColor}]}>
+                                    <Text style={[styles.normalText, {color: textColor}]}>
+                                      Transfer
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
               </View>
             </View>
 
@@ -704,12 +703,14 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   tagContainer: {
+    width: 230,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
   },
   tag: {
+    borderWidth: 1,
     borderRadius: 25,
     marginTop: 2,
     marginBottom: 2,

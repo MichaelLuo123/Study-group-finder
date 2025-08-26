@@ -32,12 +32,12 @@ const RequestPasswordResetScreen = () => {
 
     const handleSendCode = async () => {
         if (!email.trim()) {
-            setMessage({ text: 'Please enter your email address', type: 'error' });
+            setMessage({ text: 'Please enter your email address!', type: 'error' });
             return;
         }
 
         if (!email.endsWith('.edu')) {
-            setMessage({ text: 'Please use a valid .edu email address', type: 'error' });
+            setMessage({ text: 'Please use a valid .edu email address!', type: 'error' });
             return;
         }
 
@@ -235,9 +235,7 @@ const RequestPasswordResetScreen = () => {
             flexDirection: 'row',
             alignItems: 'center',
             backgroundColor: textInputColor,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: isDarkMode ? '#404040' : '#e0e0e0',
+            borderRadius: 10,
             padding: 10,
         },
         inputIcon: {
@@ -258,7 +256,6 @@ const RequestPasswordResetScreen = () => {
         resendButtonText: {
             color: '#5CAEF1',
             fontSize: 16,
-            fontWeight: '500',
             fontFamily: 'Poppins-SemiBold',
         },
         resetButton: {
@@ -308,7 +305,7 @@ const RequestPasswordResetScreen = () => {
                 <Text style={styles.description}>
                     {isCodeSent 
                         ? 'Enter the 6-digit verification code sent to your email.'
-                        : 'Enter your email address to receive a verification code.'
+                        : 'Enter your email address to receive a verification code'
                     }
                 </Text>
 

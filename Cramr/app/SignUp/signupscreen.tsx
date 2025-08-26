@@ -379,11 +379,10 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
     },
     title: {
         fontSize: 28,
-        fontWeight: 'bold',
         color: textColor,
         marginBottom: 30,
         marginTop: -60,
-        fontFamily: "Poppins-Bold"
+        fontFamily: "Poppins-SemiBold"
     },
     formContainer: {
         marginTop: 8,
@@ -454,9 +453,10 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
     },
     errorText: {
         color: errorColor,
-        fontSize: 12,
+        fontSize: 14,
         marginTop: 4,
         marginLeft: 4,
+        fontFamily: 'Poppins-Regular'
     },
 });
 

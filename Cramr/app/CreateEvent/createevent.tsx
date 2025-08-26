@@ -36,6 +36,7 @@ const CreateEventScreen = () => {
 
   // Other state variables
   const [title, setTitle] = useState('');
+  const [bannerColor, setBannerColor] = useState(1);
   const [description, setDescription] = useState('');
   const studyTags = [
     'Pomodoro',
@@ -56,6 +57,7 @@ const CreateEventScreen = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [location, setLocation] = useState('');
   const [studyRoom, setStudyRoom] = useState('');
+  const [virtualRoomLink, setVirtualRoomLink] = useState('');
 
   const [dateTime, setDateTime] = useState(() => {
     const now = new Date();
@@ -150,10 +152,21 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
       Alert.alert('Error', 'Please enter an event description');
       return;
     }
-    if (!location.trim()) {
-      Alert.alert('Error', 'Please enter an event location');
-      return;
+    
+    if (isOnline) {
+      // For online events, require virtual room link
+      if (!virtualRoomLink.trim()) {
+        Alert.alert('Error', 'Please enter a virtual room link for online events');
+        return;
+      }
+    } else {
+      // For in-person events, require location
+      if (!location.trim()) {
+        Alert.alert('Error', 'Please enter a location for in-person events');
+        return;
+      }
     }
+
     if (!dateTime || isNaN(dateTime.getTime())) {
       Alert.alert('Error', 'Please select a valid date and time');
       return;
@@ -191,7 +204,7 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
       event_format: isOnline ? 'Online' : 'In Person',
       location: location.trim(),
       study_room: !isOnline && studyRoom.trim() ? studyRoom.trim() : null,
-      virtual_room_link: isOnline ? location.trim() : null,
+      virtual_room_link: isOnline ? virtualRoomLink.trim() : null,
       date_and_time: formatForPostgres(dateTime),
       capacity: Number(capacity),
       invited_ids: selectedFriends,
@@ -199,6 +212,7 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
     };
 
     try {
+      console.log('isOnline:', isOnline);
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`, {
         method: 'POST',
         headers: {
@@ -328,6 +342,7 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
             leftLabel='In-Person'
             rightLabel='Online  '
             onChangeSlider={setIsOnline}
+            value={isOnline}
             width={210}
             lightMode={!isDarkMode}
             style={{ marginBottom: 10 }}
@@ -354,8 +369,8 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
             <TextInput
               placeholder="Enter link to virtual study room."
               placeholderTextColor={placeholderColor}
-              value={location}
-              onChangeText={setLocation}
+              value={virtualRoomLink}
+              onChangeText={setVirtualRoomLink}
               style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
             />
           )}
@@ -424,12 +439,12 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
           >
             {isSubmitting ? (
               <View style={styles.loadingContainer}>
-                <Text style={[styles.subheaderText, { color: '#ffffff' }]}>
+                <Text style={[styles.subheaderText, { color: textColor }]}>
                   Creating...
                 </Text>
               </View>
             ) : (
-              <Text style={[styles.subheaderText, { color: '#ffffff' }]}>
+              <Text style={[styles.subheaderText, { color: textColor }]}>
                 Create
               </Text>
             )}

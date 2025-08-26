@@ -155,7 +155,7 @@ const SetNewPasswordScreen = () => {
 
             <View style={[styles.card, {backgroundColor: backgroundColor}]}>
                 <Text style={[styles.cardTitle, {color: textColor}]}>Reset Password</Text>
-                <Text style={[styles.description, {color: textColor}]}>
+                <Text style={[styles.description, {color: placeholderColor}]}>
                     Enter your new password below.
                 </Text>
 
@@ -239,7 +239,7 @@ const SetNewPasswordScreen = () => {
                     disabled={isLoading}
                 >
                     <Text style={[styles.resetButtonText, { color: textColor }]}>
-                        {isLoading ? 'Changing Password...' : 'Change Password'}
+                        {isLoading ? 'Resetting Password...' : 'Reset Password'}
                     </Text>
                 </TouchableOpacity>
 
@@ -318,7 +318,7 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         borderRadius: 10,
     },
     inputError: {
-        borderColor: '#EF4444',
+        borderColor: '#E36062',
     },
     inputIcon: {
         marginRight: 8,
@@ -338,8 +338,8 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         padding: 4,
     },
     errorText: {
-        color: '#EF4444',
-        fontSize: 12,
+        color: '#E36062',
+        fontSize: 14,
         marginTop: 4,
         marginLeft: 4,
         fontFamily: 'Poppins-Regular',
@@ -355,7 +355,7 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         backgroundColor: '#9CA3AF',
     },
     resetButtonText: {
-        fontFamily: 'Poppins-SemiBold',
+        fontFamily: 'Poppins-Regular',
         fontSize: 16,
     },
     messageContainer: {
@@ -374,11 +374,9 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         lineHeight: 20,
     },
     successMessage: {
-        backgroundColor: isDarkMode ? '#064E3B' : '#ECFDF5',
         borderColor: '#10B981',
     },
     errorMessage: {
-        backgroundColor: isDarkMode ? '#7F1D1D' : '#FEF2F2',
         borderColor: '#EF4444',
     },
     infoMessage: {

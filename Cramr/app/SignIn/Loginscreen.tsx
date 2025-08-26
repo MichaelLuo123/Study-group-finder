@@ -48,7 +48,6 @@ const LoginScreen = () => {
                 const result = await response.json();
                 if (result.success) {
                     setLoginStatus('success');
-                    setLoginMessage('Login successful!');
                     // Store user information in context
                     console.log('Login successful, storing user:', result.user);
                     setUser(result.user);
@@ -69,7 +68,7 @@ const LoginScreen = () => {
             if (!email.trim()) {
                 newErrors.email = 'Please enter your email!';
             } else if (!email.endsWith('.edu')) {
-                newErrors.email = 'Please use a valid .edu email address.';
+                newErrors.email = 'Please use a valid .edu email address!';
             }
 
             if (!password.trim()) {
@@ -164,7 +163,7 @@ const LoginScreen = () => {
                    )}
 
                     <View style={styles.loginLinkContainer}>
-                        <TouchableOpacity onPress={() => router.push('/Login/RequestPasswordReset')}>
+                        <TouchableOpacity onPress={() => router.push('/SignIn/RequestPasswordReset')}>
                             <Text style={styles.signInText}>Forgot password?</Text>
                         </TouchableOpacity>
                     </View>
@@ -209,7 +208,7 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
        marginTop: -60,
        color: textColor,
        marginBottom: 16,
-       fontFamily: 'Poppins-Bold'
+       fontFamily: 'Poppins-SemiBold'
    },
    formContainer: {
        marginBottom: 24,

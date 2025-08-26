@@ -97,7 +97,7 @@ export default function Profile() {
           
           // Populate form fields with database data
           setProfilePicture(userData.profile_picture_url || null);
-          setBannerColor(Number(userData.banner_color) || null);
+          setBannerColor(Number(userData.banner_color) || 0);
           setName(userData.full_name);
           setUsername(userData.username);
           setSchool(userData.school || null);
@@ -216,24 +216,24 @@ export default function Profile() {
           </Text>
             <View style={styles.bannerColorContainer}>
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 1 && styles.ring]}
+              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 0 && styles.ring]}
+              onPress={() => setBannerColor(0)} 
+            />
+            <TouchableOpacity 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 1 && styles.ring]} 
               onPress={() => setBannerColor(1)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 2 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 2 && styles.ring]} 
               onPress={() => setBannerColor(2)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 3 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 3 && styles.ring]} 
               onPress={() => setBannerColor(3)} 
             />
             <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 4 && styles.ring]} 
+              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 4 && styles.ring]} 
               onPress={() => setBannerColor(4)} 
-            />
-            <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 5 && styles.ring]} 
-              onPress={() => setBannerColor(5)} 
             />
             </View>
 
@@ -331,8 +331,8 @@ export default function Profile() {
             Transfer?
           </Text>
           <Slider
-            leftLabel="Yes"
-            rightLabel="No"
+            leftLabel="No"
+            rightLabel="Yes"
             width={125}
             value={isTransfer}
             onChangeSlider={setIsTransfer}

@@ -18,13 +18,14 @@ const Slider: React.FC<SliderProps> = ({
     width,
     onChangeSlider: onValueChange, 
     lightMode,
-    value: initialValue,
+    value: initialValue = false, // Default to false
     style={}
 }) => {
     const sliderBackgroundColor = (lightMode ? Colors.light.sliderBackground : Colors.dark.sliderBackground)
     const sliderColor = (lightMode ? Colors.light.slider : Colors.dark.slider)
     const textColor = (lightMode ? Colors.light.text : Colors.dark.text)
 
+    // Remove the ! inversion here
     const [value, setValue] = useState(initialValue);
     const [slideAnim] = useState(new Animated.Value(initialValue ? 1 : 0));
 
@@ -34,15 +35,15 @@ const Slider: React.FC<SliderProps> = ({
         onValueChange?.(newValue);
         
         Animated.timing(slideAnim, {
-        toValue: newValue ? 1 : 0,
-        duration: 200,
-        useNativeDriver: false,
+            toValue: newValue ? 1 : 0,
+            duration: 200,
+            useNativeDriver: false,
         }).start();
     };
 
     const slideWidth = slideAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0%', '50%'],
+        outputRange: ['0%', '50%'], // 0% = left (false), 50% = right (true)
     });
 
     return (
@@ -52,7 +53,7 @@ const Slider: React.FC<SliderProps> = ({
                 style={[
                 styles.slider, 
                 {
-                    left: slideWidth, 
+                    left: slideWidth, // This will move from left to right
                     backgroundColor: sliderColor,
                 }
                 ]}
