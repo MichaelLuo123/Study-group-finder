@@ -8,7 +8,7 @@ import {
   SafeAreaView, ScrollView, StyleSheet, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../../constants/Colors';
 
 const AccountPage = () => {
   // All state and hooks must be declared at the top of the component

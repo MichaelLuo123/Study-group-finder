@@ -15,8 +15,8 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import Slider from '../../components/Slider'; // ✅ import your custom Slider
-import { Colors } from '../../constants/Colors';
+import Slider from '../../../components/Slider'; // ✅ import your custom Slider
+import { Colors } from '../../../constants/Colors';
 
 interface Friend {
   id: string;

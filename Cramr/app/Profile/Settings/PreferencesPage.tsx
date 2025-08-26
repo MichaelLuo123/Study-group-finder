@@ -7,9 +7,9 @@ import {
   Text,
   TouchableOpacity
 } from 'react-native';
-import Slider from '../../components/Slider';
-import { Colors } from '../../constants/Colors';
-import { useUser } from '../../contexts/UserContext';
+import Slider from '../../../components/Slider';
+import { Colors } from '../../../constants/Colors';
+import { useUser } from '../../../contexts/UserContext';
 
 const PreferencesPage = () => {
   const router = useRouter();

@@ -3,10 +3,10 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Dropdown from '../../components/Dropdown';
-import ImageUpload from '../../components/ImageUpload';
-import Slider from '../../components/Slider';
-import { Colors } from '../../constants/Colors';
+import Dropdown from '../../../components/Dropdown';
+import ImageUpload from '../../../components/ImageUpload';
+import Slider from '../../../components/Slider';
+import { Colors } from '../../../constants/Colors';
 
 // Define user interface
 interface User {

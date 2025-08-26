@@ -5,7 +5,7 @@ import { Alert, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, Toucha
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
-import EventList from '../listView/eventList';
+import EventList from '../List/eventList';
 
 // Define user interface
 interface User {

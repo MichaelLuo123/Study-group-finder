@@ -5,8 +5,8 @@ import { Bell, Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
-import EventList from '../listView/eventList';
-import Saved from '../Saved/Saved';
+import EventList from '../List/eventList';
+import Saved from './Saved/Saved';
 
 // Define user interface
 interface User {

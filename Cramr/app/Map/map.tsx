@@ -16,8 +16,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
-import EventList from '../listView/eventList';
-import FilterModal, { Filters } from '../listView/filter';
+import EventList from '../List/eventList';
+import FilterModal, { Filters } from '../List/filter';
 
 const { height: screenHeight } = Dimensions.get('window');
 const BOTTOM_SHEET_MIN_HEIGHT = 120; 
@@ -85,7 +85,7 @@ export default function MapScreen() {
             onPress={() => router.push('/(tabs)')}
           >
             <Image
-              source={require('../listView/assets/images/finalCramrLogo.png')}
+              source={require('../../assets/images/biggerCramrLogo.png')}
               style={styles.logo}
               resizeMode="contain"
             />

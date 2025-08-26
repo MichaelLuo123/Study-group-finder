@@ -47,7 +47,7 @@ export default function HomeScreen() {
       headerLeft: () => (
         <View style={[styles.fullWidthHeader]}>
           <Image
-            source={require('./assets/images/finalCramrLogo.png')}
+            source={require('../../assets/images/biggerCramrLogo.png')}
             style={[styles.logo]}
             resizeMode="contain"
           />

@@ -1,5 +1,4 @@
 import { useUser } from '@/contexts/UserContext';
-import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
@@ -13,7 +12,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../../constants/Colors';
 import { TwoFactorBE } from './TwoFactorBE';
 
 const CODE_LENGTH = 6;
@@ -36,11 +35,7 @@ const TwoFAPage = () => {
     
     const inputs = useRef<TextInput[]>([]);
 
-    const [fontsLoaded] = useFonts({
-        'Poppins-Regular': require('../../assets/fonts/Poppins/Poppins-Regular.ttf'),
-        'Poppins-Bold': require('../../assets/fonts/Poppins/Poppins-Bold.ttf'),
-    });
-
+    
     useEffect(() => {
         //load the 2FA backend by generating a key
         twoFA = new TwoFactorBE();

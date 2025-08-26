@@ -3,7 +3,7 @@ import Slider from '@/components/Slider';
 import { useUser } from '@/contexts/UserContext';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../../constants/Colors';
 
 interface Event {
     id: string;
