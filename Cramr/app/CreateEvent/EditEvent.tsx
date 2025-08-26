@@ -322,7 +322,7 @@ const formatTime = (dateAndTime: Date | string | null) => {
           </TouchableOpacity>
 
           <View style={{ alignItems: 'center' }}>
-            <Text style={[styles.headerText, { color: textColor, marginTop: 15, marginBottom: 20 }]}>Edit Event</Text>
+            <Text style={[styles.headerText, { color: textColor, marginTop: -25, marginBottom: 20 }]}>Edit Event</Text>
           </View>
 
           <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Name </Text>

@@ -65,14 +65,6 @@ const EventViewScreen = () => {
   const [currentPage, setCurrentPage] = useState('eventView');
   const [busy, setBusy] = useState(false);
 
-  // Theme colors
-  const backgroundColor = isDarkMode ? '#1a1a1a' : '#ffffff';
-  const textColor = isDarkMode ? '#ffffff' : '#000000';
-  const textInputColor = isDarkMode ? '#2a2a2a' : '#f5f5f5';
-  const placeholderTextColor = isDarkMode ? '#888888' : '#666666';
-  const rsvpedButtonColor = isDarkMode ? '#4CAF50' : '#4CAF50';
-  const bannerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
-
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
       setCurrentPage(page);

@@ -38,7 +38,7 @@ export const usePushNotifications = (): PushNotificationState => {
             }
 
             if (finalStatus !== "granted") {
-                alert("Failed to get push token");
+                // alert("Failed to get push token");
             }
 
             // Uncomment this if we're using EAS to build

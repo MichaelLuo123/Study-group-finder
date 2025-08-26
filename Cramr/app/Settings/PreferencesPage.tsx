@@ -1,12 +1,12 @@
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, View } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView, ScrollView, StyleSheet,
   Switch,
   Text,
-  TouchableOpacity, View
+  TouchableOpacity
 } from 'react-native';
 import Slider from '../../components/Slider';
 import { Colors } from '../../constants/Colors';
@@ -116,7 +116,7 @@ const PreferencesPage = () => {
             />
           </TouchableOpacity>
         </View>
-
+        {/*
         <View style={styles.toggleGroup}>
           <Text style={styles.toggleLabel}>Email Notifications</Text>
           <Switch
@@ -136,6 +136,7 @@ const PreferencesPage = () => {
             thumbColor={thumbColor}
           />
         </View>
+        */}
 
         <Text style={styles.sectionTitle}>Theme</Text>
         <Slider
@@ -179,9 +180,10 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
       fontSize: 18,
       fontWeight: 'bold',
       alignSelf: 'center',
-      marginBottom: 24,
+      marginBottom: 20,
+      marginTop: -25,
       color: textColor,
-      fontFamily: 'Poppins-Bold',
+      fontFamily: 'Poppins-SemiBold',
     },
     toggleGroup: {
       alignItems: 'flex-start',

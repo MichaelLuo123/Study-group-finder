@@ -209,7 +209,7 @@ const AccountPage = () => {
               />
             </TouchableOpacity>
 
-            <Text style={[styles.heading, { color: textColor }]}>Account</Text>
+            <Text style={[styles.heading, { color: textColor, marginTop: -40, marginBottom: 20 }]}>Account</Text>
 
             <Text style={[styles.subheading, { color: textColor }]}>Email</Text>
             <TextInput 
