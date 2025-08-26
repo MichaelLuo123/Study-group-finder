@@ -206,13 +206,13 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
     },
     saveButton: {
       backgroundColor: '#5CAEF1',
-      padding: 12,
+      padding: 10,
       borderRadius: 12,
       marginTop: 20,
     },
     saveButtonText: {
       color: textColor,
-      fontWeight: '600',
+      fontSize: 16,
       textAlign: 'center',
       fontFamily: 'Poppins-Regular',
     },

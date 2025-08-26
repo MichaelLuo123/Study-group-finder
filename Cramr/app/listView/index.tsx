@@ -266,11 +266,14 @@ export default function HomeScreen() {
                       onPress={() => navigateToProfile(person.id)}
                     >
                       <View style={styles.personInfo}>
-                        <View style={styles.personAvatar}>
-                          <Text style={[styles.personAvatarText, {color:textColor, fontFamily: 'Poppins-Regular'}]}>
-                            {person.full_name?.charAt(0) || person.username?.charAt(0) || '?'}
-                          </Text>
-                        </View>
+                        <Image 
+                          source={
+                            person.profile_picture_url
+                              ? { uri: person.profile_picture_url }
+                              : require('../../assets/images/default_profile.jpg')
+                          }
+                          style={styles.personAvatar} 
+                        />
                         <View style={styles.personDetails}>
                           <Text style={[styles.personName, {color:textColor, fontFamily: 'Poppins-Regular'}]}>{person.full_name || 'Unknown'}</Text>
                           <Text style={[styles.personUsername, {color:textColor, fontFamily: 'Poppins-Regular'}]}>@{person.username}</Text>
@@ -483,10 +486,9 @@ const styles = StyleSheet.create({
   },
   personInfo: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   personAvatar: {
-    width: 50, height: 50, borderRadius: 25, backgroundColor: '#FFD700',
+    width: 50, height: 50, borderRadius: 50,
     alignItems: 'center', justifyContent: 'center', marginRight: 15,
   },
-  personAvatarText: { fontSize: 20, fontWeight: 'bold', color: '#333' },
   personDetails: { flex: 1 },
   personName: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 2 },
   personUsername: { fontSize: 14, color: '#666', marginBottom: 2 },

@@ -307,131 +307,141 @@ export default function Saved() {
 
     return (
         <SafeAreaView style={{backgroundColor: backgroundColor, flex: 1}}>
-            <ScrollView
-                style={{flex: 1}}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={refreshEvents}
-                        colors={[isDarkMode ? '#ffffff' : '#000000']}
-                        tintColor={isDarkMode ? '#ffffff' : '#000000'}
-                    />
-                }
-            >
-                <View style={{padding: 20, backgroundColor: backgroundColor, minHeight: '100%'}}>
-                    <TouchableOpacity onPress={() => {
-                        if (isMounted) {
-                            setTimeout(() => router.back(), 50);
-                        }
-                    }}>
-                        <Image 
-                            source={require('../../assets/images/cramr_logo.png')} 
-                            style={styles.logoContainer} 
-                            resizeMode="contain"
+            <View style={{flex: 1}}>
+                <ScrollView
+                    contentContainerStyle={[styles.scrollContent, {backgroundColor}]}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={refreshEvents}
+                            colors={[isDarkMode ? '#ffffff' : '#000000']}
+                            tintColor={isDarkMode ? '#ffffff' : '#000000'}
                         />
-                    </TouchableOpacity>
-                
-                    <View style={{alignItems: 'center', marginTop: 20, marginBottom: 20}}>
-                        <Slider
-                            leftLabel='RSVPed'
-                            rightLabel='Saved'
-                            width={180}
-                            onChangeSlider={setIsSwitch}
-                            lightMode={!isDarkMode}
-                        />
+                    }
+                >
+                    <View style={{padding: 20}}>
+                        <TouchableOpacity onPress={() => {
+                            if (isMounted) {
+                                setTimeout(() => router.back(), 50);
+                            }
+                        }}>
+                            <Image 
+                                source={require('../../assets/images/cramr_logo.png')} 
+                                style={styles.logoContainer} 
+                                resizeMode="contain"
+                            />
+                        </TouchableOpacity>
+                    
+                        <View style={{alignItems: 'center', marginTop: 20, marginBottom: 20}}>
+                            <Slider
+                                leftLabel='RSVPed'
+                                rightLabel='Saved'
+                                width={180}
+                                onChangeSlider={setIsSwitch}
+                                lightMode={!isDarkMode}
+                            />
+                        </View>
+
+                        {error && (
+                            <Text style={[styles.normalText, {color: 'red', marginBottom: 10}]}>
+                                Error: {error}
+                            </Text>
+                        )}
+
+                        {!isSwitch && renderEventList(rsvpedEvents, 'No RSVPed events...')}
+                        {isSwitch && renderEventList(savedEvents, 'No saved events...')}
                     </View>
+                </ScrollView>
 
-                    {error && (
-                        <Text style={[styles.normalText, {color: 'red', marginBottom: 10}]}>
-                            Error: {error}
-                        </Text>
-                    )}
-
-                    {!isSwitch && renderEventList(rsvpedEvents, 'No RSVPed events...')}
-                    {isSwitch && renderEventList(savedEvents, 'No saved events...')}
+                {/* Bottom Navigation Bar */}
+                <View style={[styles.bottomNav, { 
+                    backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', 
+                    borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' 
+                }]}> 
+                    <TouchableOpacity 
+                        style={styles.navButton}
+                        onPress={() => handleNavigation('listView')}
+                        accessible={true}
+                        accessibilityLabel="List View"
+                    >
+                        <MaterialCommunityIcons 
+                            name="clipboard-list-outline" 
+                            size={24} 
+                            color={isDarkMode ? "#ffffff" : "#000000"} 
+                        />
+                        {currentPage === 'listView' && <View style={styles.activeDot} />}
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={styles.navButton}
+                        onPress={() => handleNavigation('map')}
+                        accessible={true}
+                        accessibilityLabel="Map View"
+                    >
+                        <Ionicons 
+                            name="map-outline" 
+                            size={24} 
+                            color={isDarkMode ? "#ffffff" : "#000000"} 
+                        />
+                        {currentPage === 'map' && <View style={styles.activeDot} />}
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={styles.navButton}
+                        onPress={() => handleNavigation('addEvent')}
+                        accessible={true}
+                        accessibilityLabel="Add Event"
+                    >
+                        <Feather 
+                            name="plus-square" 
+                            size={24} 
+                            color={isDarkMode ? "#ffffff" : "#000000"} 
+                        />
+                        {currentPage === 'addEvent' && <View style={styles.activeDot} />}
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={styles.navButton}
+                        onPress={() => handleNavigation('bookmarks')}
+                        accessible={true}
+                        accessibilityLabel="Bookmarks"
+                    >
+                        <Feather 
+                            name="bookmark" 
+                            size={24} 
+                            color={isDarkMode ? "#ffffff" : "#000000"} 
+                        />
+                        {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={styles.navButton}
+                        onPress={() => handleNavigation('profile')}
+                        accessible={true}
+                        accessibilityLabel="Profile"
+                    >
+                        <Ionicons 
+                            name="person-circle-outline" 
+                            size={24} 
+                            color={isDarkMode ? "#ffffff" : "#000000"} 
+                        />
+                        {currentPage === 'profile' && <View style={styles.activeDot} />}
+                    </TouchableOpacity>
                 </View>
-            </ScrollView>
-
-            {/* Bottom Navigation Bar */}
-            <View style={[styles.bottomNav, { 
-                backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff', 
-                borderTopColor: isDarkMode ? '#4a5568' : '#e0e0e0' 
-            }]}> 
-                <TouchableOpacity 
-                    style={styles.navButton}
-                    onPress={() => handleNavigation('listView')}
-                    accessible={true}
-                    accessibilityLabel="List View"
-                >
-                    <MaterialCommunityIcons 
-                        name="clipboard-list-outline" 
-                        size={24} 
-                        color={isDarkMode ? "#ffffff" : "#000000"} 
-                    />
-                    {currentPage === 'listView' && <View style={styles.activeDot} />}
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                    style={styles.navButton}
-                    onPress={() => handleNavigation('map')}
-                    accessible={true}
-                    accessibilityLabel="Map View"
-                >
-                    <Ionicons 
-                        name="map-outline" 
-                        size={24} 
-                        color={isDarkMode ? "#ffffff" : "#000000"} 
-                    />
-                    {currentPage === 'map' && <View style={styles.activeDot} />}
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                    style={styles.navButton}
-                    onPress={() => handleNavigation('addEvent')}
-                    accessible={true}
-                    accessibilityLabel="Add Event"
-                >
-                    <Feather 
-                        name="plus-square" 
-                        size={24} 
-                        color={isDarkMode ? "#ffffff" : "#000000"} 
-                    />
-                    {currentPage === 'addEvent' && <View style={styles.activeDot} />}
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                    style={styles.navButton}
-                    onPress={() => handleNavigation('bookmarks')}
-                    accessible={true}
-                    accessibilityLabel="Bookmarks"
-                >
-                    <Feather 
-                        name="bookmark" 
-                        size={24} 
-                        color={isDarkMode ? "#ffffff" : "#000000"} 
-                    />
-                    {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                    style={styles.navButton}
-                    onPress={() => handleNavigation('profile')}
-                    accessible={true}
-                    accessibilityLabel="Profile"
-                >
-                    <Ionicons 
-                        name="person-circle-outline" 
-                        size={24} 
-                        color={isDarkMode ? "#ffffff" : "#000000"} 
-                    />
-                    {currentPage === 'profile' && <View style={styles.activeDot} />}
-                </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    // Container styles
+    container: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+    },
+
     // Text
     headerText: {
         fontFamily: 'Poppins-SemiBold',
@@ -459,6 +469,8 @@ const styles = StyleSheet.create({
         height: 27,
         width: 120
     },
+    
+    // Navigation
     bottomNav: {
         flexDirection: 'row',
         justifyContent: 'space-around',
@@ -466,6 +478,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderTopWidth: 1,
+        marginBottom: -34,
         paddingBottom: Platform.OS === 'ios' ? 34 : 12,
         elevation: 5,
     },

@@ -383,14 +383,14 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#5CAEF1',
-    padding: 12,
+    padding: 10,
     borderRadius: 12,
     marginBottom: 15,
     marginTop: 15
   },
     saveButtonText: {
       color: '#000000',
-      fontSize: 14,
+      fontSize: 16,
       textAlign: 'center',
       fontFamily: 'Poppins-Regular',
     },
@@ -401,12 +401,12 @@ const styles = StyleSheet.create({
     },
     deleteButton: {
       backgroundColor: '#E36062',
-      padding: 12,
+      padding: 10,
       borderRadius: 12,
     },
     deleteButtonText: {
       color: '#000000',
-      fontWeight: '600',
+      fontSize: 16,
       textAlign: 'center',
       fontFamily: 'Poppins-Regular',
     },

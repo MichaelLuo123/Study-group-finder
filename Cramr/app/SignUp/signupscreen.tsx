@@ -19,6 +19,7 @@ import { Colors } from '../../constants/Colors';
 const SignUpScreen = () => {
     // Colors
     const {isDarkMode, toggleDarkMode} = useUser();
+    const { setUser } = useUser();
 
     const backgroundColor = isDarkMode ? Colors.dark.background : Colors.light.background;
     const textColor = isDarkMode ? Colors.dark.text : Colors.light.text;
@@ -112,7 +113,8 @@ const SignUpScreen = () => {
                 
                 if (response.ok && result.success) {
                     console.log('User registered successfully');
-                    router.push('/SignUp/signupsuccess');
+                    setUser(result.user);
+                    router.push('../Settings/ProfilePage');
                 } else {
                     // Handle different error cases
                     if (response.status === 409) {
@@ -377,11 +379,10 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
     },
     title: {
         fontSize: 28,
-        fontWeight: 'bold',
         color: textColor,
         marginBottom: 30,
         marginTop: -60,
-        fontFamily: "Poppins-Bold"
+        fontFamily: "Poppins-SemiBold"
     },
     formContainer: {
         marginTop: 8,
@@ -452,9 +453,10 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
     },
     errorText: {
         color: errorColor,
-        fontSize: 12,
+        fontSize: 14,
         marginTop: 4,
         marginLeft: 4,
+        fontFamily: 'Poppins-Regular'
     },
 });
 

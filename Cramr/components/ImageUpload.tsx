@@ -53,6 +53,7 @@ export default function ImageUpload({value, onChangeImage, style, isDarkMode}: I
 
   const removeImage = () => {
     setImage(null); // Set to null instead of default image path
+    onChangeImage(null);
   };
   
   // Function to determine image source

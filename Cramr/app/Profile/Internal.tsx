@@ -220,7 +220,7 @@ export default function Internal() {
 
   return (
     <View style={[styles.container, {backgroundColor: backgroundColor}]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 30 }}>
         <View>
           {/* Show message if no user is logged in */}
           {!loggedInUser && (
@@ -258,7 +258,7 @@ export default function Internal() {
             </View>
           </View>
 
-          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 1], marginTop: 20}]}>
+          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 0], marginTop: 20}]}>
             <View style={styles.leftOfBannerContainer}>
               <Image source={profilePicture ? {uri: profilePicture} : require('../../assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
             </View>
@@ -284,31 +284,41 @@ export default function Internal() {
                 </View>
               </TouchableOpacity>
               <View style={[styles.tagContainer, {marginTop: 3}]}>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {school}
-                  </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {major}
-                  </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {classLevel}
-                  </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {pronouns}
-                  </Text>
-                </View>
-                {isTransfer && (<View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    Transfer
-                  </Text>
-                </View>)}
+                {school !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {school}
+                    </Text>
+                  </View>
+                )}
+                {major !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {major}
+                    </Text>
+                  </View>
+                )}
+                {classLevel !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {classLevel}
+                    </Text>
+                  </View>
+                )}
+                {pronouns !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {pronouns}
+                    </Text>
+                  </View>
+                )}
+                {isTransfer && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      Transfer
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -353,13 +363,13 @@ export default function Internal() {
             creatorUserId={userId}
           />
 
-            </> 
+          </> 
           )}
         </View>
       </ScrollView>
 
       {/* Bottom Navigation Bar - Same as Map */}
-      <View style={[styles.bottomNav, { backgroundColor: true ? '#ffffff' : '#2d2d2d', borderTopColor: true ? '#e0e0e0' : '#4a5568' }]}> 
+      <View style={[styles.bottomNav, { backgroundColor: textInputColor, borderTopColor: !isDarkMode ? '#e0e0e0' : '#4a5568' }]}> 
         <TouchableOpacity 
           style={styles.navButton}
           onPress={() => handleNavigation('listView')}
@@ -367,7 +377,7 @@ export default function Internal() {
           <MaterialCommunityIcons 
             name="clipboard-list-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'listView' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -378,7 +388,7 @@ export default function Internal() {
           <Ionicons 
             name="map-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'map' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -389,7 +399,7 @@ export default function Internal() {
           <Feather 
             name="plus-square" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'addEvent' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -400,7 +410,7 @@ export default function Internal() {
           <Feather 
             name="bookmark" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -411,7 +421,7 @@ export default function Internal() {
           <Ionicons 
             name="person-circle-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'profile' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -507,12 +517,14 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   tagContainer: {
+    width: 230,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
   },
   tag: {
+    borderWidth: 1,
     borderRadius: 25,
     marginTop: 2,
     marginBottom: 2,

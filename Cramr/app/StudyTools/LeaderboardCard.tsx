@@ -5,7 +5,7 @@ import {
   Platform,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 
 type Entry = {
@@ -110,7 +110,7 @@ function PodiumCol({
           source={
             avatarUri
               ? { uri: avatarUri }
-              : require('../assets/images/default_profile.jpg')
+              : require('../../assets/images/default_profile.jpg')
           }
           style={styles.avatar}
         />
@@ -142,7 +142,7 @@ function Row({
         source={
           avatarUri
             ? { uri: avatarUri }
-            : require('../assets/images/default-avatar.png')
+            : require('../../assets/images/default_profile.jpg')
         }
         style={styles.rowAvatar}
       />
