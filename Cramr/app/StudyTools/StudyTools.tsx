@@ -43,23 +43,30 @@ export default function StudyTools() {
 
         <TouchableOpacity
         style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('')}
+        onPress={() => router.push('./MindMapList')}
         >
-        <Text style={[styles.itemText, { color: textColor }]}>Mind Map</Text>
+        <Text style={[styles.itemText, { color: textColor }]}>Mind Maps</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
         style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('')}
+        onPress={() => router.push('./FlashcardsList')}
         >
         <Text style={[styles.itemText, { color: textColor }]}>Flashcards</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
         style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('')}
+        onPress={() => router.push('./NotesList')}
         >
         <Text style={[styles.itemText, { color: textColor }]}>Notes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+        style={[styles.item, { backgroundColor: textInputColor }]}
+        onPress={() => router.push('./AmbientNoise')}
+        >
+        <Text style={[styles.itemText, { color: textColor }]}>Ambient Noise Maker</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

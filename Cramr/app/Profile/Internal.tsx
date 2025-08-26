@@ -3,7 +3,7 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Bell, Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import EventList from '../listView/eventList';
 
@@ -155,8 +155,8 @@ export default function Internal() {
           setUserEvents(filteredEvents);
           
           console.log(`Found ${filteredEvents.length} events created by user ${userId}`);
-          console.log('All events:', eventsData.map(e => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
-          console.log('Filtered events:', filteredEvents.map(e => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
+          console.log('All events:', eventsData.map((e: any) => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
+          console.log('Filtered events:', filteredEvents.map((e: any) => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
         } else {
           console.error('Failed to fetch events data');
         }
@@ -167,6 +167,8 @@ export default function Internal() {
 
     fetchAllEventsAndFilter();
   }, [userId]);
+
+
 
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
@@ -218,7 +220,7 @@ export default function Internal() {
 
   return (
     <View style={[styles.container, {backgroundColor: backgroundColor}]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 30 }}>
         <View>
           {/* Show message if no user is logged in */}
           {!loggedInUser && (
@@ -247,7 +249,7 @@ export default function Internal() {
             </TouchableOpacity>
             
             <View style={styles.notificationsAndSettingsButtonContainer}>
-              <TouchableOpacity onPress={() => router.push('')}>
+              <TouchableOpacity onPress={() => router.push('/Profile/NotificationsPage')}>
                 <Bell size={24} color={textColor} style={styles.iconContainer} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/Settings/SettingsFrontPage')}>
@@ -256,7 +258,7 @@ export default function Internal() {
             </View>
           </View>
 
-          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 1], marginTop: 20}]}>
+          <View style={[styles.bannerContainer, {backgroundColor: bannerColors[bannerColor || 0], marginTop: 20}]}>
             <View style={styles.leftOfBannerContainer}>
               <Image source={profilePicture ? {uri: profilePicture} : require('../../assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
             </View>
@@ -265,40 +267,58 @@ export default function Internal() {
               <Text style={[styles.headerText, {color: textColor}]}>{name}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>@{username}</Text>
               <TouchableOpacity onPress={() => router.push('/Follow/follow')}>
-                <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>
-                <Text style={[styles.subheaderBoldText, {color: textColor}]}>{followers}</Text> Followers
-                <View style={styles.dotContainer}>
-                  <View style={[styles.dot, {backgroundColor: textColor}]} />
+                <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 3}}>
+                  <Text style={[styles.subheaderText, {color: textColor}]}>
+                    <Text style={[styles.subheaderBoldText, {color: textColor}]}>
+                      {loggedInUser?.followers || 0}
+                    </Text> Followers
+                  </Text>
+                  <View style={styles.dotContainer}>
+                    <View style={[styles.dot, {backgroundColor: textColor}]} />
+                  </View>
+                  <Text style={[styles.subheaderText, {color: textColor}]}>
+                    <Text style={[styles.subheaderBoldText, {color: textColor}]}>
+                      {loggedInUser?.following || 0}
+                    </Text> Following
+                  </Text>
                 </View>
-                <Text style={[styles.subheaderBoldText, {color: textColor}]}>{following}</Text> Following
-                </Text>
               </TouchableOpacity>
               <View style={[styles.tagContainer, {marginTop: 3}]}>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {school}
-                  </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {major}
-                  </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {classLevel}
-                  </Text>
-                </View>
-                <View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    {pronouns}
-                  </Text>
-                </View>
-                {isTransfer && (<View style={[styles.tag, {backgroundColor: textInputColor}]}>
-                  <Text style={[styles.normalText, {color: textColor}]}>
-                    Transfer
-                  </Text>
-                </View>)}
+                {school !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {school}
+                    </Text>
+                  </View>
+                )}
+                {major !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {major}
+                    </Text>
+                  </View>
+                )}
+                {classLevel !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {classLevel}
+                    </Text>
+                  </View>
+                )}
+                {pronouns !== null && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      {pronouns}
+                    </Text>
+                  </View>
+                )}
+                {isTransfer && (
+                  <View style={[styles.tag, {borderColor: textColor}]}>
+                    <Text style={[styles.normalText, {color: textColor}]}>
+                      Transfer
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -343,13 +363,13 @@ export default function Internal() {
             creatorUserId={userId}
           />
 
-            </> 
+          </> 
           )}
         </View>
       </ScrollView>
 
       {/* Bottom Navigation Bar - Same as Map */}
-      <View style={[styles.bottomNav, { backgroundColor: true ? '#ffffff' : '#2d2d2d', borderTopColor: true ? '#e0e0e0' : '#4a5568' }]}> 
+      <View style={[styles.bottomNav, { backgroundColor: textInputColor, borderTopColor: !isDarkMode ? '#e0e0e0' : '#4a5568' }]}> 
         <TouchableOpacity 
           style={styles.navButton}
           onPress={() => handleNavigation('listView')}
@@ -357,7 +377,7 @@ export default function Internal() {
           <MaterialCommunityIcons 
             name="clipboard-list-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'listView' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -368,7 +388,7 @@ export default function Internal() {
           <Ionicons 
             name="map-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'map' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -379,7 +399,7 @@ export default function Internal() {
           <Feather 
             name="plus-square" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'addEvent' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -390,7 +410,7 @@ export default function Internal() {
           <Feather 
             name="bookmark" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -401,7 +421,7 @@ export default function Internal() {
           <Ionicons 
             name="person-circle-outline" 
             size={24} 
-            color={true ? "#000000" : "#ffffff"} 
+            color={textColor} 
           />
           {currentPage === 'profile' && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -471,7 +491,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   leftOfBannerContainer: {
-    marginLeft: 10,
+    marginLeft: 5,
     marginRight: 10,
     justifyContent: 'center', // center vertically
     alignItems: 'center', // center horizontally
@@ -497,12 +517,14 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   tagContainer: {
+    width: 230,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
   },
   tag: {
+    borderWidth: 1,
     borderRadius: 25,
     marginTop: 2,
     marginBottom: 2,

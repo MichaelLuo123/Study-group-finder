@@ -34,6 +34,7 @@ const FollowList = () => {
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+  const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
   const cardBackgroundColor = (!isDarkMode ? '#fff' : '#2d2d2d')
   const borderColor = (!isDarkMode ? '#e0e0e0' : '#4a5568')
   const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
@@ -41,7 +42,7 @@ const FollowList = () => {
   const router = useRouter();
   const scheme = useColorScheme();
   const lightMode = scheme !== 'dark';
-  const { user } = useUser();
+  const { user, updateUserData } = useUser();
 
   const [activeTab, setActiveTab] = useState<'following' | 'followers'>('following');
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,6 +113,12 @@ const FollowList = () => {
         setFollowing(prev => prev.filter(u => u.id !== userId));
         setUnfollowModalVisible(false);
         setUserToUnfollow(null);
+        
+        // Update the UserContext to reflect the new following count immediately
+        if (user) {
+          const newFollowingCount = Math.max((user.following || 0) - 1, 0);
+          updateUserData({ following: newFollowingCount });
+        }
       } else {
         Alert.alert('Error', 'Failed to unfollow user');
       }
@@ -248,17 +255,17 @@ const FollowList = () => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
             <Text style={[styles.modalTitle, { color: textColor }]}>
-              Unfollow {userToUnfollow?.full_name || userToUnfollow?.username || 'this user'}?
+              Remove {userToUnfollow?.full_name || userToUnfollow?.username || 'this user'} from Following?
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalCancelButton, { backgroundColor: textInputColor }]} onPress={handleCancelUnfollow}>
+              <TouchableOpacity style={[styles.modalCancelButton, { backgroundColor: cancelButtonColor }]} onPress={handleCancelUnfollow}>
                 <Text style={[styles.modalCancelText, { color: textColor }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalConfirmButton}
                 onPress={() => userToUnfollow && unfollowUser(userToUnfollow.id)}
               >
-                <Text style={styles.modalConfirmText}>Unfollow</Text>
+                <Text style={[styles.modalConfirmText, { color: textColor }]}>Remove</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -308,12 +315,12 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, fontFamily: 'Poppins-Regular', textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { borderRadius: 12, padding: 20, margin: 20, minWidth: 300 },
-  modalTitle: { fontSize: 18, fontFamily: 'Poppins-SemiBold', textAlign: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 16, fontFamily: 'Poppins-Regular', textAlign: 'center', marginBottom: 20 },
   modalButtons: { flexDirection: 'row', gap: 10 },
   modalCancelButton: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center' },
-  modalCancelText: { fontSize: 16, fontFamily: 'Poppins-SemiBold' },
+  modalCancelText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
   modalConfirmButton: { flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#E36062', alignItems: 'center' },
-  modalConfirmText: { fontSize: 16, color: '#fff', fontFamily: 'Poppins-SemiBold' },
+  modalConfirmText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
 });
 
 export default FollowList;

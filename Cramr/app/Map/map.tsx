@@ -309,8 +309,10 @@ useEffect(() => {
             <View style={[styles.searchInputContainer, {backgroundColor: textInputColor}]}>
               <TextInput
                 mode="flat"
-                placeholder="Search"
+                placeholder="Search events..."
                 style={styles.searchInput}
+                contentStyle={[styles.searchInputContent, {color: textColor}]} // Add this for font styling
+                outlineStyle={styles.searchInputOutline} // Add this for border radius
                 left={<TextInput.Icon icon="magnify" color={textColor}/>}
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
@@ -549,5 +551,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#5caef1',
     position: 'absolute',
     bottom: -5,
+  },
+  searchInputContent: {
+    fontFamily: 'Poppins-Regular', // This applies the font to the input text and placeholder
+  },
+  searchInputOutline: {
+    borderRadius: 10, // This ensures the outline respects the border radius
+    borderWidth: 0, // Remove any border if you don't want it
   },
 });

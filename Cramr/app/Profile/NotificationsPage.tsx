@@ -1,7 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '@/contexts/UserContext';
+import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Colors } from '../../constants/Colors';
 type Notification = {
   id: string;
   sender: string;
@@ -10,11 +12,20 @@ type Notification = {
 };
 
 export default function NotificationsPage({ navigation }: { navigation: any }) {
+  const router = useRouter();
+  const {isDarkMode, toggleDarkMode} = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
+
+
   const [notifications, setNotifications] = useState<{ [date: string]: Notification[] }>({});
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Hardcoded user ID as requested
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
+  const { user } = useUser();
+  // const userId = 'a163cdc9-6db7-4498-a73b-a439ed221dec';
+  // Use actual user ID from context, fallback to hardcoded for testing
+  const userId = user?.id || 'a163cdc9-6db7-4498-a73b-a439ed221dec';
 
   useEffect(() => {
     fetchNotifications();
@@ -56,7 +67,7 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: backgroundColor }}>
       <ScrollView 
         contentContainerStyle={styles.container}
         refreshControl={
@@ -65,21 +76,20 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
       >
         {/* Top bar with back arrow and title */}
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#222" />
-          </TouchableOpacity>
-          <Text style={styles.title}>Notifications</Text>
+          <ArrowLeft onPress={() => router.back()} color={textColor} />
         </View>
+
+        <Text style={[styles.title, { color: textColor }]}>Notifications</Text>
 
         {/* Notifications List */}
         {Object.entries(notifications).map(([date, notifs]) => (
           <View key={date} style={{ marginBottom: 14 }}>
-            <Text style={styles.dateHeader}>{date}</Text>
+            <Text style={[styles.dateHeader, { color: textColor }]}>{date}</Text>
             {notifs.map(notif => (
-              <View key={notif.id} style={styles.notifBox}>
+              <View key={notif.id} style={[styles.notifBox, { backgroundColor: textInputColor }]}>
                 <Text>
-                  <Text style={styles.bold}>{notif.sender}</Text>
-                  <Text> {notif.message}</Text>
+                  <Text style={[styles.bold, { color: textColor }]}>{notif.sender}</Text>
+                  <Text style={{ color: textColor, fontFamily: 'Poppins-Regular' }}> {notif.message}</Text>
                 </Text>
               </View>
             ))}
@@ -92,7 +102,7 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 18,
+    padding: 20,
     paddingBottom: 40,
   },
   headerRow: {
@@ -108,18 +118,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
     color: '#222',
+    marginBottom: 10,
+    alignSelf: 'center',
   },
   dateHeader: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    marginVertical: 6,
-    color: '#222',
+    fontSize: 16,
+    marginVertical: 5,
+    marginLeft: 5
   },
   notifBox: {
-    backgroundColor: '#f7f7f7',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -127,7 +138,6 @@ const styles = StyleSheet.create({
   },
   bold: {
     fontFamily: 'Poppins-SemiBold',
-    fontWeight: 'bold',
     color: '#222',
   },
 });

@@ -120,6 +120,57 @@ async function getUsersWhoBlocked(userId) {
   }
 }
 
+// Get all event IDs (for debugging)
+app.get('/events/ids', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT id, title, creator_id, created_at 
+      FROM events 
+      ORDER BY created_at DESC
+    `);
+    
+    res.json({
+      success: true,
+      events: result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        creator_id: row.creator_id,
+        created_at: row.created_at
+      }))
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get events by current user (for debugging)
+app.get('/users/:userId/events', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT id, title, creator_id, created_at 
+      FROM events 
+      WHERE creator_id = $1
+      ORDER BY created_at DESC
+    `, [userId]);
+    
+    res.json({
+      success: true,
+      events: result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        creator_id: row.creator_id,
+        created_at: row.created_at
+      }))
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 // Get all events (filtered by blocking)
 app.get('/events', async (req, res) => {
   try {
@@ -244,7 +295,20 @@ app.get('/events', async (req, res) => {
 
 // Create new event
 app.post('/events', async (req, res) => {
-  const { title, description, location, class: classField, date, tags, capacity, invitePeople, creator_id } = req.body;
+  const { 
+    title, 
+    description, 
+    location, 
+    class: classField, 
+    date_and_time, 
+    tags, 
+    capacity, 
+    invitePeople, 
+    creator_id,
+    virtual_room_link,
+    study_room, 
+    event_format
+  } = req.body;
   
   // Validate required fields
   if (!title || !creator_id) {
@@ -262,10 +326,16 @@ app.post('/events', async (req, res) => {
       return res.status(400).json({ error: 'Invalid creator_id: user not found' });
     }
 
-    // First create the event
+    // Create the event with virtual_room_link and study_room
     const result = await client.query(
-      'INSERT INTO events (title, description, location, class, date_and_time, tags, capacity, creator_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
-      [title, description, location, classField, date, tags, capacity, creator_id]
+      `INSERT INTO events (
+        title, description, location, class, date_and_time, tags, capacity, 
+        creator_id, virtual_room_link, study_room, event_format, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) RETURNING *`,
+      [
+        title, description, location, classField, date_and_time, tags, capacity, 
+        creator_id, virtual_room_link, study_room, event_format
+      ]
     );
     
     const event = result.rows[0];
@@ -293,7 +363,7 @@ app.post('/events', async (req, res) => {
             'event_invite',
             `You've been invited to ${title}`,
             event.id,
-            { event_title: title, location: location, date: date }
+            { event_title: title, location: location, date: date_and_time }
           );
         }
       }
@@ -396,7 +466,9 @@ app.post('/login', async (req, res) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      full_name: user.full_name
+      full_name: user.full_name,
+      following: user.following || 0,
+      followers: user.followers || 0
     };
     
     console.log('Login successful for user:', responseUser);
@@ -606,19 +678,30 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
 
 // Search users
 app.get('/users/search', async (req, res) => {
-  const { q } = req.query;
+  const { q, currentUserId } = req.query;
   
   if (!q || q.length < 2) {
     return res.status(400).json({ error: 'Search query must be at least 2 characters' })
   }
   
   try {
-    const result = await client.query(`
-      SELECT id, username, full_name, email
+    let query = `
+      SELECT id, username, full_name, email, following, followers
       FROM users 
       WHERE 
-        LOWER(username) LIKE LOWER($1) OR 
-        LOWER(full_name) LIKE LOWER($1)
+        (LOWER(username) LIKE LOWER($1) OR 
+         LOWER(full_name) LIKE LOWER($1))
+    `;
+    
+    let params = [`%${q}%`];
+    
+    // Exclude current user from search results if currentUserId is provided
+    if (currentUserId) {
+      query += ` AND id != $2`;
+      params.push(currentUserId);
+    }
+    
+    query += `
       ORDER BY 
         CASE 
           WHEN LOWER(username) = LOWER($1) THEN 1
@@ -627,7 +710,9 @@ app.get('/users/search', async (req, res) => {
         END,
         username
       LIMIT 20
-    `, [`%${q}%`]);
+    `;
+    
+    const result = await client.query(query, params);
     
     res.json(result.rows);
   } catch (err) {
@@ -748,6 +833,24 @@ app.post('/users/:id/follow', async (req, res) => {
       RETURNING *
     `, [id, userId]);
     
+    // Update follower's following_ids array and following count
+    await client.query(`
+      UPDATE users 
+      SET following_ids = array_append(following_ids, $1), 
+          following = following + 1,
+          updated_at = NOW()
+      WHERE id = $2
+    `, [userId, id]);
+    
+    // Update followed user's followers_ids array and followers count
+    await client.query(`
+      UPDATE users 
+      SET followers_ids = array_append(followers_ids, $1), 
+          followers = followers + 1,
+          updated_at = NOW()
+      WHERE id = $2
+    `, [id, userId]);
+    
     // Create notification for the user being followed
     const followerUser = await client.query('SELECT username FROM users WHERE id = $1', [id]);
     if (followerUser.rows.length > 0) {
@@ -784,6 +887,24 @@ app.delete('/users/:id/follow/:userId', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Follow relationship not found' });
     }
+    
+    // Update follower's following_ids array and following count
+    await client.query(`
+      UPDATE users 
+      SET following_ids = array_remove(following_ids, $1), 
+          following = GREATEST(following - 1, 0),
+          updated_at = NOW()
+      WHERE id = $2
+    `, [userId, id]);
+    
+    // Update followed user's followers_ids array and followers count
+    await client.query(`
+      UPDATE users 
+      SET followers_ids = array_remove(followers_ids, $1), 
+          followers = GREATEST(followers - 1, 0),
+          updated_at = NOW()
+      WHERE id = $2
+    `, [id, userId]);
     
     res.json({
       success: true,
@@ -989,7 +1110,7 @@ app.put('/users/:id/profile', async (req, res) => {
         major = COALESCE($2, major),
         year = COALESCE($3, year),
         bio = COALESCE($4, bio),
-        profile_picture_url = COALESCE($5, profile_picture_url),
+        profile_picture_url = $5,
         banner_color = COALESCE($6, banner_color),
         school = COALESCE($7, school),
         pronouns = COALESCE($8, pronouns),
@@ -1359,106 +1480,7 @@ async function createNotification(userId, senderId, type, message, eventId = nul
   }
 }
 
-// Test endpoint to create a notification (for development/testing purposes)
-app.post('/test/create-notification', async (req, res) => {
-  const { user_id, sender_id, type, message, event_id, metadata } = req.body;
-  
-  if (!user_id || !sender_id || !type || !message) {
-    return res.status(400).json({ error: 'user_id, sender_id, type, and message are required' });
-  }
-  
-  try {
-    const notification = await createNotification(user_id, sender_id, type, message, event_id, metadata);
-    
-    if (notification) {
-      res.status(201).json({
-        success: true,
-        message: 'Test notification created successfully',
-        notification: notification
-      });
-    } else {
-      res.status(500).json({ error: 'Failed to create notification' });
-    }
-  } catch (err) {
-    console.error('Test notification creation error:', err);
-    res.status(500).json({ error: 'Database error', details: err.message });
-  }
-});
 
-// Create sample notifications for specific user (hardcoded for testing)
-app.post('/test/create-sample-notifications', async (req, res) => {
-  const userId = '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5';
-  
-  try {
-    // First, clear any existing notifications for this user
-    await client.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
-    
-    // Create sample notifications with different dates
-    const sampleNotifications = [
-      {
-        type: 'follow',
-        message: 'jessicastacy started following you.',
-        metadata: { action: 'follow' },
-        created_at: new Date() // Today
-      },
-      {
-        type: 'event_invite',
-        message: 'You\'ve been invited to CS101 Study Group',
-        metadata: { event_title: 'CS101 Study Group', location: 'Room 101, UCSD' },
-        created_at: new Date() // Today
-      },
-      {
-        type: 'event_rsvp',
-        message: 'caileymnm RSVPed to In-N-Out Study Session',
-        metadata: { event_title: 'In-N-Out Study Session', status: 'accepted' },
-        created_at: new Date() // Today
-      },
-      {
-        type: 'event_invite',
-        message: 'You\'ve been invited to Math 20A Study Session',
-        metadata: { event_title: 'Math 20A Study Session', location: 'Library Study Room' },
-        created_at: new Date() // Today
-      },
-      {
-        type: 'follow',
-        message: 'kevinyang123 started following you.',
-        metadata: { action: 'follow' },
-        created_at: new Date() // Today
-      },
-      {
-        type: 'follow',
-        message: 'kevinyang123 started following you.',
-        metadata: { action: 'follow' },
-        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
-      }
-    ];
-    
-    const createdNotifications = [];
-    
-    for (const notif of sampleNotifications) {
-      // Insert with custom created_at timestamp
-      const result = await client.query(`
-        INSERT INTO notifications (user_id, sender_id, type, message, event_id, metadata, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *
-      `, [userId, userId, notif.type, notif.message, null, JSON.stringify(notif.metadata), notif.created_at]);
-      
-      if (result.rows[0]) {
-        createdNotifications.push(result.rows[0]);
-      }
-    }
-    
-    res.json({
-      success: true,
-      message: `Created ${createdNotifications.length} sample notifications for user ${userId} with different dates`,
-      notifications: createdNotifications
-    });
-    
-  } catch (err) {
-    console.error('Error creating sample notifications:', err);
-    res.status(500).json({ error: 'Database error', details: err.message });
-  }
-});
 
 app.get('/events/:id', async (req, res) => {
   const { id } = req.params;
@@ -1534,6 +1556,137 @@ app.get('/events/:id', async (req, res) => {
       saved_count,
     });
   } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Update event (general endpoint)
+// Update event (general endpoint)
+app.put('/events/:id', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    title, 
+    description, 
+    location, 
+    class: classField, 
+    date_and_time, 
+    tags, 
+    capacity,
+    virtual_room_link,
+    study_room,
+    event_format,
+  } = req.body;
+  
+  console.log('PUT /events/:id request:', { id, body: req.body });
+  
+  try {
+    // Build dynamic query based on provided fields
+    let query = 'UPDATE events SET';
+    let params = [];
+    let paramIndex = 1;
+    let hasUpdates = false;
+    
+    if (title !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` title = $${paramIndex}`;
+      params.push(title);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (description !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` description = $${paramIndex}`;
+      params.push(description);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (location !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` location = $${paramIndex}`;
+      params.push(location);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (classField !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` class = $${paramIndex}`;
+      params.push(classField);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (date_and_time !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` date_and_time = $${paramIndex}`;
+      params.push(date_and_time);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (tags !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` tags = $${paramIndex}`;
+      params.push(tags);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (capacity !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` capacity = $${paramIndex}`;
+      params.push(capacity);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    // ADD THESE NEW FIELDS:
+    if (virtual_room_link !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` virtual_room_link = $${paramIndex}`;
+      params.push(virtual_room_link);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (study_room !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` study_room = $${paramIndex}`;
+      params.push(study_room);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (event_format !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` event_format = $${paramIndex}`;
+      params.push(event_format);
+      paramIndex++;
+      hasUpdates = true;
+    }
+    
+    if (!hasUpdates) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    
+    query += ` WHERE id = $${paramIndex} RETURNING *`;
+    params.push(id);
+    
+    const result = await client.query(query, params);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Event updated successfully',
+      event: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Update event error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
@@ -1777,6 +1930,58 @@ app.post('/events/:eventId/rsvpd', async (req, res) => {
     
     console.log('Updated rsvped_ids:', { eventId, old: currentRsvpedIds, new: updatedRsvpedIds });
     
+    // Create notification for event creator when someone RSVPs (only for accepted RSVPs)
+    if (status === 'accepted' && event.creator_id !== user_id) {
+      try {
+        // Get the RSVPing user's username for the notification message
+        const rsvpUserResult = await client.query('SELECT username FROM users WHERE id = $1', [user_id]);
+        const rsvpUsername = rsvpUserResult.rows[0]?.username || 'Someone';
+        
+        // Get event title for the notification
+        const eventTitleResult = await client.query('SELECT title FROM events WHERE id = $1', [eventId]);
+        const eventTitle = eventTitleResult.rows[0]?.title || 'your event';
+        
+        // Create notification for the event creator
+        await createNotification(
+          event.creator_id, // event creator (recipient)
+          user_id,          // RSVPing user (sender)
+          'event_rsvp',
+          `${rsvpUsername} RSVPed to ${eventTitle}`,
+          eventId,
+          { event_title: eventTitle, status: 'accepted' }
+        );
+        
+        console.log(`Created RSVP notification for event creator ${event.creator_id}`);
+      } catch (notificationError) {
+        console.error('Error creating RSVP notification:', notificationError);
+        // Don't fail the RSVP if notification creation fails
+      }
+    }
+    
+    // Create notification for the RSVPing user (self-notification for confirmation)
+    if (status === 'accepted') {
+      try {
+        // Get event title for the notification
+        const eventTitleResult = await client.query('SELECT title FROM events WHERE id = $1', [eventId]);
+        const eventTitle = eventTitleResult.rows[0]?.title || 'an event';
+        
+        // Create notification for the RSVPing user
+        await createNotification(
+          user_id,          // RSVPing user (recipient - self)
+          user_id,          // RSVPing user (sender - self)
+          'event_rsvp_self',
+          `You RSVPed to ${eventTitle}`,
+          eventId,
+          { event_title: eventTitle, status: 'accepted' }
+        );
+        
+        console.log(`Created self RSVP notification for user ${user_id}`);
+      } catch (notificationError) {
+        console.error('Error creating self RSVP notification:', notificationError);
+        // Don't fail the RSVP if notification creation fails
+      }
+    }
+    
     res.json({
       success: true,
       message: 'RSVP updated successfully',
@@ -1860,6 +2065,59 @@ app.delete('/events/:eventId/rsvpd', async (req, res) => {
     
     console.log('Updated rsvped_ids after delete:', { eventId, old: currentRsvpedIds, new: updatedRsvpedIds });
     
+    // Create notification for event creator when someone cancels their RSVP
+    try {
+      // Get event creator ID
+      const eventCreatorResult = await client.query('SELECT creator_id, title FROM events WHERE id = $1', [eventId]);
+      if (eventCreatorResult.rows.length > 0) {
+        const eventCreator = eventCreatorResult.rows[0];
+        
+        // Only notify if the user was previously accepted and is not the creator
+        if (currentRsvpedIds.includes(user_id) && eventCreator.creator_id !== user_id) {
+          // Get the cancelling user's username
+          const cancelUserResult = await client.query('SELECT username FROM users WHERE id = $1', [user_id]);
+          const cancelUsername = cancelUserResult.rows[0]?.username || 'Someone';
+          
+          // Create notification for the event creator
+          await createNotification(
+            eventCreator.creator_id, // event creator (recipient)
+            user_id,                 // cancelling user (sender)
+            'event_rsvp_cancel',
+            `${cancelUsername} cancelled their RSVP to ${eventCreator.title || 'your event'}`,
+            eventId,
+            { event_title: eventCreator.title, status: 'cancelled' }
+          );
+          
+          console.log(`Created RSVP cancellation notification for event creator ${eventCreator.creator_id}`);
+        }
+      }
+    } catch (notificationError) {
+      console.error('Error creating RSVP cancellation notification:', notificationError);
+      // Don't fail the RSVP deletion if notification creation fails
+    }
+    
+    // Create notification for the cancelling user (self-notification for confirmation)
+    try {
+      // Get event title for the notification
+      const eventTitleResult = await client.query('SELECT title FROM events WHERE id = $1', [eventId]);
+      const eventTitle = eventTitleResult.rows[0]?.title || 'an event';
+      
+      // Create notification for the cancelling user
+      await createNotification(
+        user_id,          // cancelling user (recipient - self)
+        user_id,          // cancelling user (sender - self)
+        'event_rsvp_cancel_self',
+        `You cancelled your RSVP to ${eventTitle}`,
+        eventId,
+        { event_title: eventTitle, status: 'cancelled' }
+      );
+      
+      console.log(`Created self RSVP cancellation notification for user ${user_id}`);
+    } catch (notificationError) {
+      console.error('Error creating self RSVP cancellation notification:', notificationError);
+      // Don't fail the RSVP deletion if notification creation fails
+    }
+    
     res.json({
       success: true,
       message: 'RSVP removed successfully'
@@ -1941,6 +2199,89 @@ app.put('/events/:eventId/rsvpd', async (req, res) => {
     `, [updatedRsvpedIds, eventId]);
     
     console.log('Updated rsvped_ids after status change:', { eventId, old: currentRsvpedIds, new: updatedRsvpedIds });
+    
+    // Create notification for event creator when RSVP status changes
+    try {
+      // Get event creator and title
+      const eventCreatorResult = await client.query('SELECT creator_id, title FROM events WHERE id = $1', [eventId]);
+      if (eventCreatorResult.rows.length > 0) {
+        const eventCreator = eventCreatorResult.rows[0];
+        
+        // Only notify if the user is not the creator
+        if (eventCreator.creator_id !== user_id) {
+          // Get the RSVPing user's username
+          const rsvpUserResult = await client.query('SELECT username FROM users WHERE id = $1', [user_id]);
+          const rsvpUsername = rsvpUserResult.rows[0]?.username || 'Someone';
+          
+          let notificationMessage;
+          let notificationType;
+          
+          if (status === 'accepted') {
+            notificationMessage = `${rsvpUsername} RSVPed to ${eventCreator.title || 'your event'}`;
+            notificationType = 'event_rsvp';
+          } else if (status === 'declined') {
+            notificationMessage = `${rsvpUsername} declined ${eventCreator.title || 'your event'}`;
+            notificationType = 'event_rsvp_decline';
+          } else if (status === 'pending') {
+            notificationMessage = `${rsvpUsername} is pending for ${eventCreator.title || 'your event'}`;
+            notificationType = 'event_rsvp_pending';
+          }
+          
+          if (notificationMessage && notificationType) {
+            await createNotification(
+              eventCreator.creator_id, // event creator (recipient)
+              user_id,                 // RSVPing user (sender)
+              notificationType,
+              notificationMessage,
+              eventId,
+              { event_title: eventCreator.title, status: status }
+            );
+            
+            console.log(`Created RSVP status change notification for event creator ${eventCreator.creator_id}`);
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error('Error creating RSVP status change notification:', notificationError);
+      // Don't fail the RSVP update if notification creation fails
+    }
+    
+    // Create notification for the RSVPing user (self-notification for confirmation)
+    try {
+      // Get event title for the notification
+      const eventTitleResult = await client.query('SELECT title FROM events WHERE id = $1', [eventId]);
+      const eventTitle = eventTitleResult.rows[0]?.title || 'an event';
+      
+      let selfNotificationMessage;
+      let selfNotificationType;
+      
+      if (status === 'accepted') {
+        selfNotificationMessage = `You RSVPed to ${eventTitle}`;
+        selfNotificationType = 'event_rsvp_self';
+      } else if (status === 'declined') {
+        selfNotificationMessage = `You declined ${eventTitle}`;
+        selfNotificationType = 'event_rsvp_decline_self';
+      } else if (status === 'pending') {
+        selfNotificationMessage = `You set your RSVP to pending for ${eventTitle}`;
+        selfNotificationType = 'event_rsvp_pending_self';
+      }
+      
+      if (selfNotificationMessage && selfNotificationType) {
+        await createNotification(
+          user_id,          // RSVPing user (recipient - self)
+          user_id,          // RSVPing user (sender - self)
+          selfNotificationType,
+          selfNotificationMessage,
+          eventId,
+          { event_title: eventTitle, status: status }
+        );
+        
+        console.log(`Created self RSVP status change notification for user ${user_id}`);
+      }
+    } catch (notificationError) {
+      console.error('Error creating self RSVP status change notification:', notificationError);
+      // Don't fail the RSVP update if notification creation fails
+    }
     
     res.json({
       success: true,

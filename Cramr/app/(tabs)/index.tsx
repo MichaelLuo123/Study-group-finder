@@ -14,12 +14,13 @@ export default function HomeScreen() {
 
   const navigationItems = [
     // Sign in and Sign up
-    { title: 'Sign in', route: '/Login/Loginscreen' },
+    { title: 'Sign in', route: '/SignIn/Loginscreen' },
     { title: 'Sign up', route: '/SignUp/signupscreen' },
     { title: 'Sign up success', route: '/SignUp/signupsuccess' },
     { title: 'Sign up fail', route: '/signupfail' },
     { title: '2-Factor Authentication', route: '/TwoFactor/TwoFAPage'},
-    
+    { title: 'Forgot Password', route: '/PasswordRecovery/pwRecovery' },
+
     // Home
     { title: 'Home/List', route: '/listView' },
 
@@ -33,7 +34,10 @@ export default function HomeScreen() {
     { title: 'Create event', route: '/CreateEvent/createevent' },
     { title: 'Edit event', route: '/CreateEvent/EditEvent' },
 
+    //Messages
+    { title: 'Messages', route: '/Messages/messages' },
 
+   
     // Saved/RSVPed Events
     { title: 'Saved/RSVPed Events', route: '/Saved/Saved' },
 
@@ -42,6 +46,7 @@ export default function HomeScreen() {
     { title: 'Settings', route: '/Settings/SettingsFrontPage' },
     { title: 'Profile Page (External)', route: '/Profile/External' },
     { title: 'Follow Page', route: '/Follow/follow' },
+    { title: 'Notifications', route: '/Profile/NotificationsPage' },
 
     // Study Tools
     { title: 'Study Tools', route: '/StudyTools/StudyTools' }
