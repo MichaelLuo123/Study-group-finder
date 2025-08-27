@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 // import SendLogo from '../../assets/images/Send.png';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../../constants/Colors';
 
 interface Message {
   id: string;
@@ -80,7 +80,7 @@ const ChatScreen = () => {
   {/* White Bubble Around Name & Username */}
   <View style={styles.chatHeaderBubble}>
     <Image 
-      source={require('../../assets/images/avatar_1.png')} 
+      source={require('../../../assets/images/avatar_1.png')} 
       style={styles.chatProfilePicture}
     />
     <View style={styles.chatHeaderInfo}>
@@ -120,7 +120,7 @@ const ChatScreen = () => {
   onPress={handleSendMessage}
 >
   <Image
-    source={require('../../assets/images/Send.png')}
+    source={require('../../../assets/images/Send.png')}
     style={[styles.sendButtonImage, { width: 24, height: 24 }]} // adjust size
     resizeMode="contain"
   />

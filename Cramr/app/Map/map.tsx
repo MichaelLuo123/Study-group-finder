@@ -16,8 +16,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
-import EventList from '../listView/eventList';
-import FilterModal, { Filters } from '../listView/filter';
+import EventList from '../List/eventList';
+import FilterModal, { Filters } from '../List/filter';
 
 const { height: screenHeight } = Dimensions.get('window');
 const BOTTOM_SHEET_MIN_HEIGHT = 120; 
@@ -85,7 +85,7 @@ export default function MapScreen() {
             onPress={() => router.push('/(tabs)')}
           >
             <Image
-              source={require('../listView/assets/images/finalCramrLogo.png')}
+              source={require('../../assets/images/biggerCramrLogo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -103,13 +103,13 @@ export default function MapScreen() {
     if (currentPage !== page) {
       setCurrentPage(page);
       if (page === 'listView') {
-        router.push('/listView');
+        router.push('/List');
       }
       if (page === 'addEvent') {
         router.push('/CreateEvent/createevent');
       } 
-      if (page === 'bookmarks') {
-        router.push('/Saved/Saved');
+      if (page === 'studyTools') {
+        router.push('/StudyTools/StudyTools');
       } 
       if (page === 'profile') {
         router.push('/Profile/Internal');
@@ -390,14 +390,14 @@ useEffect(() => {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navButton}
-          onPress={() => handleNavigation('bookmarks')}
+          onPress={() => handleNavigation('studyTools')}
         >
           <Feather 
-            name="bookmark" 
+            name="tool" 
             size={24} 
             color={isDarkMode ? "#ffffff" : "#000000"} 
           />
-          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+          {currentPage === 'studyTools' && <View style={styles.activeDot} />}
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navButton}

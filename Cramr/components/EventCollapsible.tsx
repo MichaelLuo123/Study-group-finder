@@ -216,7 +216,9 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                         </>
                     )}
                 </Text>
-                <Image source={ownerProfile ? {uri: ownerProfile} : require('@/assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
+                <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: ownerId } })}>
+                    <Image source={ownerProfile ? {uri: ownerProfile} : require('@/assets/images/default_profile.jpg')} style={styles.profilePictureContainer}/>
+                </TouchableOpacity>
             </TouchableOpacity>
 
             {isOpen && (
@@ -293,22 +295,34 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
                                 <Users size={20} color={textColor} style={styles.eventIcon}/>
                                 <Text style={[styles.normalText, {color: textColor}]}>{RSVPs.length}/{capacity}</Text>
                                 {attendee1Profile != null && RSVPs[0] != null &&(
-                                    <Image source={{uri: attendee1Profile}} style={styles.smallProfilePictureContainer}/>
+                                    <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: RSVPs[0].user_id } })}>
+                                        <Image source={{uri: attendee1Profile}} style={styles.smallProfilePictureContainer}/>
+                                    </TouchableOpacity>
                                 )}
                                 {attendee1Profile == null && RSVPs[0] != null && (
-                                    <Image source={require('../assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
+                                    <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: RSVPs[0].user_id } })}>
+                                        <Image source={require('../assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
+                                    </TouchableOpacity>
                                 )}
                                 {attendee2Profile != null && RSVPs[1] != null && (
-                                    <Image source={{uri: attendee2Profile}} style={styles.smallProfilePictureContainer}/>
+                                    <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: RSVPs[1].user_id } })}>
+                                        <Image source={{uri: attendee2Profile}} style={styles.smallProfilePictureContainer}/>
+                                    </TouchableOpacity>
                                 )}
                                 {attendee2Profile == null &&  RSVPs[1] != null && (
-                                    <Image source={require('../assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
+                                    <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: RSVPs[1].user_id } })}>
+                                        <Image source={require('../assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
+                                    </TouchableOpacity>
                                 )}
                                 {attendee3Profile != null && RSVPs[2] != null && (
-                                    <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>
+                                    <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: RSVPs[2].user_id } })}>
+                                        <Image source={{uri: attendee3Profile}} style={styles.smallProfilePictureContainer}/>
+                                    </TouchableOpacity>
                                 )}
                                 {attendee3Profile == null &&  RSVPs[2] != null && (
-                                    <Image source={require('@/assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
+                                    <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: RSVPs[2].user_id } })}>
+                                        <Image source={require('@/assets/images/default_profile.jpg')} style={styles.smallProfilePictureContainer}/>
+                                    </TouchableOpacity>
                                 )}
                                 {RSVPs.length > 3 && (
                                     <Text style={[styles.normalText, {color: textColor, marginLeft: 5}]}>

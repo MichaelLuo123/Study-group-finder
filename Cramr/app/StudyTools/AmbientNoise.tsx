@@ -3,13 +3,13 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Pause, Play } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    AppState,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  AppState,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
@@ -338,9 +338,7 @@ export default function AmbientNoise() {
         <Text style={[styles.heading, { color: textColor }]}>Music</Text>
 
         {isLoading && (
-          <Text style={[styles.loadingText, { color: textColor }]}>
-            Loading sounds...
-          </Text>
+          <></>
         )}
 
 
@@ -383,8 +381,9 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 18,
     alignSelf: 'center',
-    marginBottom: 30,
-    fontFamily: 'Poppins-Bold',
+    marginBottom: 20,
+    marginTop: -40,
+    fontFamily: 'Poppins-SemiBold',
   },
   backButton: {
     width: 25,
@@ -414,7 +413,7 @@ const styles = StyleSheet.create({
   },
   trackTitle: {
     fontSize: 16,
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     marginBottom: 10,
     textAlign: 'center',
     alignSelf: 'center',

@@ -113,7 +113,7 @@ const RequestPasswordResetScreen = () => {
                 
                 setTimeout(() => {
                     router.push({
-                        pathname: '/Login/SetNewPassword',
+                        pathname: '/SignIn/SetNewPassword',
                         params: { token: result.token }
                     });
                 }, 1500);

@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../../constants/Colors';
 // import NewMessageLogo from '../../assets/images/NewMessage.png';
 
 interface MessagePreview {
@@ -61,7 +61,7 @@ const Messages = () => {
       onPress={() => router.push('/Messages/chat' as any)}
     >
       <Image 
-        source={require('../../assets/images/avatar_1.png')} 
+        source={require('../../../assets/images/avatar_1.png')} 
         style={styles.avatar}
       />
       <View style={styles.messageInfo}>
@@ -90,7 +90,7 @@ const Messages = () => {
           onPress={() => router.push('/Messages/new' as any)}
         >
           <Image
-            source={require('../../assets/images/NewMessage.png')}
+            source={require('../../../assets/images/NewMessage.png')}
             style={[styles.createImage, { width: 27, height: 27}]} // adjust width/height here
             resizeMode="contain"
           />

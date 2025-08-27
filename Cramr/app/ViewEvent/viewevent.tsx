@@ -68,7 +68,7 @@ const EventViewScreen = () => {
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
       setCurrentPage(page);
-      if (page === 'listView') router.push('/listView');
+      if (page === 'listView') router.push('/List');
       if (page === 'profile') router.push('/Profile/Internal');
     }
   };

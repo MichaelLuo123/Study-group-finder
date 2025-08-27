@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import { Platform, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 
-type Page = 'listView' | 'map' | 'addEvent' | 'bookmarks' | 'profile';
+type Page = 'listView' | 'map' | 'addEvent' | 'studyTools' | 'profile';
 
 type Props = {
   current: Page;
@@ -36,9 +36,9 @@ export default function BottomNav({ current, onNavigate, light = true, style }: 
         children={<Feather name="plus-square" size={24} color={icon} />}
       />
       <NavBtn
-        active={current === 'bookmarks'}
-        onPress={() => onNavigate('bookmarks')}
-        children={<Feather name="bookmark" size={24} color={icon} />}
+        active={current === 'studyTools'}
+        onPress={() => onNavigate('studyTools')}
+        children={<Feather name="tool" size={24} color={icon} />}
       />
       <NavBtn
         active={current === 'profile'}

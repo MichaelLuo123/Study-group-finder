@@ -47,7 +47,7 @@ export default function HomeScreen() {
       headerLeft: () => (
         <View style={[styles.fullWidthHeader]}>
           <Image
-            source={require('./assets/images/finalCramrLogo.png')}
+            source={require('../../assets/images/cramr_logo.png')}
             style={[styles.logo]}
             resizeMode="contain"
           />
@@ -70,10 +70,10 @@ export default function HomeScreen() {
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
       setCurrentPage(page);
-      if (page === 'listView') router.push('/listView');
+      if (page === 'listView') router.push('/List');
       if (page === 'map') router.push('/Map/map');
       if (page === 'addEvent') router.push('/CreateEvent/createevent');
-      if (page === 'bookmarks') router.push('/Saved/Saved');
+      if (page === 'studyTools') router.push('/StudyTools/StudyTools');
       if (page === 'profile') router.push('/Profile/Internal');
     }
   };
@@ -211,7 +211,7 @@ export default function HomeScreen() {
         onChangeSlider={(value) => !value ? setSearchMode('events') : setSearchMode('people')}
         lightMode={!isDarkMode}
         value={sliderValue}
-        style={{marginBottom: 5, marginTop: -10, alignSelf: 'center'}}
+        style={{marginBottom: 5, alignSelf: 'center'}}
       />
 
       {/* Search Bar + Filter (filter only shows on Events) */}
@@ -343,9 +343,9 @@ export default function HomeScreen() {
           <Feather name="plus-square" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
           {currentPage === 'addEvent' && <View style={styles.activeDot} />}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => handleNavigation('bookmarks')}>
-          <Feather name="bookmark" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+        <TouchableOpacity style={styles.navButton} onPress={() => handleNavigation('studyTools')}>
+          <Feather name="tool" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
+          {currentPage === 'tool' && <View style={styles.activeDot} />}
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton} onPress={() => handleNavigation('profile')}>
           <Ionicons

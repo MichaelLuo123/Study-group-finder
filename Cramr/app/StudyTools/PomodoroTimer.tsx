@@ -5,6 +5,8 @@ import {
   Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -196,161 +198,167 @@ export default function PomodoroTimer() {
     <View style={[styles.taskItem, { backgroundColor: textInputColor }]}>
       <Text style={[styles.taskText, { color: textColor }]}>{item.text}</Text>
       <TouchableOpacity onPress={() => deleteTask(item.id)}>
-        <X size={20} color="#FF6B6B" />
+        <X size={20} color="#E36062" />
       </TouchableOpacity>
     </View>
   );
 
   return (
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={24} color={textColor} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: textColor }]}>Pomodoro Timer</Text>
-        </View>
-
-        {/* Mode Selection Pills */}
-        <View style={styles.modeContainer}>
-          <TouchableOpacity
-            style={[
-              styles.modePill,
-              currentMode === 'work' && styles.modePillSelected,
-              { backgroundColor: currentMode === 'work' ? 'transparent' : textInputColor }
-            ]}
-            onPress={() => {
-              setCurrentMode('work');
-              setTimeLeft(timerSettings.work);
-              setIsRunning(false);
-            }}
-          >
-            <Text style={[styles.modePillText, { color: textColor }]}>Pomodoro</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.modePill,
-              currentMode === 'shortBreak' && styles.modePillSelected,
-              { backgroundColor: currentMode === 'shortBreak' ? 'transparent' : textInputColor }
-            ]}
-            onPress={() => {
-              setCurrentMode('shortBreak');
-              setTimeLeft(timerSettings.shortBreak);
-              setIsRunning(false);
-            }}
-          >
-            <Text style={[styles.modePillText, { color: textColor }]}>Short Break</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.modePill,
-              currentMode === 'longBreak' && styles.modePillSelected,
-              { backgroundColor: currentMode === 'longBreak' ? 'transparent' : textInputColor }
-            ]}
-            onPress={() => {
-              setCurrentMode('longBreak');
-              setTimeLeft(timerSettings.longBreak);
-              setIsRunning(false);
-            }}
-          >
-            <Text style={[styles.modePillText, { color: textColor }]}>Long Break</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Round Indicator */}
-        <Text style={[styles.roundText, { color: textColor }]}>
-          Round {completedSessions + 1}
-        </Text>
-
-        {/* Timer Display */}
-        <View style={styles.timerContainer}>
-          <Image 
-            source={currentGif === 'catboat' 
-              ? require('../../assets/images/catboat.gif')
-              : require('../../assets/images/icey.gif')
-            }
-            style={[
-              styles.gifAnimation,
-              { opacity: isRunning ? 1 : 0.6 }
-            ]}
-            resizeMode="contain"
-          />
-          
-          {/* GIF Credit - right below the GIF */}
-          <Text style={[styles.gifCredit, { color: textColor }]}>
-            {currentGif === 'catboat' 
-              ? '🐱⛵ by Assma Amedi' 
-              : '❄️ by Robin Griffiths'
-            }
-          </Text>
-          
-          <Text style={[styles.timer, { color: textColor }]}>
-            {formatTime(timeLeft)}
-          </Text>
-        </View>
-
-        {/* Control Buttons */}
-        <View style={styles.controlsContainer}>
-          <TouchableOpacity
-            style={styles.resetButton}
-            onPress={resetTimer}
-          >
-            <Text style={styles.controlButtonText}>Reset</Text>
-          </TouchableOpacity>
-
-          {!isRunning ? (
-            <TouchableOpacity
-              style={styles.startButton}
-              onPress={startTimer}
-            >
-              <Text style={styles.controlButtonText}>Start</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={{height: tasks.length > 0 ? 1000 + tasks.length * 80 : 1000 }}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ArrowLeft size={24} color={textColor} />
             </TouchableOpacity>
-          ) : (
+            <Text style={[styles.title, { color: textColor }]}>Pomodoro Timer</Text>
+          </View>
+
+          {/* Mode Selection Pills */}
+          <View style={styles.modeContainer}>
             <TouchableOpacity
-              style={styles.startButton}
-              onPress={pauseTimer}
+              style={[
+                styles.modePill,
+                {backgroundColor: textInputColor},
+                { borderColor: currentMode === 'work' ? textColor : 'transparent' }
+              ]}
+              onPress={() => {
+                setCurrentMode('work');
+                setTimeLeft(timerSettings.work);
+                setIsRunning(false);
+              }}
             >
-              <Text style={styles.controlButtonText}>Pause</Text>
+              <Text style={[styles.modePillText, { color: textColor }]}>Pomodoro</Text>
             </TouchableOpacity>
-          )}
-        </View>
 
-        {/* Divider */}
-        <View style={[styles.divider, { backgroundColor: textColor }]} />
+            <TouchableOpacity
+              style={[
+                styles.modePill,
+                {backgroundColor: textInputColor},
+                { borderColor: currentMode === 'shortBreak' ? textColor : 'transparent' }
+              ]}
+              onPress={() => {
+                setCurrentMode('shortBreak');
+                setTimeLeft(timerSettings.shortBreak);
+                setIsRunning(false);
+              }}
+            >
+              <Text style={[styles.modePillText, { color: textColor }]}>Short Break</Text>
+            </TouchableOpacity>
 
-        {/* Tasks Section */}
-        <View style={styles.tasksContainer}>
-          <Text style={[styles.tasksTitle, { color: textColor }]}>Tasks</Text>
-          
-          <FlatList
-            data={tasks}
-            renderItem={renderTask}
-            keyExtractor={(item) => item.id}
-            style={styles.tasksList}
-            scrollEnabled={false}
-          />
-
-          {/* Add Task Input */}
-          <View style={styles.addTaskContainer}>
-            <TextInput
-              style={[styles.taskInput, { backgroundColor: textInputColor, color: textColor }]}
-              placeholder="Enter task.."
-              placeholderTextColor={!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText}
-              value={newTaskText}
-              onChangeText={setNewTaskText}
-              onSubmitEditing={addTask}
-            />
-            <TouchableOpacity style={styles.addButton} onPress={addTask}>
-              <Plus size={20} color="white" />
+            <TouchableOpacity
+              style={[
+                styles.modePill,
+                {backgroundColor: textInputColor},
+                { borderColor: currentMode === 'longBreak' ? textColor : 'transparent' }
+              ]}
+              onPress={() => {
+                setCurrentMode('longBreak');
+                setTimeLeft(timerSettings.longBreak);
+                setIsRunning(false);
+              }}
+            >
+              <Text style={[styles.modePillText, { color: textColor }]}>Long Break</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
+          {/* Round Indicator */}
+          <Text style={[styles.roundText, { color: textColor }]}>
+            Round {completedSessions + 1}
+          </Text>
+
+          {/* Timer Display */}
+          <View style={styles.timerContainer}>
+            <Image 
+              source={currentGif === 'catboat' 
+                ? require('../../assets/images/catboat.gif')
+                : require('../../assets/images/icey.gif')
+              }
+              style={[
+                styles.gifAnimation,
+                { opacity: isRunning ? 1 : 0.6 ,}
+              ]}
+              resizeMode="contain"
+            />
+            
+            {/* GIF Credit - right below the GIF */}
+            <Text style={[styles.gifCredit, { color: textColor }]}>
+              {currentGif === 'catboat' 
+                ? '🐱⛵ by Assma Amedi' 
+                : '❄️ by Robin Griffiths'
+              }
+            </Text>
+            
+            <Text style={[styles.timer, { color: textColor }]}>
+              {formatTime(timeLeft)}
+            </Text>
+          </View>
+
+          {/* Control Buttons */}
+          <View style={styles.controlsContainer}>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={resetTimer}
+            >
+              <Text style={[styles.controlButtonText, { color: textColor }]}>Reset</Text>
+            </TouchableOpacity>
+
+            {!isRunning ? (
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={startTimer}
+              >
+                <Text style={[styles.controlButtonText, { color: textColor }]}>Start</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={pauseTimer}
+              >
+                <Text style={styles.controlButtonText}>Pause</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Divider */}
+          <View style={[styles.divider, { backgroundColor: textColor }]} />
+
+          {/* Tasks Section */}
+          <View style={styles.tasksContainer}>
+            <Text style={[styles.tasksTitle, { color: textColor }]}>Tasks</Text>
+            
+            <FlatList
+              data={tasks}
+              renderItem={renderTask}
+              keyExtractor={(item) => item.id}
+              style={styles.tasksList}
+              scrollEnabled={false}
+            />
+
+            {/* Add Task Input */}
+            <View style={styles.addTaskContainer}>
+              <TextInput
+                style={[styles.taskInput, { backgroundColor: textInputColor, color: textColor }]}
+                placeholder="Enter task.."
+                placeholderTextColor={!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText}
+                value={newTaskText}
+                onChangeText={setNewTaskText}
+                onSubmitEditing={addTask}
+              />
+              <TouchableOpacity style={styles.addButton} onPress={addTask}>
+                <Plus size={20} color={textColor} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -364,14 +372,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   backButton: {
     marginRight: 15,
   },
   title: {
-    fontSize: 24,
-    fontFamily: 'Poppins-Bold',
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    marginLeft: 60,
   },
   modeContainer: {
     flexDirection: 'row',
@@ -380,97 +389,82 @@ const styles = StyleSheet.create({
   },
   modePill: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginHorizontal: 4,
+    padding: 10,
+    borderRadius: 10,
+    marginHorizontal: 5,
     borderWidth: 1,
-    borderColor: '#000',
     alignItems: 'center',
     minHeight: 36,
   },
-  modePillSelected: {
-    backgroundColor: 'transparent',
-    borderColor: '#000',
-  },
   modePillText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Medium',
+    fontSize: 14,
     textAlign: 'center',
     lineHeight: 16,
+    fontFamily: 'Poppins-Regular',
   },
   roundText: {
     fontSize: 16,
-    fontFamily: 'Poppins-Regular',
+    fontFamily: 'Poppins-SemiBold',
     textAlign: 'center',
-    marginBottom: 30,
+    marginTop: 10
   },
   timerContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   gifAnimation: {
     width: 280,
     height: 280,
     alignSelf: 'center',
-    marginBottom: 10,
   },
   gifCredit: {
     fontSize: 12,
     fontFamily: 'Poppins-Regular',
     textAlign: 'center',
-    marginBottom: 15,
-    marginTop: 5,
+    marginBottom: 20,
     opacity: 0.7,
   },
   timerIcon: {
     color: 'white',
     fontSize: 24,
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
   },
   timer: {
-    fontSize: 72,
-    fontFamily: 'Poppins-Bold',
+    fontSize: 50,
+    fontFamily: 'Poppins-SemiBold',
   },
   controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   resetButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: '#FF6B6B',
-    minWidth: 120,
+    backgroundColor: '#E36062',
+    padding: 10,
+    borderRadius: 10,
+    width: 150,
     alignItems: 'center',
   },
   startButton: {
     backgroundColor: '#5CAEF1',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: '#5CAEF1',
-    minWidth: 120,
+    padding: 10,
+    borderRadius: 10,
+    width: 150,
     alignItems: 'center',
   },
   controlButtonText: {
-    color: 'white',
     fontSize: 16,
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'Poppins-Regular',
   },
   divider: {
     height: 1,
-    marginBottom: 30,
+    marginBottom: 20,
   },
   tasksContainer: {
-    flex: 1,
+    marginBottom: 20,
   },
   tasksTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Poppins-Bold',
     marginBottom: 15,
   },
@@ -481,13 +475,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
+    padding: 10,
     borderRadius: 10,
     marginBottom: 10,
   },
   taskText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Poppins-Regular',
     flex: 1,
   },
@@ -497,18 +490,16 @@ const styles = StyleSheet.create({
   },
   taskInput: {
     flex: 1,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderRadius: 25,
+    padding: 10,
+    borderRadius: 10,
     marginRight: 10,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Poppins-Regular',
   },
   addButton: {
     backgroundColor: '#5CAEF1',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    padding: 10,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
