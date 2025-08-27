@@ -310,7 +310,7 @@ export default function HomeScreen() {
               return (
                 <TouchableOpacity
                   key={person.id}
-                  style={[styles.personCard, {backgroundColor: bannerColors[person.banner_color] || 'white'}]}
+                  style={[styles.personCard, {backgroundColor: bannerColors[person.banner_color] || textInputColor}]}
                   onPress={() => navigateToProfile(person.id)}
                 >
                   <View style={styles.personInfo}>
