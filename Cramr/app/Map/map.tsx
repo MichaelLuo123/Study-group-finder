@@ -24,47 +24,41 @@ const HEADER_HEIGHT = 100;
 const NAVBAR_HEIGHT = 80; 
 const BOTTOM_SHEET_MAX_HEIGHT = screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT; 
 
-const StarMarker = ({ userId, remainingCapacity}: { userId: string, remainingCapacity: number }) => {
-  const { isDarkMode } = useUser();
-  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background);
+const StarMarker = ({ userId, remainingCapacity }: { userId: string, remainingCapacity: number }) => {
+  const { isDarkMode, user: loggedInUser } = useUser();
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
-  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
-  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText);
   const bannerColors = Colors.bannerColors;
-
-  const [color, setColor] = useState(null);
+  const [color, setColor] = useState<number | null>(null);
 
   // Fetch banner color
-    useEffect(() => {
-      const fetchBannerColor = async () => {
-          if (!userId) return;
-                
-              try {
-                    const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        setColor(data.banner_color || null);
-                    } else {
-                        setColor(null);
-                    }
-                } catch (error) {
-                    console.error('Error fetching banner color:', error);
-                    setColor(null);
-                }
-            };
-    
-            fetchBannerColor();
-        }, [userId]);
+  useEffect(() => {
+    const fetchBannerColor = async () => {
+      if (!userId) return;
+      try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setColor(data.banner_color || null);
+        } else {
+          setColor(null);
+        }
+      } catch (error) {
+        console.error('Error fetching banner color:', error);
+        setColor(null);
+      }
+    };
+    fetchBannerColor();
+  }, [userId]);
 
   return (
     <View style={styles.starContainer}>
       <Ionicons
         name='star'
         size={45}
-        color={color ? bannerColors[color] : 'white'}
+        color={(userId === loggedInUser?.id ? 'transparent' : (color ? bannerColors[color] : 'white'))}
       />
       <View style={styles.textContainer}>
-        <Text style={[styles.starText, {color: textColor}]}>{remainingCapacity}</Text>
+        <Text style={[styles.starText, { color: textColor && (userId === loggedInUser?.id ? 'transparent' : textColor)}]}>{remainingCapacity}</Text>
       </View>
     </View>
   );
@@ -76,7 +70,6 @@ export default function MapScreen() {
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
   const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText);
-  const bannerColors = Colors.bannerColors;
 
   const navigation = useNavigation();
   const router = useRouter();
@@ -84,7 +77,6 @@ export default function MapScreen() {
 
   // State
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState('map');
   const [events, setEvents] = useState<any[]>([]);
   const [eventDistances, setEventDistances] = useState<{ [eventId: string]: number }>({});
@@ -124,7 +116,7 @@ export default function MapScreen() {
         right: 0,
       },
     });
-  }, [navigation, backgroundColor]);
+  }, [backgroundColor, navigation, router]);
 
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
@@ -356,7 +348,6 @@ export default function MapScreen() {
               return null;
             }
             
-            console.log('Rendering marker for event:', event.id, 'at', event.coordinates);
             return (
               <Marker
                 key={event.id}
@@ -367,7 +358,7 @@ export default function MapScreen() {
                 onPress={() => setSelectedEventId(event.id)}
                 zIndex={index + 1}
               >
-                <StarMarker 
+                <StarMarker
                   userId={event.creator_id}
                   remainingCapacity={event.remainingCapacity}
                 />
