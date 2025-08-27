@@ -168,23 +168,30 @@ export default function Internal() {
     }
   };
 
-  // Pull-to-refresh handler
+  // Add a refresh key state to force child components to refresh
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Update the onRefresh function
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    
     try {
-      // Refresh user data
+      // Refresh user data first
       await fetchUserData();
       
-      // Refresh events data
-      await fetchAllEventsAndFilter();
+      // Only refresh events if we have a userId
+      if (loggedInUser?.id) {
+        await fetchAllEventsAndFilter();
+      }
+      
+      // Force child components to refresh by incrementing the key
+      setRefreshKey(prev => prev + 1);
       
     } catch (error) {
       console.error('Error during refresh:', error);
     } finally {
       setRefreshing(false);
     }
-  }, [loggedInUser?.id, userId]);
+  }, [loggedInUser?.id]);
 
   // pull user data from database
   useEffect(() => {
@@ -426,6 +433,7 @@ export default function Internal() {
           {visibleEvents === 'own' && (
             <>
               <EventList
+                key={`own-${refreshKey}`}
                 creatorUserId={userId}
               />
             </>
@@ -433,6 +441,7 @@ export default function Internal() {
           {visibleEvents === 'rsvped' && (
             <>
               <Saved
+                key={`rsvped-${refreshKey}`}
                 userId={userId || null}
                 showSlider={false}
                 defaultView="saved"
@@ -442,6 +451,7 @@ export default function Internal() {
           {visibleEvents === 'saved' && (
             <>
               <Saved
+                key={`saved-${refreshKey}`} 
                 userId={userId || null}
                 showSlider={false}
                 defaultView="rsvped"
