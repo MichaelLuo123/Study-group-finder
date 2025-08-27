@@ -103,13 +103,13 @@ export default function MapScreen() {
     if (currentPage !== page) {
       setCurrentPage(page);
       if (page === 'listView') {
-        router.push('/listView');
+        router.push('/List');
       }
       if (page === 'addEvent') {
         router.push('/CreateEvent/createevent');
       } 
-      if (page === 'bookmarks') {
-        router.push('/Saved/Saved');
+      if (page === 'studyTools') {
+        router.push('/StudyTools/StudyTools');
       } 
       if (page === 'profile') {
         router.push('/Profile/Internal');
@@ -390,14 +390,14 @@ useEffect(() => {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navButton}
-          onPress={() => handleNavigation('bookmarks')}
+          onPress={() => handleNavigation('studyTools')}
         >
           <Feather 
-            name="bookmark" 
+            name="tool" 
             size={24} 
             color={isDarkMode ? "#ffffff" : "#000000"} 
           />
-          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+          {currentPage === 'studyTools' && <View style={styles.activeDot} />}
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navButton}

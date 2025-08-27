@@ -3,7 +3,7 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Bell, Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import EventList from '../List/eventList';
 import Saved from './Saved/Saved';
@@ -55,7 +55,7 @@ interface Event {
 
 export default function Internal() {
   const router = useRouter();
-  const { user: loggedInUser } = useUser();
+  const { user: loggedInUser, updateUserData } = useUser();
 
   // Colors
   const {isDarkMode, toggleDarkMode} = useUser();
@@ -69,6 +69,9 @@ export default function Internal() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const userId = loggedInUser?.id; // Use logged-in user's ID
+
+  // Add refresh state
+  const [refreshing, setRefreshing] = useState(false);
 
   // Form state;
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -91,94 +94,124 @@ export default function Internal() {
   const [following, setFollowing] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState('profile');
 
+  // Events
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [userEvents, setUserEvents] = useState<Event[]>([]);
+
+  // Function to fetch user data
+  const fetchUserData = async () => {
+    // Only fetch if we have a valid logged-in user
+    if (!loggedInUser?.id) {
+      return; // Don't fetch if no logged-in user
+    }
+    
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        
+        // Populate form fields with database data
+        setProfilePicture(userData.profile_picture_url || null);
+        setBannerColor(Number(userData.banner_color) || null);
+        setName(userData.full_name);
+        setUsername(userData.username);
+        setSchool(userData.school || null);
+        setMajor(userData.major || null);
+        setClassLevel(userData.year || null);
+        setPronouns(userData.pronouns || null);
+        setIsTransfer(userData.transfer || false);
+        setBio(userData.bio || null);
+        setPrompt1(userData.prompt_1 || null);
+        setPrompt1Answer(userData.prompt_1_answer || null);
+        setPrompt2(userData.prompt_2 || null);
+        setPrompt2Answer(userData.prompt_2_answer || null);
+        setPrompt3(userData.prompt_3 || null);
+        setPrompt3Answer(userData.prompt_3_answer || null);
+        setFollowers(userData.followers);
+        setFollowing(userData.following);
+
+        // Update the user context with latest data
+        updateUserData({
+          followers: userData.followers,
+          following: userData.following
+        });
+      } else {
+        console.error('Failed to fetch user data');
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
+
+  // Function to fetch events
+  const fetchAllEventsAndFilter = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+      if (response.ok) {
+        const eventsData = await response.json();
+        setAllEvents(eventsData);
+        
+        // Filter events where creator_id matches userId
+        const filteredEvents = eventsData.filter((event: Event) => event.creator_id === userId);
+        setUserEvents(filteredEvents);
+        
+        console.log(`Found ${filteredEvents.length} events created by user ${userId}`);
+        console.log('All events:', eventsData.map((e: any) => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
+        console.log('Filtered events:', filteredEvents.map((e: any) => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
+      } else {
+        console.error('Failed to fetch events data');
+      }
+    } catch (error) {
+      console.error('Error fetching events data:', error);
+    }
+  };
+
+  // Pull-to-refresh handler
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    
+    try {
+      // Refresh user data
+      await fetchUserData();
+      
+      // Refresh events data
+      await fetchAllEventsAndFilter();
+      
+    } catch (error) {
+      console.error('Error during refresh:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loggedInUser?.id, userId]);
+
   // pull user data from database
   useEffect(() => {
-    const fetchUserData = async () => {
-      // Only fetch if we have a valid logged-in user
-      if (!loggedInUser?.id) {
-        return; // Don't fetch if no logged-in user
-      }
-      
+    const loadInitialData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          
-          // Populate form fields with database data
-          setProfilePicture(userData.profile_picture_url || null);
-          setBannerColor(Number(userData.banner_color) || null);
-          setName(userData.full_name);
-          setUsername(userData.username);
-          setSchool(userData.school || null);
-          setMajor(userData.major || null);
-          setClassLevel(userData.year || null);
-          setPronouns(userData.pronouns || null);
-          setIsTransfer(userData.transfer || false);
-          setBio(userData.bio || null);
-          setPrompt1(userData.prompt_1 || null);
-          setPrompt1Answer(userData.prompt_1_answer || null);
-          setPrompt2(userData.prompt_2 || null);
-          setPrompt2Answer(userData.prompt_2_answer || null);
-          setPrompt3(userData.prompt_3 || null);
-          setPrompt3Answer(userData.prompt_3_answer || null);
-          setFollowers(userData.followers);
-          setFollowing(userData.following);
-        } else {
-          console.error('Failed to fetch user data');
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
+        await fetchUserData();
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUserData();
+    loadInitialData();
   }, [loggedInUser?.id]);
-
-  // Events
-  const [allEvents, setAllEvents] = useState<Event[]>([]);
-  const [userEvents, setUserEvents] = useState<Event[]>([]);
 
   // Fetch all events from database and filter by creator_id
   useEffect(() => {
-    const fetchAllEventsAndFilter = async () => {
-      try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-        if (response.ok) {
-          const eventsData = await response.json();
-          setAllEvents(eventsData);
-          
-          // Filter events where creator_id matches userId
-          const filteredEvents = eventsData.filter((event: Event) => event.creator_id === userId);
-          setUserEvents(filteredEvents);
-          
-          console.log(`Found ${filteredEvents.length} events created by user ${userId}`);
-          console.log('All events:', eventsData.map((e: any) => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
-          console.log('Filtered events:', filteredEvents.map((e: any) => ({ id: e.id, creator_id: e.creator_id, title: e.title })));
-        } else {
-          console.error('Failed to fetch events data');
-        }
-      } catch (error) {
-        console.error('Error fetching events data:', error);
-      }
-    };
-
     fetchAllEventsAndFilter();
   }, [userId]);
-
-
 
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
       setCurrentPage(page);
-      if (page === 'listView') router.push('/listView');
+      if (page === 'listView') router.push('/List');
       if (page === 'map') router.push('/Map/map');
       if (page === 'addEvent') router.push('/CreateEvent/createevent');
-      if (page === 'bookmarks') router.push('/Saved/Saved');
+      if (page === 'studyTools') router.push('/StudyTools/StudyTools');
       if (page === 'profile') router.push('/Profile/Internal');
     }
   };
@@ -223,8 +256,20 @@ export default function Internal() {
   const [visibleEvents, setVisibleEvents] = useState<'rsvped' | 'saved' | 'own'>('saved');
 
   return (
-    <View style={[styles.container, {backgroundColor: backgroundColor}]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 30 }}>
+    <View style={[styles.container, {backgroundColor: backgroundColor, height: 'auto'}]}>
+      <ScrollView 
+        contentContainerStyle={{ paddingBottom: 100, paddingTop: 30 }} 
+        showsVerticalScrollIndicator={false} 
+        showsHorizontalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#5CAEF1']} // Android
+            tintColor={'#5CAEF1'} // iOS
+          />
+        }
+      >
         <View>
           {/* Show message if no user is logged in */}
           {!loggedInUser && (
@@ -256,7 +301,7 @@ export default function Internal() {
               <TouchableOpacity onPress={() => router.push('/Profile/NotificationsPage')}>
                 <Bell size={24} color={textColor} style={styles.iconContainer} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/Settings/SettingsFrontPage')}>
+              <TouchableOpacity onPress={() => router.push('./Settings/SettingsFrontPage')}>
                 <Settings size={24} color={textColor} style={styles.iconContainer} />
               </TouchableOpacity>
             </View>
@@ -270,7 +315,7 @@ export default function Internal() {
             <View style={styles.rightOfBannerContainer}>
               <Text style={[styles.headerText, {color: textColor}]}>{name}</Text>
               <Text style={[styles.subheaderText, {color: textColor, marginTop: 3}]}>@{username}</Text>
-              <TouchableOpacity onPress={() => router.push('/Follow/follow')}>
+              <TouchableOpacity onPress={() => router.push('./Follow/follow')}>
                 <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 3}}>
                   <Text style={[styles.subheaderText, {color: textColor}]}>
                     <Text style={[styles.subheaderBoldText, {color: textColor}]}>
@@ -362,7 +407,7 @@ export default function Internal() {
           
           <View style={{flexDirection: 'row', justifyContent: 'space-around', marginTop: 15, backgroundColor: sliderBackgroundColor, borderRadius: 25, marginBottom: 10}}>
             <TouchableOpacity onPress={() => setVisibleEvents('own')}>
-              <View style={{borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 10, ...(visibleEvents === 'own' ? {backgroundColor: textInputColor,} : {})}}>
+              <View style={{borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 10, paddingHorizontal: 12,...(visibleEvents === 'own' ? {backgroundColor: textInputColor,} : {})}}>
                 <Text style={[styles.normalText, {color: textColor}]}> My Events </Text>
               </View>
             </TouchableOpacity>
@@ -445,14 +490,14 @@ export default function Internal() {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navButton}
-          onPress={() => handleNavigation('bookmarks')}
+          onPress={() => handleNavigation('studyTools')}
         >
           <Feather 
-            name="bookmark" 
+            name="tool" 
             size={24} 
             color={textColor} 
           />
-          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+          {currentPage === 'studyTools' && <View style={styles.activeDot} />}
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navButton}
@@ -500,7 +545,8 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     height: 27,
-    width: 120
+    width: 120,
+    marginTop: 15,
   },
   topButtonsContainer: {
     flexDirection: 'row',
@@ -510,6 +556,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: 70,
+    marginTop: 15,
   },
   iconContainer: {
     width: 25,

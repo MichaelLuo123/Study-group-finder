@@ -2,7 +2,7 @@ import EventCollapsible from '@/components/EventCollapsible';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import * as Location from 'expo-location';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Colors } from '../../constants/Colors';
 
 import { useUser } from '@/contexts/UserContext';
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,11 +22,11 @@ interface EventListProps {
   filters?: Filters | null;
   selectedEventId?: string | null;
   searchQuery?: string;
-  creatorUserId?: string; // New prop for filtering by creator
+  creatorUserId?: string;
   isDistanceVisible?: boolean;
   eventDistances?: { [eventId: string]: number };
-  onClearSelectedEvent?: () => void; // Callback to clear selected event
-  onCenterMapOnEvent?: (eventId: string) => void; // Callback to center map on event
+  onClearSelectedEvent?: () => void;
+  onCenterMapOnEvent?: (eventId: string) => void;
 }
 
 export default function EventList({ 
@@ -45,7 +46,59 @@ export default function EventList({
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
 
-  const userId = user?.id; // Use logged-in user's ID
+  const [refreshing, setRefreshing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false); // Additional state for better UX
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced refresh function to prevent multiple simultaneous calls
+  const onRefresh = useCallback(async () => {
+    // Prevent multiple refresh calls
+    if (refreshing || isRefreshing) return;
+    
+    setRefreshing(true);
+    setIsRefreshing(true);
+    
+    // Clear any existing timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+
+    try {
+      // Add minimum refresh duration for smooth UX (prevents flash)
+      const refreshPromise = fetchEvents();
+      const minDurationPromise = new Promise(resolve => 
+        setTimeout(resolve, 800) // Minimum 800ms for smooth feel
+      );
+      
+      await Promise.all([refreshPromise, minDurationPromise]);
+      
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      // Show user-friendly error without breaking the flow
+      Alert.alert(
+        'Refresh Failed', 
+        'Unable to refresh events. Please check your connection and try again.',
+        [{ text: 'OK', style: 'default' }]
+      );
+    } finally {
+      // Ensure smooth transition with slight delay
+      refreshTimeoutRef.current = setTimeout(() => {
+        setRefreshing(false);
+        setIsRefreshing(false);
+      }, 200);
+    }
+  }, [refreshing, isRefreshing]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const userId = user?.id;
 
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,11 +111,16 @@ export default function EventList({
   const [busyEventId, setBusyEventId] = useState<string | null>(null);
   const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
   const { expoPushToken, scheduleEventReminder } = usePushNotifications();
+  
   const fetchEvents = async () => {
     try {
-      setLoading(true);
+      // Only show loading spinner on initial load, not on refresh
+      if (!refreshing && !isRefreshing && events.length === 0) {
+        setLoading(true);
+      }
       setError(null);
-      const factory = new PublicStudySessionFactory(); // create the study session factory for ALL the events from the database to use
+      
+      const factory = new PublicStudySessionFactory();
       
       // 1. Fetch events from backend
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
@@ -87,8 +145,8 @@ export default function EventList({
             // Try geocoding if location exists
             if (event.location) {
               try {
-                const studySession = factory.createStudySession(event.location, event.date_and_time, event.title); //you use the factory to build the study session object
-                const geocodeResult = await studySession.addressToCoordinates(); //the factory doesn't have this functionality. the Study Session object does.
+                const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
+                const geocodeResult = await studySession.addressToCoordinates();
                 
                 if (geocodeResult?.geometry?.location) {
                   coordinates = {
@@ -155,21 +213,22 @@ export default function EventList({
       
       // 3. Sort events by distance
       const sortedEvents = processedEvents.sort((a, b) => {
-        //console.log("sorting the thing");
         const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
         const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
         return aDistance - bDistance;
       });
       
-      //console.log("Showing the thing");
       setEvents(sortedEvents);
       
     } catch (mainError) {
       console.error('Failed to fetch events:', mainError);
       setError(mainError instanceof Error ? mainError.message : 'Unknown error');
-      setEvents([]); // Clear events on error
+      setEvents([]);
     } finally {
-      setLoading(false);
+      // Only set loading to false if not refreshing AND we were actually loading
+      if ((!refreshing && !isRefreshing) || events.length === 0) {
+        setLoading(false);
+      }
     }
   };
 
@@ -189,12 +248,12 @@ export default function EventList({
   }, []);
 
   const scheduleRSVPNotifications = (events:any[]) => {
-    const rsvpEvents = events.filter(event => event.isRSVPed); // checked if it is RSVPed
+    const rsvpEvents = events.filter(event => event.isRSVPed);
     
     rsvpEvents.forEach(event => {
       const eventDate = event.date_and_time;
       if(eventDate){
-        const reminderTime = eventDate.getTime() -  60 * 60 * 1000 // 1 hour before the event
+        const reminderTime = eventDate.getTime() -  60 * 60 * 1000
 
         scheduleEventReminder?.(reminderTime, event.id);
       }
@@ -309,7 +368,6 @@ export default function EventList({
   };
 
   const handleEventToggle = (eventId: string) => {
-    // Clear selectedEventId when user manually toggles events
     if (selectedEventId && onClearSelectedEvent) {
       onClearSelectedEvent();
     }
@@ -317,11 +375,9 @@ export default function EventList({
     setCollapsedEvents(prev => {
       const newSet = new Set(prev);
       
-      // If this event is already collapsed, expand it
       if (newSet.has(eventId)) {
         newSet.delete(eventId);
       } else {
-        // Collapse this event
         newSet.add(eventId);
       }
       
@@ -333,26 +389,17 @@ export default function EventList({
   const filteredEvents = events.filter((event: any) => {
     if (!filters) return true;
   
-    // 1) Distance filter (max distance)
-    /*if (filters.distance && event.coordinates?.lat != null && event.coordinates?.lng != null) {
-      const d = distanceFromUser(event.coordinates.lat, event.coordinates.lng, filters.unit);
-      if (d > filters.distance) return false;
-    }*/
-  
-    // 2) Attendees filter (minimum attendees, matches UI "> X people")
     if (filters.attendees) {
       const count = event.accepted_count ?? event.rsvped_count ?? 0;
       if (count < filters.attendees) return false;
     }
   
-    // 3) Noise level filter (tags)
     if (filters.noise) {
       const wanted = filters.noise.toLowerCase();
       const hasTag = Array.isArray(event.tags) && event.tags.some((t: string) => (t || '').toLowerCase() === wanted);
       if (!hasTag) return false;
     }
   
-    // 4) Location type filter (tags)
     if (filters.location) {
       const wanted = filters.location.toLowerCase();
       const hasTag = Array.isArray(event.tags) && event.tags.some((t: string) => (t || '').toLowerCase() === wanted);
@@ -382,7 +429,6 @@ export default function EventList({
       })
     : creatorFilteredEvents;
 
-  // Update collapsed events when selectedEventId changes
   useEffect(() => {
     if (selectedEventId) {
       setCollapsedEvents(new Set(
@@ -391,9 +437,8 @@ export default function EventList({
           .filter(id => id !== selectedEventId)
       ));
     }
-  }, [selectedEventId]); // Remove 'events' dependency to prevent unnecessary re-runs
+  }, [selectedEventId]);
 
-  // Scroll to selected event when selectedEventId changes
   useEffect(() => {
     if (selectedEventId && searchedEvents.length > 0) {
       const eventIndex = searchedEvents.findIndex(event => event.id === selectedEventId);
@@ -403,7 +448,6 @@ export default function EventList({
           for (let i = 0; i < eventIndex; i++) {
             const event = searchedEvents[i];
             
-            // Base height for event banner 
             let eventHeight = 60; 
             
             if (!collapsedEvents.has(event.id)) {
@@ -426,7 +470,8 @@ export default function EventList({
   }, [selectedEventId, searchedEvents, collapsedEvents]);
 
   // ----------- RENDER LOGIC -----------
-  if (loading) {
+  // Only show loading screen on initial load when there are no events
+  if (loading && events.length === 0) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color="#5CAEF1" />
@@ -448,7 +493,6 @@ export default function EventList({
 
   return (
     <>
-
       <ScrollView 
         ref={scrollViewRef}
         contentContainerStyle={styles.container}
@@ -456,13 +500,25 @@ export default function EventList({
         nestedScrollEnabled={true}
         style={{ flex: 1 }}
         bounces={true}
+        // Enhanced RefreshControl with better colors and smoother animation
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={isDarkMode ? ['#5CAEF1', '#7CC8FF'] : ['#5CAEF1', '#4A9EE0']} // Dynamic colors for dark/light mode
+            tintColor={isDarkMode ? '#5CAEF1' : '#4A9EE0'} // iOS color
+            progressBackgroundColor={isDarkMode ? '#2D2D2D' : '#FFFFFF'} // Background adapts to theme
+            titleColor={textColor} // Title color matches theme
+            size="default" // Use default size for smoother animation
+          />
+        }
       >
+        {/* Remove the refresh overlay since RefreshControl handles this better */}
+        
         {searchedEvents.map((event: any) => {
           const isCollapsed = collapsedEvents.has(event.id);
 
           return (
-            // Updated condition: when creatorUserId is provided, show only creator's events
-            // When creatorUserId is not provided, exclude the current user's events (original behavior)
             (creatorUserId ? event.creator_id === creatorUserId : event.creator_id !== userId) && (
               <EventCollapsible
                 key={event.id}
@@ -487,9 +543,9 @@ export default function EventList({
                 isRsvped={event.isRSVPed}
                 onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
                 isCollapsed={isCollapsed}
-                                 onToggleCollapse={() => handleEventToggle(event.id)}
-                 onCenterMapOnEvent={onCenterMapOnEvent}
-                 isDistanceVisible={isDistanceVisible ? true : false}
+                onToggleCollapse={() => handleEventToggle(event.id)}
+                onCenterMapOnEvent={onCenterMapOnEvent}
+                isDistanceVisible={isDistanceVisible ? true : false}
                 distanceUnit={filters?.unit || 'mi'}
                 distance={isDistanceVisible && eventDistances ? eventDistances[event.id] : null}
                 isDarkMode={isDarkMode}
@@ -528,6 +584,25 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 14,
+  },
+  // New styles for refresh overlay
+  refreshOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    borderRadius: 8,
+    margin: 10,
+  },
+  refreshText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
   },
   errorContainer: {
     flex: 1,

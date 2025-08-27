@@ -679,20 +679,18 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
 // Search users
 app.get('/users/search', async (req, res) => {
   const { q, currentUserId } = req.query;
-  
   if (!q || q.length < 2) {
-    return res.status(400).json({ error: 'Search query must be at least 2 characters' })
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
   }
   
   try {
     let query = `
-      SELECT id, username, full_name, email, following, followers
-      FROM users 
-      WHERE 
-        (LOWER(username) LIKE LOWER($1) OR 
+      SELECT id, username, full_name, email, following, followers, profile_picture_url
+      FROM users
+      WHERE
+        (LOWER(username) LIKE LOWER($1) OR
          LOWER(full_name) LIKE LOWER($1))
     `;
-    
     let params = [`%${q}%`];
     
     // Exclude current user from search results if currentUserId is provided
@@ -702,8 +700,8 @@ app.get('/users/search', async (req, res) => {
     }
     
     query += `
-      ORDER BY 
-        CASE 
+      ORDER BY
+        CASE
           WHEN LOWER(username) = LOWER($1) THEN 1
           WHEN LOWER(full_name) = LOWER($1) THEN 2
           ELSE 3
@@ -713,7 +711,6 @@ app.get('/users/search', async (req, res) => {
     `;
     
     const result = await client.query(query, params);
-    
     res.json(result.rows);
   } catch (err) {
     console.error('Search users error:', err);

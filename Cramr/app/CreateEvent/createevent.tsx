@@ -239,7 +239,7 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
         setCapacity('');
         setSelectedFriends([]);
         // Navigate back to home after successful creation
-        router.push('/listView');
+        router.push('/List');
         return data;
       } else {
         Alert.alert('Error', data.error || 'Failed to create event');
@@ -256,13 +256,13 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
     if (currentPage !== page) {
       setCurrentPage(page);
       if (page === 'listView') {
-        router.push('/listView');
+        router.push('/List');
       } else if (page === 'map') {
         router.push('/Map/map');
       } else if (page === 'addEvent') {
 
-      } else if (page === 'bookmarks') {
-        router.push('/Saved/Saved');
+      } else if (page === 'studyTools') {
+        router.push('/StudyTools/StudyTools');
       } else if (page === 'profile') {
         router.push('/Profile/Internal');
       }
@@ -272,12 +272,14 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      
       <KeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Platform.OS === 'ios' ? 120 : 100 }]}
         enableOnAndroid={true}
-        extraScrollHeight={100}
+        extraScrollHeight={50}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
       >
         <View style={[styles.content, { backgroundColor: backgroundColor }]}>
           {/* Header */}
@@ -478,63 +480,63 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
       )}
 
       {/* Bottom Navigation Bar */}
-      <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.navBorder }]}> 
-        <TouchableOpacity 
+      <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.navBorder }]}>
+        <TouchableOpacity
           style={styles.navButton}
           onPress={() => handleNavigation('listView')}
-        >
-          <MaterialCommunityIcons 
-            name="clipboard-list-outline" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'listView' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('map')}
-        >
-          <Ionicons 
-            name="map-outline" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'map' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('addEvent')}
-        >
-          <Feather 
-            name="plus-square" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'addEvent' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('bookmarks')}
-        >
-          <Feather 
-            name="bookmark" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('profile')}
-        >
-          <Ionicons 
-            name="person-circle-outline" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'profile' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-      </View>
+          >
+            <MaterialCommunityIcons 
+              name="clipboard-list-outline" 
+              size={24} 
+              color={textColor} 
+            />
+            {currentPage === 'listView' && <View style={styles.activeDot} />}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => handleNavigation('map')}
+          >
+            <Ionicons 
+              name="map-outline" 
+              size={24} 
+              color={textColor} 
+            />
+            {currentPage === 'map' && <View style={styles.activeDot} />}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => handleNavigation('addEvent')}
+          >
+            <Feather 
+              name="plus-square" 
+              size={24} 
+              color={textColor} 
+            />
+            {currentPage === 'addEvent' && <View style={styles.activeDot} />}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => handleNavigation('studyTools')}
+          >
+            <Feather 
+              name="tool" 
+              size={24} 
+              color={textColor} 
+            />
+            {currentPage === 'studyTools' && <View style={styles.activeDot} />}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => handleNavigation('profile')}
+          >
+            <Ionicons 
+              name="person-circle-outline" 
+              size={24} 
+              color={textColor} 
+            />
+            {currentPage === 'profile' && <View style={styles.activeDot} />}
+          </TouchableOpacity>
+        </View>
     </SafeAreaView>
   );
 };
@@ -568,10 +570,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     height: 27,
     width: 120,
+    marginTop: -5,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 80, // Space for navbar
   },
   content: {
     padding: 20,
@@ -644,8 +646,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12, 
-    zIndex: 1001, 
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12,
   },
   navButton: {
     alignItems: 'center',

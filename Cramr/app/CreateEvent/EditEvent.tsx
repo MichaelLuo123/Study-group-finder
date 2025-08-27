@@ -5,7 +5,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import FollowersDropdown from '../../components/FollowersDropdown';
 import { Colors } from '../../constants/Colors';
@@ -292,7 +292,7 @@ const formatTime = (dateAndTime: Date | string | null) => {
     if (currentPage !== page) {
       setCurrentPage(page);
       if (page === 'listView') {
-        router.push('/listView');
+        router.push('/List');
       } else if (page === 'map') {
         router.push('/Map/map');
       } else if (page === 'addEvent') {
@@ -306,265 +306,271 @@ const formatTime = (dateAndTime: Date | string | null) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <KeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
-        enableOnAndroid={true}
-        extraScrollHeight={100}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[styles.content, { backgroundColor: backgroundColor }]}>
-          {/* Header */}
-          <TouchableOpacity onPress={() => router.back()}>
-            <ArrowLeft color={textColor} />
-          </TouchableOpacity>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
+      <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.scrollContent}
+          enableOnAndroid={true}
+          extraScrollHeight={100}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.content, { backgroundColor: backgroundColor }]}>
+            {/* Header */}
+            <TouchableOpacity onPress={() => router.back()}>
+              <ArrowLeft color={textColor} />
+            </TouchableOpacity>
 
-          <View style={{ alignItems: 'center' }}>
-            <Text style={[styles.headerText, { color: textColor, marginTop: -25, marginBottom: 20 }]}>Edit Event</Text>
-          </View>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={[styles.headerText, { color: textColor, marginTop: -25, marginBottom: 20 }]}>Edit Event</Text>
+            </View>
 
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Name </Text>
-          <TextInput
-            placeholder="Enter name of event."
-            placeholderTextColor={placeholderColor}
-            value={title}
-            onChangeText={setTitle}
-            style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
-          />
-
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 10 }]}> Tags </Text>
-          <View style={styles.tagsContainer}>
-            {studyTags.map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                style={[
-                  styles.tagButton,
-                  {
-                    borderColor: selectedTags.includes(tag) ? textColor : 'transparent',
-                    backgroundColor: textInputColor
-                  }
-                ]}
-                onPress={() => toggleTag(tag)}
-              >
-                <Text
-                  style={[
-                    styles.tagText,
-                    {
-                      color: textColor
-                    }
-                  ]}
-                >
-                  {tag}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Class/Subject </Text>
-          <View style={{flexDirection: 'row', justifyContent: 'space-between', width: 100}}>
+            <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Name </Text>
             <TextInput
-            placeholder="Ex.: CSE 100"
-            placeholderTextColor={placeholderColor}
-            value={classField}
-            onChangeText={setClassField}
-            style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 100 }]}
-            />
-          </View>
-
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Location </Text>
-          <Slider
-            leftLabel='In-Person'
-            rightLabel='Online  '
-            onChangeSlider={setIsOnline}
-            value={isOnline}
-            width={210}
-            lightMode={!isDarkMode}
-            style={{ marginBottom: 10 }}
-          />
-          {isOnline === false && (
-            <>
-              <TextInput
-                placeholder="Enter address."
-                placeholderTextColor={placeholderColor}
-                value={location}
-                onChangeText={setLocation}
-                style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
-              />
-              <TextInput
-                placeholder="Enter study room."
-                placeholderTextColor={placeholderColor}
-                value={studyRoom}
-                onChangeText={setStudyRoom}
-                style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 150 }]}
-              />
-            </>
-          )}
-          {isOnline === true && (
-            <TextInput
-              placeholder="Enter link to virtual study room."
+              placeholder="Enter name of event."
               placeholderTextColor={placeholderColor}
-              value={virtualRoomLink}
-              onChangeText={setVirtualRoomLink}
+              value={title}
+              onChangeText={setTitle}
               style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
             />
-          )}
 
-          {/* Date/Time Picker - Updated to match create event */}
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Date & Time </Text>
-          <View style={styles.dateTimeRow}>
-            <TouchableOpacity
-              style={[styles.dateTimeButton, { backgroundColor: textInputColor, borderWidth: 0 }]}
-              onPress={() => setShowDatePicker(!showDatePicker)}
-            >
-              <Ionicons name="calendar-outline" size={20} color={textColor} />
-              <Text style={[styles.normalText, { color: textColor }]}>
-                {formatDate(dateTime)}
-              </Text>
-            </TouchableOpacity>
+            <Text style={[styles.subheaderText, { color: textColor, marginBottom: 10 }]}> Tags </Text>
+            <View style={styles.tagsContainer}>
+              {studyTags.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  style={[
+                    styles.tagButton,
+                    {
+                      borderColor: selectedTags.includes(tag) ? textColor : 'transparent',
+                      backgroundColor: textInputColor
+                    }
+                  ]}
+                  onPress={() => toggleTag(tag)}
+                >
+                  <Text
+                    style={[
+                      styles.tagText,
+                      {
+                        color: textColor
+                      }
+                    ]}
+                  >
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             
+            <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Class/Subject </Text>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', width: 100}}>
+              <TextInput
+              placeholder="Ex.: CSE 100"
+              placeholderTextColor={placeholderColor}
+              value={classField}
+              onChangeText={setClassField}
+              style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 100 }]}
+              />
+            </View>
+
+            <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Location </Text>
+            <Slider
+              leftLabel='In-Person'
+              rightLabel='Online  '
+              onChangeSlider={setIsOnline}
+              value={isOnline}
+              width={210}
+              lightMode={!isDarkMode}
+              style={{ marginBottom: 10 }}
+            />
+            {isOnline === false && (
+              <>
+                <TextInput
+                  placeholder="Enter address."
+                  placeholderTextColor={placeholderColor}
+                  value={location}
+                  onChangeText={setLocation}
+                  style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
+                />
+                <TextInput
+                  placeholder="Enter study room."
+                  placeholderTextColor={placeholderColor}
+                  value={studyRoom}
+                  onChangeText={setStudyRoom}
+                  style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 150 }]}
+                />
+              </>
+            )}
+            {isOnline === true && (
+              <TextInput
+                placeholder="Enter link to virtual study room."
+                placeholderTextColor={placeholderColor}
+                value={virtualRoomLink}
+                onChangeText={setVirtualRoomLink}
+                style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
+              />
+            )}
+
+            {/* Date/Time Picker - Updated to match create event */}
+            <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Date & Time </Text>
+            <View style={styles.dateTimeRow}>
+              <TouchableOpacity
+                style={[styles.dateTimeButton, { backgroundColor: textInputColor, borderWidth: 0 }]}
+                onPress={() => setShowDatePicker(!showDatePicker)}
+              >
+                <Ionicons name="calendar-outline" size={20} color={textColor} />
+                <Text style={[styles.normalText, { color: textColor }]}>
+                  {formatDate(dateTime)}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.dateTimeButton, { backgroundColor: textInputColor, borderWidth: 0 }]}
+                onPress={() => setShowTimePicker(!showTimePicker)}
+              >
+                <Ionicons name="time-outline" size={20} color={textColor} />
+                <Text style={[styles.normalText, { color: textColor }]}>
+                  {formatTime(dateTime)}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Capacity </Text>
+            <View style={{ flexDirection: "row", justifyContent: 'space-between', alignItems: 'center', width: 100 }}>
+              <TextInput
+                placeholder="5"
+                placeholderTextColor={placeholderColor}
+                value={capacity}
+                onChangeText={setCapacity}
+                keyboardType="numeric"
+                style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 50 }]}
+              />
+              <Text style={[styles.normalText, { color: textColor, marginLeft: 5, marginBottom: 13 }]}> people </Text>
+            </View>
+
+            {/* Invite People Dropdown */}
+            <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> People </Text>
+            <FollowersDropdown
+              selectedFriends={selectedFriends}
+              onFriendsChange={setSelectedFriends}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+
+            <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Description </Text>
+            <TextInput
+              placeholder="Enter description."
+              placeholderTextColor={placeholderColor}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              style={[styles.input, styles.textArea, { color: textColor, backgroundColor: textInputColor }]}
+            />
+            
+            {/* Submit Button */}
             <TouchableOpacity
-              style={[styles.dateTimeButton, { backgroundColor: textInputColor, borderWidth: 0 }]}
-              onPress={() => setShowTimePicker(!showTimePicker)}
+              onPress={handleSave}
+              style={[styles.saveButton, { backgroundColor: '#5CAEF1' }]}
+              disabled={isSubmitting}
             >
-              <Ionicons name="time-outline" size={20} color={textColor} />
-              <Text style={[styles.normalText, { color: textColor }]}>
-                {formatTime(dateTime)}
-              </Text>
+              {isSubmitting ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={[styles.subheaderText, { color: textColor}]}>
+                    Saving...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.subheaderText, { color: textColor }]}>
+                  Save
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={{ height: 0.5, backgroundColor: dividerColor, marginTop: 15, marginBottom: 5 }} />
+
+            {/* Delete Button */}
+            <TouchableOpacity
+              onPress={handleDeleteModal}
+              style={[styles.saveButton, { backgroundColor: '#E36062' }]}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={[styles.subheaderText, { color: textColor}]}>
+                    Deleting...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.subheaderText, { color: textColor }]}>
+                  Delete
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
+        </KeyboardAwareScrollView>
 
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Capacity </Text>
-          <View style={{ flexDirection: "row", justifyContent: 'space-between', alignItems: 'center', width: 100 }}>
-            <TextInput
-              placeholder="5"
-              placeholderTextColor={placeholderColor}
-              value={capacity}
-              onChangeText={setCapacity}
-              keyboardType="numeric"
-              style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 50 }]}
-            />
-            <Text style={[styles.normalText, { color: textColor, marginLeft: 5, marginBottom: 13 }]}> people </Text>
-          </View>
-
-          {/* Invite People Dropdown */}
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> People </Text>
-          <FollowersDropdown
-            selectedFriends={selectedFriends}
-            onFriendsChange={setSelectedFriends}
-            theme={theme}
-            isDarkMode={isDarkMode}
+        {/* Date Picker Modal - Updated to match create event */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={dateTime}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onDateChange}
+            minimumDate={new Date()}
+            themeVariant={isDarkMode ? 'dark' : 'light'}
+            textColor={isDarkMode ? '#FFFFFF' : '#000000'}
           />
+        )}
 
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Description </Text>
-          <TextInput
-            placeholder="Enter description."
-            placeholderTextColor={placeholderColor}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            style={[styles.input, styles.textArea, { color: textColor, backgroundColor: textInputColor }]}
+        {/* Time Picker Modal - Updated to match create event */}
+        {showTimePicker && (
+          <DateTimePicker
+            value={new Date(dateTime.getTime() + dateTime.getTimezoneOffset() * 60000)}
+            mode="time"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onTimeChange}
+            themeVariant={isDarkMode ? 'dark' : 'light'}
+            textColor={isDarkMode ? '#FFFFFF' : '#000000'}
           />
-          
-          {/* Submit Button */}
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.saveButton, { backgroundColor: '#5CAEF1' }]}
-            disabled={isSubmitting}
+        )}
+
+          <Modal
+              animationType="fade"
+              transparent={true}
+              visible={isDeleteModalVisible}
+              onRequestClose={handleDelete}
           >
-            {isSubmitting ? (
-              <View style={styles.loadingContainer}>
-                <Text style={[styles.subheaderText, { color: textColor}]}>
-                  Saving...
-                </Text>
-              </View>
-            ) : (
-              <Text style={[styles.subheaderText, { color: textColor }]}>
-                Save
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={{ height: 0.5, backgroundColor: dividerColor, marginTop: 15, marginBottom: 5 }} />
-
-          {/* Delete Button */}
-          <TouchableOpacity
-            onPress={handleDeleteModal}
-            style={[styles.saveButton, { backgroundColor: '#E36062' }]}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <View style={styles.loadingContainer}>
-                <Text style={[styles.subheaderText, { color: textColor}]}>
-                  Deleting...
-                </Text>
-              </View>
-            ) : (
-              <Text style={[styles.subheaderText, { color: textColor }]}>
-                Delete
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAwareScrollView>
-
-      {/* Date Picker Modal - Updated to match create event */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={dateTime}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onDateChange}
-          minimumDate={new Date()}
-          themeVariant={isDarkMode ? 'dark' : 'light'}
-          textColor={isDarkMode ? '#FFFFFF' : '#000000'}
-        />
-      )}
-
-      {/* Time Picker Modal - Updated to match create event */}
-      {showTimePicker && (
-        <DateTimePicker
-          value={new Date(dateTime.getTime() + dateTime.getTimezoneOffset() * 60000)}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onTimeChange}
-          themeVariant={isDarkMode ? 'dark' : 'light'}
-          textColor={isDarkMode ? '#FFFFFF' : '#000000'}
-        />
-      )}
-
-        <Modal
-            animationType="fade"
-            transparent={true}
-            visible={isDeleteModalVisible}
-            onRequestClose={handleDelete}
-        >
-            <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, {backgroundColor: backgroundColor, padding: 15}]}>
-                    <Text style={[styles.normalText, {color: textColor, textAlign: 'center', marginTop: 10}]}>
-                        Delete event?
-                    </Text>
-                        
-                    <View style={{flexDirection: 'row', gap: 10, width: '100%', marginTop: 20}}>
-                        <TouchableOpacity
-                            style={{flex: 1, backgroundColor: cancelButtonColor, height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
-                            onPress={handleCancelDelete}
-                        >
-                            <Text style={[styles.normalText, {color: textColor}]}>Cancel</Text>
-                        </TouchableOpacity>
+              <View style={styles.modalOverlay}>
+                  <View style={[styles.modalContent, {backgroundColor: backgroundColor, padding: 15}]}>
+                      <Text style={[styles.normalText, {color: textColor, textAlign: 'center', marginTop: 10}]}>
+                          Delete event?
+                      </Text>
                           
-                        <TouchableOpacity
-                            style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
-                            onPress={handleDelete}
-                        >
-                            <Text style={[styles.normalText, {color: textColor}]}>Delete</Text>
+                      <View style={{flexDirection: 'row', gap: 10, width: '100%', marginTop: 20}}>
+                          <TouchableOpacity
+                              style={{flex: 1, backgroundColor: cancelButtonColor, height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
+                              onPress={handleCancelDelete}
+                          >
+                              <Text style={[styles.normalText, {color: textColor}]}>Cancel</Text>
                           </TouchableOpacity>
+                            
+                          <TouchableOpacity
+                              style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
+                              onPress={handleDelete}
+                          >
+                              <Text style={[styles.normalText, {color: textColor}]}>Delete</Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       </View>
-                    </View>
-        </Modal>
-    </SafeAreaView>
+          </Modal>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -16,18 +16,13 @@ export default function HomeScreen() {
     // Sign in and Sign up
     { title: 'Sign in', route: '/SignIn/Loginscreen' },
     { title: 'Sign up', route: '/SignUp/signupscreen' },
-    { title: 'Sign up success', route: '/SignUp/signupsuccess' },
-    { title: 'Sign up fail', route: '/signupfail' },
-    { title: '2-Factor Authentication', route: '/TwoFactor/TwoFAPage'},
-    { title: 'Forgot Password', route: '/PasswordRecovery/pwRecovery' },
 
     // Home
-    { title: 'Home/List', route: '/listView' },
+    { title: 'Home/List', route: '/List' },
 
     // Map
     { title: 'Map', route: '/Map/map' },
     
-    { title: 'Event List Page', route: '/listView/eventList' },
     { title: 'View event', route: '/ViewEvent/viewevent' },
 
     // Create Event and Edit Event
@@ -221,8 +216,8 @@ const styles = StyleSheet.create({
 //         <Button title="Go to Profile Page (External)" onPress={() => router.push('/Profile/External')} />
 //         <Button title="Go to Saved/RSVP Events" onPress={() => router.push('/Saved/Saved')} />
 //         <Button title="Go to Follow Page" onPress={() => router.push('/Follow/follow')} />
-//         <Button title="Go to eventList Page" onPress={() => router.push('/listView/eventList')} />
-//         <Button title="Go to List View" onPress={() => router.push('/listView')} />
+//         <Button title="Go to eventList Page" onPress={() => router.push('/List/eventList')} />
+//         <Button title="Go to List View" onPress={() => router.push('/List')} />
 //         <Button title="Go to Notifications" onPress={() => router.push('/Profile/NotificationsPage')} />
 //       </ThemedView>
 //     </ParallaxScrollView>
