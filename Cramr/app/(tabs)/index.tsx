@@ -49,7 +49,9 @@ export default function HomeScreen() {
     { title: 'Notifications', route: '/Profile/NotificationsPage' },
 
     // Study Tools
-    { title: 'Study Tools', route: '/StudyTools/StudyTools' }
+    { title: 'Study Tools', route: '/StudyTools/StudyTools' },
+    // Leaderboard
+    { title: 'Leaderboard', route: '/StudyTools/LeaderboardPage' }
   ];
 
   return (
