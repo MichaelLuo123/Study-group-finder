@@ -36,7 +36,7 @@ export default function StudyTools() {
 
         <TouchableOpacity
         style={[styles.item, { backgroundColor: textInputColor }]}
-        onPress={() => router.push('./Pomodoro')}
+        onPress={() => router.push('/StudyTools/PomodoroTimer')}
         >
         <Text style={[styles.itemText, { color: textColor }]}>Pomodoro</Text>
         </TouchableOpacity>
@@ -60,6 +60,13 @@ export default function StudyTools() {
         onPress={() => router.push('./NotesList')}
         >
         <Text style={[styles.itemText, { color: textColor }]}>Notes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+        style={[styles.item, { backgroundColor: textInputColor }]}
+        onPress={() => router.push('./AmbientNoise')}
+        >
+        <Text style={[styles.itemText, { color: textColor }]}>Ambient Noise Maker</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

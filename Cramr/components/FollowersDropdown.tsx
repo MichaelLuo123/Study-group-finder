@@ -207,9 +207,8 @@ const styles = StyleSheet.create({
   selectedTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    padding: 10,
+    borderRadius: 50,
     gap: 6,
   },
   tagText: {
@@ -222,8 +221,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    padding: 10,
     marginBottom: 8,
     gap: 10,
   },
@@ -231,6 +229,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
+    padding: 5,
   },
   
   // Search results

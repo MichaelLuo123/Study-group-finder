@@ -4,6 +4,7 @@ import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Use
 import { useEffect, useState } from 'react';
 import {
   Dimensions,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import {
   View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Colors } from '../../constants/Colors';
 
 const { width } = Dimensions.get('window');
 
@@ -43,6 +45,13 @@ interface RSVP {
 
 const EventViewScreen = () => {
   const { isDarkMode, toggleDarkMode, user } = useUser();
+  // Colors
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
+  const bannerColors = Colors.bannerColors
+  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+
   const userId = user?.id; // Use logged-in user's ID
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
@@ -359,19 +368,26 @@ const EventViewScreen = () => {
 
             {/* Comments List */}
             {comments.map((comment) => (
-              <View key={comment.id} style={styles.commentItem}>
+              <View key={comment.id} style={[styles.commentItem, {borderBottomColor: placeholderTextColor,}]}>
                 <View style={styles.commentHeader}>
                   <Image 
                     source={comment.profile_picture_url ? 
                       { uri: comment.profile_picture_url } : 
                       require('../../assets/images/default_profile.jpg')
-                    } 
+                    }
                     style={styles.commentAvatar} 
                   />
                   <View style={styles.commentInfo}>
-                    <Text style={[styles.commentAuthor, { color: textColor }]}>
-                      {comment.full_name || comment.username}
-                    </Text>
+                    <View style={styles.commentAuthorRow}>
+                      <Text style={[styles.commentAuthor, { color: textColor }]}>
+                        {comment.full_name || comment.username}
+                      </Text>
+                      {comment.is_event_owner && (
+                        <View style={styles.eventOwnerTag}>
+                          <Text style={styles.eventOwnerTagText}>Event Owner</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={[styles.commentTime, { color: placeholderTextColor }]}>
                       {new Date(comment.created_at).toLocaleDateString()}
                     </Text>
@@ -598,7 +614,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: placeholderTextColor,
+    borderBottomColor: '#666666',
   },
   commentHeader: {
     flexDirection: 'row',
@@ -614,9 +630,25 @@ const styles = StyleSheet.create({
   commentInfo: {
     flex: 1,
   },
+  commentAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   commentAuthor: {
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
+  },
+  eventOwnerTag: {
+    backgroundColor: '#5CAEF1',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  eventOwnerTagText: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Medium',
+    color: '#fff',
   },
   commentTime: {
     fontSize: 12,

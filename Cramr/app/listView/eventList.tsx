@@ -155,13 +155,13 @@ export default function EventList({
       
       // 3. Sort events by distance
       const sortedEvents = processedEvents.sort((a, b) => {
-        console.log("sorting the thing");
+        //console.log("sorting the thing");
         const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
         const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
         return aDistance - bDistance;
       });
       
-      console.log("Showing the thing");
+      //console.log("Showing the thing");
       setEvents(sortedEvents);
       
     } catch (mainError) {
@@ -470,14 +470,15 @@ export default function EventList({
                 ownerId={event.creator_id}
                 ownerProfile={event.creator_profile_picture}
                 title={event.title}
-                bannerColor={bannerColors[event.banner_color || 1]}
                 tag1={event.tags?.[0] || null}
                 tag2={event.tags?.[1] || null}
                 tag3={event.tags?.[2] || null}
                 subject={event.class || 'invalid'}
+                isOnline={event.event_format === 'Online'}
                 location={event.location || 'invalid'}
-                date={event.date}
-                time={event.time}
+                studyRoom={event.study_room || null}
+                virtualRoomLink={event.virtual_room_link || null}
+                dateAndTime={event.date_and_time}
                 rsvpedCount={event.accepted_count || event.rsvped_count || 0}
                 capacity={event.capacity || '∞'}
                 isOwner={event.creator_id === userId}

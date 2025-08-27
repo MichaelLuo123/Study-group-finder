@@ -34,6 +34,7 @@ const FollowList = () => {
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+  const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
   const cardBackgroundColor = (!isDarkMode ? '#fff' : '#2d2d2d')
   const borderColor = (!isDarkMode ? '#e0e0e0' : '#4a5568')
   const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
@@ -50,8 +51,6 @@ const FollowList = () => {
   const [loading, setLoading] = useState(false);
   const [unfollowModalVisible, setUnfollowModalVisible] = useState(false);
   const [userToUnfollow, setUserToUnfollow] = useState<Friend | null>(null);
-  const [removeFollowerModalVisible, setRemoveFollowerModalVisible] = useState(false);
-  const [userToRemoveFollower, setUserToRemoveFollower] = useState<Friend | null>(null);
 
   const currentUserId = user?.id; // Use logged-in user's ID
 
@@ -101,39 +100,7 @@ const FollowList = () => {
     setUserToUnfollow(null);
   };
 
-  const handleRemoveFollowerCheck = (user: Friend) => {
-    setUserToRemoveFollower(user);
-    setRemoveFollowerModalVisible(true);
-  };
-  const handleCancelRemoveFollower = () => {
-    setRemoveFollowerModalVisible(false);
-    setUserToRemoveFollower(null);
-  };
 
-  const removeFollower = async (userId: string) => {
-    try {
-      const res = await fetch(`http://132.249.242.182:8080/users/${currentUserId}/followers/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (res.ok) {
-        Alert.alert('Success', 'Follower removed successfully!');
-        setFollowers(prev => prev.filter(u => u.id !== userId));
-        setRemoveFollowerModalVisible(false);
-        setUserToRemoveFollower(null);
-        
-        // Update the UserContext to reflect the new followers count immediately
-        if (user) {
-          const newFollowersCount = Math.max((user.followers || 0) - 1, 0);
-          updateUserData({ followers: newFollowersCount });
-        }
-      } else {
-        Alert.alert('Error', 'Failed to remove follower');
-      }
-    } catch {
-      Alert.alert('Error', 'Network error occurred');
-    }
-  };
 
   const unfollowUser = async (userId: string) => {
     try {
@@ -173,7 +140,7 @@ const FollowList = () => {
 
   const renderFollowingItem = ({ item }: { item: Friend }) => (
     <TouchableOpacity 
-      style={[styles.friendContainer, { backgroundColor: cardBackgroundColor, borderColor: borderColor }]}
+      style={[styles.userContainer, { backgroundColor: cardBackgroundColor, borderColor: borderColor }]}
       onPress={() => router.push(`/Profile/External?userId=${item.id}`)}
     >
       <View style={styles.avatar}>
@@ -181,9 +148,9 @@ const FollowList = () => {
           {item.full_name?.charAt(0) || item.username?.charAt(0) || '?'}
         </Text>
       </View>
-      <View style={styles.friendInfo}>
-        <Text style={[styles.friendName, { color: textColor }]}>{item.full_name || 'Unknown'}</Text>
-        <Text style={[styles.friendUsername, { color: textColor }]}>@{item.username}</Text>
+      <View style={styles.userInfo}>
+        <Text style={[styles.userName, { color: textColor }]}>{item.full_name || 'Unknown'}</Text>
+        <Text style={[styles.userUsername, { color: textColor }]}>@{item.username}</Text>
       </View>
       <TouchableOpacity 
         style={styles.removeButton} 
@@ -199,7 +166,7 @@ const FollowList = () => {
 
   const renderFollowerItem = ({ item }: { item: Friend }) => (
     <TouchableOpacity 
-      style={[styles.friendContainer, { backgroundColor: cardBackgroundColor, borderColor: borderColor }]}
+      style={[styles.userContainer, { backgroundColor: cardBackgroundColor, borderColor: borderColor }]}
       onPress={() => router.push(`/Profile/External?userId=${item.id}`)}
     >
       <View style={styles.avatar}>
@@ -207,19 +174,10 @@ const FollowList = () => {
           {item.full_name?.charAt(0) || item.username?.charAt(0) || '?'}
         </Text>
       </View>
-      <View style={styles.friendInfo}>
-        <Text style={[styles.friendName, { color: textColor }]}>{item.full_name || 'Unknown'}</Text>
-        <Text style={[styles.friendUsername, { color: textColor }]}>@{item.username}</Text>
+      <View style={styles.userInfo}>
+        <Text style={[styles.userName, { color: textColor }]}>{item.full_name || 'Unknown'}</Text>
+        <Text style={[styles.userUsername, { color: textColor }]}>@{item.username}</Text>
       </View>
-      <TouchableOpacity 
-        style={styles.removeButton} 
-        onPress={(e) => {
-          e.stopPropagation();
-          handleRemoveFollowerCheck(item);
-        }}
-      >
-        <Ionicons name="close" size={24} color="#E36062" />
-      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -230,7 +188,7 @@ const FollowList = () => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Friends</Text>
+        <Text style={[styles.headerTitle, { color: textColor }]}>Follows</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -265,7 +223,7 @@ const FollowList = () => {
           data={filteredFollowers}
           renderItem={renderFollowerItem}
           keyExtractor={(item) => item.id}
-          style={styles.friendsList}
+          style={styles.followsList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -280,7 +238,7 @@ const FollowList = () => {
           data={filteredFollowing}
           renderItem={renderFollowingItem}
           keyExtractor={(item) => item.id}
-          style={styles.friendsList}
+          style={styles.followsList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -297,44 +255,24 @@ const FollowList = () => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
             <Text style={[styles.modalTitle, { color: textColor }]}>
-              Unfollow {userToUnfollow?.full_name || userToUnfollow?.username || 'this user'}?
+              Remove {userToUnfollow?.full_name || userToUnfollow?.username || 'this user'} from Following?
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalCancelButton, { backgroundColor: textInputColor }]} onPress={handleCancelUnfollow}>
+              <TouchableOpacity style={[styles.modalCancelButton, { backgroundColor: cancelButtonColor }]} onPress={handleCancelUnfollow}>
                 <Text style={[styles.modalCancelText, { color: textColor }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalConfirmButton}
                 onPress={() => userToUnfollow && unfollowUser(userToUnfollow.id)}
               >
-                <Text style={styles.modalConfirmText}>Unfollow</Text>
+                <Text style={[styles.modalConfirmText, { color: textColor }]}>Remove</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Remove Follower Modal */}
-      <Modal animationType="fade" transparent visible={removeFollowerModalVisible} onRequestClose={handleCancelRemoveFollower}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
-            <Text style={[styles.modalTitle, { color: textColor }]}>
-              Remove {userToRemoveFollower?.full_name || userToRemoveFollower?.username || 'this user'} as a follower?
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalCancelButton, { backgroundColor: textInputColor }]} onPress={handleCancelRemoveFollower}>
-                <Text style={[styles.modalCancelText, { color: textColor }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalConfirmButton}
-                onPress={() => userToRemoveFollower && removeFollower(userToRemoveFollower.id)}
-              >
-                <Text style={styles.modalConfirmText}>Remove</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -357,8 +295,8 @@ const styles = StyleSheet.create({
   },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 16, fontFamily: 'Poppins-Regular' },
-  friendsList: { flex: 1, paddingHorizontal: 16 },
-  friendContainer: {
+  followsList: { flex: 1, paddingHorizontal: 16 },
+  userContainer: {
     flexDirection: 'row', alignItems: 'center',
     padding: 15, borderRadius: 10, marginBottom: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2,
@@ -369,20 +307,20 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
   avatarText: { fontSize: 18, fontFamily: 'Poppins-SemiBold', color: '#333' },
-  friendInfo: { flex: 1 },
-  friendName: { fontSize: 16, fontFamily: 'Poppins-SemiBold', marginBottom: 2 },
-  friendUsername: { fontSize: 14, fontFamily: 'Poppins-Regular' },
+  userInfo: { flex: 1 },
+  userName: { fontSize: 16, fontFamily: 'Poppins-SemiBold', marginBottom: 2 },
+  userUsername: { fontSize: 14, fontFamily: 'Poppins-Regular' },
   removeButton: {borderRadius: 10 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontSize: 16, fontFamily: 'Poppins-Regular', textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { borderRadius: 12, padding: 20, margin: 20, minWidth: 300 },
-  modalTitle: { fontSize: 18, fontFamily: 'Poppins-SemiBold', textAlign: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 16, fontFamily: 'Poppins-Regular', textAlign: 'center', marginBottom: 20 },
   modalButtons: { flexDirection: 'row', gap: 10 },
   modalCancelButton: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center' },
-  modalCancelText: { fontSize: 16, fontFamily: 'Poppins-SemiBold' },
+  modalCancelText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
   modalConfirmButton: { flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#E36062', alignItems: 'center' },
-  modalConfirmText: { fontSize: 16, color: '#fff', fontFamily: 'Poppins-SemiBold' },
+  modalConfirmText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
 });
 
 export default FollowList;

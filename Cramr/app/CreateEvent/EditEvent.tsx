@@ -1,18 +1,18 @@
 import Slider from '@/components/Slider';
 import { useUser } from '@/contexts/UserContext';
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import FollowersDropdown from '../../components/FollowersDropdown';
 import { Colors } from '../../constants/Colors';
 
-const CreateEventScreen = () => {
+const EditEventScreen = () => {
   const router = useRouter();
-  // Hardcoded event ID for testing
-  const eventId = 'c9b3343a-538f-4cfd-8739-30b4f093f545';
+  const { eventId } = useLocalSearchParams();
   
   // Predefined study session tags
   const studyTags = [
@@ -43,14 +43,20 @@ const CreateEventScreen = () => {
 
   // Other state variables
   const [isOnline, setIsOnline] = useState(false);
+  const [eventFormat, setEventFormat] = useState('In Person');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [virtualRoomLink, setVirtualRoomLink] = useState('');
   const [studyRoom, setStudyRoom] = useState('');
   const [classField, setClassField] = useState('');
-  const [classNumber, setClassNumber] = useState('');
-  const [date, setDate] = useState(new Date());
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); // Changed from tags string to selectedTags array
+  const [dateTime, setDateTime] = useState(() => {
+    const now = new Date();
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+    return now;
+  });
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [capacity, setCapacity] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -87,9 +93,15 @@ const CreateEventScreen = () => {
     loadEventData();
   }, []);
 
+  useEffect(() => {
+    eventFormat === 'In-Person' && setIsOnline(false);
+    eventFormat === 'Online' && setIsOnline(true);
+  }, [eventFormat]);
+
   const loadEventData = async () => {
     try {
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`);
+      console.log('Event id:' + eventId);
       if (!response.ok) {
         throw new Error('Failed to load event');
       }
@@ -101,28 +113,93 @@ const CreateEventScreen = () => {
       setLocation(eventData.location || '');
       
       // Handle class field (split into department and number)
-      if (eventData.class) {
-        const classParts = eventData.class.split(' ');
-        setClassField(classParts[0] || '');
-        setClassNumber(classParts.slice(1).join(' ') || '');
-      } else {
-        setClassField('');
-        setClassNumber('');
-      }
+      setClassField(eventData.class || '');
       
       setCapacity(eventData.capacity?.toString() || '');
       setSelectedTags(eventData.tags || []);
-      
+
+      setIsOnline(eventData.event_format === 'Online');
+
       if (eventData.date_and_time) {
-        setDate(new Date(eventData.date_and_time));
+        const eventDate = new Date(eventData.date_and_time);
+        if (!isNaN(eventDate.getTime())) {
+          setDateTime(eventDate);
+        }
       }
       
       // Set online/offline based on location
-      setIsOnline(eventData.location?.includes('http') || false);
-      
+      setIsOnline(eventData.event_format === 'Online');
+      setVirtualRoomLink(eventData.virtual_room_link || '');
+      setStudyRoom(eventData.study_room || '');
+
     } catch (error) {
       console.error('Error loading event:', error);
       Alert.alert('Error', 'Failed to load event data');
+    }
+  };
+
+ // Helper function to format date string (use UTC)
+const formatDate = (dateAndTime: Date | string | null) => {
+  if (!dateAndTime) return 'Select Date';
+  try {
+    const date = new Date(dateAndTime);
+    if (isNaN(date.getTime())) return 'Select Date';
+    
+    // Use UTC methods
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
+    const day = date.getUTCDate();
+    
+    return `${month}/${day}/${year}`;
+  } catch {
+    return 'Select Date';
+  }
+};
+
+// Helper function to format time string (use UTC)
+const formatTime = (dateAndTime: Date | string | null) => {
+  if (!dateAndTime) return 'Select Time';
+  try {
+    const date = new Date(dateAndTime);
+    if (isNaN(date.getTime())) return 'Select Time';
+    
+    // Use UTC methods
+    const hours = date.getUTCHours();
+    const minutes = date.getUTCMinutes();
+    
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const minutesStr = minutes.toString().padStart(2, '0');
+    
+    return `${hour12}:${minutesStr} ${ampm}`;
+  } catch {
+    return 'Select Time';
+  }
+};
+
+  // Updated onChange handlers from create event
+  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      // Combine the selected date with the current time
+      const newDateTime = new Date(selectedDate);
+      newDateTime.setHours(dateTime.getHours());
+      newDateTime.setMinutes(dateTime.getMinutes());
+      setDateTime(newDateTime);
+    }
+  };
+
+  const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      // Convert the selected UTC time back to local time
+      const utcTime = new Date(selectedTime.getTime() - selectedTime.getTimezoneOffset() * 60000);
+      
+      // Combine the selected time with the current date
+      const newDateTime = new Date(dateTime);
+      newDateTime.setHours(utcTime.getHours());
+      newDateTime.setMinutes(utcTime.getMinutes());
+      setDateTime(newDateTime);
     }
   };
 
@@ -138,10 +215,14 @@ const CreateEventScreen = () => {
         title: title.trim(),
         description: description.trim(),
         location: location.trim(),
-        class: `${classField.trim()} ${classNumber.trim()}`.trim(),
-        date_and_time: date.toISOString(),
+        class: classField.trim(),
+        date_and_time: dateTime,
         tags: selectedTags,
-        capacity: parseInt(capacity) || 5
+        capacity: parseInt(capacity) || 5,
+        virtual_room_link: virtualRoomLink.trim(),
+        study_room: studyRoom.trim(),
+        event_format: isOnline ? 'Online' : 'In-Person',
+
       };
 
       console.log('Saving event data:', { eventId, eventData, user: user?.id });
@@ -164,8 +245,8 @@ const CreateEventScreen = () => {
 
       const result = JSON.parse(responseText);
       Alert.alert('Success', 'Event updated successfully', [
-        { text: 'OK', onPress: () => router.back() }
       ]);
+      router.back();
     } catch (error) {
       console.error('Error updating event:', error);
       Alert.alert('Error', 'Failed to update event');
@@ -224,43 +305,6 @@ const CreateEventScreen = () => {
     }
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      const newDate = new Date(selectedDate);
-      newDate.setHours(date.getHours());
-      newDate.setMinutes(date.getMinutes());
-      setDate(newDate);
-    }
-  };
-
-  const onTimeChange = (event: any, selectedTime?: Date) => {
-    setShowTimePicker(false);
-    if (selectedTime) {
-      const newDate = new Date(date);
-      newDate.setHours(selectedTime.getHours());
-      newDate.setMinutes(selectedTime.getMinutes());
-      setDate(newDate);
-    }
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
@@ -274,11 +318,11 @@ const CreateEventScreen = () => {
         <View style={[styles.content, { backgroundColor: backgroundColor }]}>
           {/* Header */}
           <TouchableOpacity onPress={() => router.back()}>
-            <Image source={require('../../assets/images/cramr_logo.png')} style={[styles.logoContainer]} />
+            <ArrowLeft color={textColor} />
           </TouchableOpacity>
 
           <View style={{ alignItems: 'center' }}>
-            <Text style={[styles.headerText, { color: textColor, marginTop: 20, marginBottom: 20 }]}>Edit Event</Text>
+            <Text style={[styles.headerText, { color: textColor, marginTop: -25, marginBottom: 20 }]}>Edit Event</Text>
           </View>
 
           <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Name </Text>
@@ -318,21 +362,14 @@ const CreateEventScreen = () => {
             ))}
           </View>
           
-          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Class </Text>
-          <View style={{flexDirection: 'row', justifyContent: 'space-between', width: 130}}>
+          <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Class/Subject </Text>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', width: 100}}>
             <TextInput
-            placeholder="CSE"
+            placeholder="Ex.: CSE 100"
             placeholderTextColor={placeholderColor}
             value={classField}
             onChangeText={setClassField}
-            style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 75 }]}
-            />
-            <TextInput
-            placeholder="100"
-            placeholderTextColor={placeholderColor}
-            value={classNumber}
-            onChangeText={setClassNumber}
-            style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 50 }]}
+            style={[styles.input, { color: textColor, backgroundColor: textInputColor, width: 100 }]}
             />
           </View>
 
@@ -341,6 +378,7 @@ const CreateEventScreen = () => {
             leftLabel='In-Person'
             rightLabel='Online  '
             onChangeSlider={setIsOnline}
+            value={isOnline}
             width={210}
             lightMode={!isDarkMode}
             style={{ marginBottom: 10 }}
@@ -367,37 +405,32 @@ const CreateEventScreen = () => {
             <TextInput
               placeholder="Enter link to virtual study room."
               placeholderTextColor={placeholderColor}
-              value={location}
-              onChangeText={setLocation}
+              value={virtualRoomLink}
+              onChangeText={setVirtualRoomLink}
               style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
             />
           )}
 
-          {/* Date/Time Picker */}
+          {/* Date/Time Picker - Updated to match create event */}
           <Text style={[styles.subheaderText, { color: textColor, marginBottom: 5 }]}> Date & Time </Text>
           <View style={styles.dateTimeRow}>
             <TouchableOpacity
               style={[styles.dateTimeButton, { backgroundColor: textInputColor, borderWidth: 0 }]}
-              onPress={() => setShowDatePicker(true)}
+              onPress={() => setShowDatePicker(!showDatePicker)}
             >
               <Ionicons name="calendar-outline" size={20} color={textColor} />
               <Text style={[styles.normalText, { color: textColor }]}>
-                {formatDate(date)}
+                {formatDate(dateTime)}
               </Text>
             </TouchableOpacity>
-
+            
             <TouchableOpacity
               style={[styles.dateTimeButton, { backgroundColor: textInputColor, borderWidth: 0 }]}
-              onPress={() => {
-                setShowTimePicker(true);
-                setTimeout(() => {
-                  // This timeout helps with timing issues
-                }, 100);
-              }}
+              onPress={() => setShowTimePicker(!showTimePicker)}
             >
               <Ionicons name="time-outline" size={20} color={textColor} />
               <Text style={[styles.normalText, { color: textColor }]}>
-                {formatTime(date)}
+                {formatTime(dateTime)}
               </Text>
             </TouchableOpacity>
           </View>
@@ -476,84 +509,30 @@ const CreateEventScreen = () => {
         </View>
       </KeyboardAwareScrollView>
 
-      {/* Date Picker Modal */}
+      {/* Date Picker Modal - Updated to match create event */}
       {showDatePicker && (
         <DateTimePicker
-          value={date}
+          value={dateTime}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onDateChange}
           minimumDate={new Date()}
+          themeVariant={isDarkMode ? 'dark' : 'light'}
+          textColor={isDarkMode ? '#FFFFFF' : '#000000'}
         />
       )}
 
-      {/* Time Picker Modal */}
+      {/* Time Picker Modal - Updated to match create event */}
       {showTimePicker && (
         <DateTimePicker
-          value={date}
+          value={new Date(dateTime.getTime() + dateTime.getTimezoneOffset() * 60000)}
           mode="time"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onTimeChange}
+          themeVariant={isDarkMode ? 'dark' : 'light'}
+          textColor={isDarkMode ? '#FFFFFF' : '#000000'}
         />
       )}
-
-      {/* Bottom Navigation Bar */}
-      <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.navBorder }]}> 
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('listView')}
-        >
-          <MaterialCommunityIcons 
-            name="clipboard-list-outline" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'listView' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('map')}
-        >
-          <Ionicons 
-            name="map-outline" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'map' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('addEvent')}
-        >
-          <Feather 
-            name="plus-square" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'addEvent' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('bookmarks')}
-        >
-          <Feather 
-            name="bookmark" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => handleNavigation('profile')}
-        >
-          <Ionicons 
-            name="person-circle-outline" 
-            size={24} 
-            color={textColor} 
-          />
-          {currentPage === 'profile' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
 
         <Modal
             animationType="fade"
@@ -564,7 +543,7 @@ const CreateEventScreen = () => {
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, {backgroundColor: backgroundColor, padding: 15}]}>
                     <Text style={[styles.normalText, {color: textColor, textAlign: 'center', marginTop: 10}]}>
-                        Delete [event name]?
+                        Delete event?
                     </Text>
                         
                     <View style={{flexDirection: 'row', gap: 10, width: '100%', marginTop: 20}}>
@@ -579,13 +558,12 @@ const CreateEventScreen = () => {
                             style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
                             onPress={handleDelete}
                         >
-                            <Text style={[styles.normalText, {color: 'white'}]}>Delete</Text>
+                            <Text style={[styles.normalText, {color: textColor}]}>Delete</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
                     </View>
         </Modal>
-      </View>
     </SafeAreaView>
   );
 };
@@ -730,4 +708,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CreateEventScreen;
+export default EditEventScreen;

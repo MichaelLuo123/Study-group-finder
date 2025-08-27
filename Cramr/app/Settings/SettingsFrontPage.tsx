@@ -31,7 +31,7 @@ const SettingsFrontPage = () => {
     try {
       await logout();
       setModalVisible(false);
-      router.push('/Login/Loginscreen');
+      router.push('/SignIn/Loginscreen');
     } catch (error) {
       console.error('Error during sign out:', error);
     }
@@ -49,7 +49,7 @@ const SettingsFrontPage = () => {
           />
         </TouchableOpacity>
 
-        <Text style={[styles.heading, { color: textColor }]}>Settings</Text>
+        <Text style={[styles.heading, { color: textColor, marginTop: -40 }]}>Settings</Text>
 
         <TouchableOpacity
         style={[styles.item, { backgroundColor: textInputColor }]}
