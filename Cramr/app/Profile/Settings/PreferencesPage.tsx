@@ -85,11 +85,12 @@ const PreferencesPage = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Back Button */}
-        <ArrowLeft 
-          size={24} 
-          color={textColor}
-          onPress={() => router.back()}
-        />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft 
+            size={24} 
+            color={textColor}
+          />
+        </TouchableOpacity>
 
         <Text style={styles.heading}>Preferences</Text>
 
@@ -165,7 +166,6 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
     },
     heading: {
       fontSize: 18,
-      fontWeight: 'bold',
       alignSelf: 'center',
       marginBottom: 20,
       marginTop: -25,

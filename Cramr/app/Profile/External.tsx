@@ -172,10 +172,9 @@ export default function External() {
     setIsMoreModalVisible(true);
   };
 
-  const handleCancelMore = () => {
+    const handleCancelMore = () => {
     setIsMoreModalVisible(false);
     setIsBlockCheck(false);
-    setIsRemoveFollowerCheck(false);
   };
 
   // Block logic
@@ -264,24 +263,7 @@ export default function External() {
     setIsMoreModalVisible(false);
   }
 
-  // Remove Followers logic
-  const [isRemoveFollowerCheck, setIsRemoveFollowerCheck] = useState(false);
 
-  const handleRemoveFollowerCheck = () => {
-    setIsRemoveFollowerCheck(true);
-  };
-
-  const handleRemoveFollower = () => {
-    // Add your remove follower logic here
-    console.log('Remove follower');
-    setIsMoreModalVisible(false);
-    setIsRemoveFollowerCheck(false);
-  };
-
-  const handleCancelRemoveFollower = () => {
-    setIsRemoveFollowerCheck(false);
-    setIsMoreModalVisible(false);
-  }
 
   // Follow Modal
   const [isFollowModalVisible, setIsFollowModalVisible] = useState(false);
@@ -556,7 +538,7 @@ export default function External() {
             transparent={true}
             visible={isMoreModalVisible}
           >
-            {isBlockCheck === false && isRemoveFollowerCheck === false && (
+            {isBlockCheck === false && (
               <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, {backgroundColor: backgroundColor}]}>
                   <TouchableOpacity
@@ -608,31 +590,7 @@ export default function External() {
               </View>
             )}
 
-            {isRemoveFollowerCheck === true && (
-              <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, {backgroundColor: backgroundColor, padding: 15}]}>
-                  <Text style={[styles.normalText, {color: textColor, textAlign: 'center', marginTop: 10}]}>
-                    Remove {username} as a follower?
-                  </Text>
-                  
-                  <View style={{flexDirection: 'row', gap: 10, width: '100%', marginTop: 20}}>
-                    <TouchableOpacity
-                      style={{flex: 1, backgroundColor: cancelButtonColor, height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
-                      onPress={handleCancelRemoveFollower}
-                    >
-                      <Text style={[styles.normalText, {color: textColor}]}>Cancel</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={{flex: 1, backgroundColor: '#E36062', height: 35, borderRadius: 10, alignItems: 'center', justifyContent: 'center'}}
-                      onPress={handleRemoveFollower}
-                    >
-                      <Text style={[styles.normalText, {color: textColor}]}>Remove</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            )}
+
           </Modal>
 
           {/* Unfollow Confirmation Modal */}

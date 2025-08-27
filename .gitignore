@@ -43,3 +43,6 @@ app-example
 # Docker deployment scripts
 deploy-docker-michael.sh
 
+android
+ios
+

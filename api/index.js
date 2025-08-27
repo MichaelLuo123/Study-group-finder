@@ -2653,7 +2653,42 @@ app.post('/twofactor/verify-code', async (req, res) => {
   }
 });
 
-// Image upload endpoints
+// Profile picture upload endpoint
+app.post('/users/:userId/profile-picture', upload.single('profile_picture'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No profile picture file provided' });
+    }
+
+    const { userId } = req.params;
+    
+    // Generate the URL for the uploaded profile picture
+    const imageUrl = `http://132.249.242.182/uploads/${req.file.filename}`;
+    
+    // Update the user's profile_picture_url in the database
+    const result = await client.query(
+      'UPDATE users SET profile_picture_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [imageUrl, userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Profile picture uploaded successfully',
+      profile_picture_url: imageUrl,
+      filename: req.file.filename,
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Profile picture upload error:', error);
+    res.status(500).json({ error: 'Failed to upload profile picture', details: error.message });
+  }
+});
+
+// General image upload endpoints
 app.post('/upload/image', upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
@@ -2674,6 +2709,34 @@ app.post('/upload/image', upload.single('image'), (req, res) => {
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Failed to upload image', details: error.message });
+  }
+});
+
+// Get leaderboard
+app.get('/leaderboard', async (req, res) => {
+  try {
+    // Get users ranked by number of events they've created
+    const result = await client.query(`
+      SELECT 
+        u.id,
+        u.username as name,
+        u.profile_picture_url as avatar,
+        COUNT(e.id) as events
+      FROM users u
+      LEFT JOIN events e ON u.id = e.creator_id
+      GROUP BY u.id, u.username, u.profile_picture_url
+      HAVING COUNT(e.id) > 0
+      ORDER BY events DESC, u.username ASC
+      LIMIT 10
+    `);
+    
+    res.json({
+      success: true,
+      leaderboard: result.rows
+    });
+  } catch (err) {
+    console.error('Error fetching leaderboard:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 

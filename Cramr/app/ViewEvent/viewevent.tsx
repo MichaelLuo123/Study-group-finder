@@ -3,14 +3,14 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
-  Dimensions,
-  Image,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Dimensions,
+    Image,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Colors } from '../../constants/Colors';
@@ -336,7 +336,7 @@ const EventViewScreen = () => {
                   disabled={busy}
                   style={[
                     styles.rsvpButton,
-                    { backgroundColor: isRSVPed ? rsvpedButtonColor : '#5CAEF1'}
+                    { backgroundColor: isRSVPed ? '#e0e0e0' : '#5CAEF1'}
                   ]}
                 >
                   <Text style={[styles.rsvpButtonText, {color: textColor}]}>
@@ -356,6 +356,16 @@ const EventViewScreen = () => {
               </View>
 
             </View>
+          </View>
+
+          {/* Study Materials Section */}
+          <Text style={[styles.studyMaterialsTitle, { color: textColor }]}>
+            Study Materials
+          </Text>
+          <View style={styles.materialsContainer}>
+            <TouchableOpacity style={[styles.addMaterialCard, { borderColor: textColor }]}>
+              <Text style={[styles.addMaterialPlus, { color: textColor }]}>+</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={{height: 1, backgroundColor: placeholderTextColor, marginVertical: 5}}></View>
@@ -665,6 +675,37 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+  },
+  studyMaterialsSection: {
+    borderRadius: 16,
+    marginBottom: 20,
+    padding: 16,
+    borderWidth: 1,
+  },
+  studyMaterialsTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    marginBottom: 15,
+    marginTop: 20,
+  },
+  materialsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  addMaterialCard: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addMaterialPlus: {
+    fontSize: 30,
     fontFamily: 'Poppins-Bold',
   },
 });
