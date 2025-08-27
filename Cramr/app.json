@@ -21,10 +21,12 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "process.env.EXPO_PUBLIC_GOOGLE_API_KEY"
+          "apiKey": "AIzaSyBxoV_Ap9575C4SuJY2TaIftwlgSSSF6gw"
         }
       },
-      "edgeToEdgeEnabled": true
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "INTERNET"],
+      "edgeToEdgeEnabled": true,
+      "package": "com.tylervo02.Cramr"
     },
     "web": {
       "output": "static",
