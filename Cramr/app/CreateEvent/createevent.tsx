@@ -207,11 +207,13 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
       virtual_room_link: isOnline ? virtualRoomLink.trim() : null,
       date_and_time: formatForPostgres(dateTime),
       capacity: Number(capacity),
-      invited_ids: selectedFriends,
+      invitePeople: selectedFriends,
       description: description.trim(),
     };
 
     try {
+      console.log('Creating event with data:', eventData);
+      console.log('Selected friends:', selectedFriends);
       console.log('isOnline:', isOnline);
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`, {
         method: 'POST',

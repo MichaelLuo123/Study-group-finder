@@ -2,13 +2,20 @@ import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
+
 type Notification = {
   id: string;
   sender: string;
   message: string;
   date: string;
+  type?: string;
+  event_id?: string;
+  event_title?: string;
+  is_read?: boolean;
+  created_at?: string;
+  user_has_responded?: boolean;
 };
 
 export default function NotificationsPage({ navigation }: { navigation: any }) {
@@ -19,9 +26,10 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const bannerColors = Colors.bannerColors
 
-
   const [notifications, setNotifications] = useState<{ [date: string]: Notification[] }>({});
   const [refreshing, setRefreshing] = useState(false);
+  const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
+  const [respondedInvitations, setRespondedInvitations] = useState<Set<string>>(new Set());
   const { user } = useUser();
   // const userId = 'a163cdc9-6db7-4498-a73b-a439ed221dec';
   // Use actual user ID from context, fallback to hardcoded for testing
@@ -33,10 +41,12 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
 
   const fetchNotifications = async () => {
     try {
+      console.log('Fetching notifications for user:', userId);
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/notifications`);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Notifications response:', data);
         if (data.success) {
           // Transform the backend data to match the original format
           const transformedNotifications: { [date: string]: Notification[] } = {};
@@ -46,10 +56,16 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
               id: notif.id,
               sender: notif.sender,
               message: notif.message,
-              date: notif.date
+              date: notif.date,
+              type: notif.type,
+              event_id: notif.event_id,
+              event_title: notif.event_title,
+              is_read: notif.is_read,
+              created_at: notif.created_at
             }));
           });
           
+          console.log('Transformed notifications:', transformedNotifications);
           setNotifications(transformedNotifications);
         }
       } else {
@@ -64,6 +80,89 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
     setRefreshing(true);
     await fetchNotifications();
     setRefreshing(false);
+  };
+
+  const handleEventInvitation = async (eventId: string, status: 'accepted' | 'declined', notificationId: string) => {
+    if (!eventId) {
+      Alert.alert('Error', 'Event ID not found');
+      return;
+    }
+
+    console.log('Handling event invitation:', { eventId, status, notificationId, userId });
+    setProcessingInvitation(notificationId);
+
+    try {
+      const requestBody = {
+        user_id: userId,
+        status: status
+      };
+      console.log('Sending RSVP request:', requestBody);
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('RSVP response status:', response.status);
+      const result = await response.json();
+      console.log('RSVP response:', result);
+      
+      if (response.ok) {
+        if (result.success) {
+          // Mark notification as read
+          await markNotificationAsRead(notificationId);
+          
+          // Add to responded invitations set
+          setRespondedInvitations(prev => new Set([...prev, notificationId]));
+          
+          // Refresh notifications to update the UI
+          await fetchNotifications();
+          
+          Alert.alert(
+            'Success', 
+            status === 'accepted' 
+              ? 'You have accepted the event invitation!' 
+              : 'You have declined the event invitation.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert('Error', result.message || 'Failed to process invitation');
+        }
+      } else {
+        Alert.alert('Error', result.error || 'Failed to process invitation');
+      }
+    } catch (error) {
+      console.error('Error processing event invitation:', error);
+      Alert.alert('Error', 'Failed to process invitation. Please try again.');
+    } finally {
+      setProcessingInvitation(null);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const isEventInvitation = (notification: Notification) => {
+    return notification.type === 'event_invite';
+  };
+
+  const shouldShowInvitationButtons = (notification: Notification) => {
+    return isEventInvitation(notification) && 
+           notification.event_id && 
+           !respondedInvitations.has(notification.id);
   };
 
   return (
@@ -91,6 +190,41 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
                   <Text style={[styles.bold, { color: textColor }]}>{notif.sender}</Text>
                   <Text style={{ color: textColor, fontFamily: 'Poppins-Regular' }}> {notif.message}</Text>
                 </Text>
+                
+                {/* Event Invitation Action Buttons */}
+                {shouldShowInvitationButtons(notif) && (
+                  <View style={styles.actionButtonsContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.actionButton,
+                        styles.acceptButton,
+                        { opacity: processingInvitation === notif.id ? 0.6 : 1 }
+                      ]}
+                      onPress={() => handleEventInvitation(notif.event_id!, 'accepted', notif.id)}
+                      disabled={processingInvitation === notif.id}
+                    >
+                      <Text style={styles.acceptButtonText}>
+                        {processingInvitation === notif.id ? 'Processing...' : 'Accept'}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[
+                        styles.actionButton,
+                        styles.rejectButton,
+                        { opacity: processingInvitation === notif.id ? 0.6 : 1 }
+                      ]}
+                      onPress={() => handleEventInvitation(notif.event_id!, 'declined', notif.id)}
+                      disabled={processingInvitation === notif.id}
+                    >
+                      <Text style={styles.rejectButtonText}>
+                        {processingInvitation === notif.id ? 'Processing...' : 'Decline'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                
+
               </View>
             ))}
           </View>
@@ -140,4 +274,35 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     color: '#222',
   },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptButton: {
+    backgroundColor: '#5CAEF1',
+  },
+  rejectButton: {
+    backgroundColor: '#E36062',
+  },
+  acceptButtonText: {
+    color: 'white',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+  },
+  rejectButtonText: {
+    color: 'white',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+  },
+
 });
