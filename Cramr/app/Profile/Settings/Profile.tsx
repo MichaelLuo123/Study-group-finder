@@ -2,7 +2,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Dropdown from '../../../components/Dropdown';
 import ImageUpload from '../../../components/ImageUpload';
 import Slider from '../../../components/Slider';
@@ -70,7 +70,7 @@ export default function Profile() {
     { label: 'Outside of studying, I love...', value: "seventh" },
     { label: 'My go-to study snack is...', value: "eigth" },
     { label: 'A fun fact about me is...', value: "ninth" },
-    { label: 'When I’m not studying, you can find me...', value: "tenth" },
+    { label: 'When I am not studying, you can find me...', value: "tenth" },
   ];
   const [prompt1, setPrompt1] = useState<string | null>(null);
   const [prompt1Answer, setPrompt1Answer] = useState<string | null>(null);
@@ -78,6 +78,8 @@ export default function Profile() {
   const [prompt2Answer, setPrompt2Answer] = useState<string | null>(null);
   const [prompt3, setPrompt3] = useState<string | null>(null);
   const [prompt3Answer, setPrompt3Answer] = useState<string | null>(null);
+
+  const [saved, setSaved] = useState(true); // Start as true since no changes initially
 
   // pull user data from database
   useEffect(() => {
@@ -112,6 +114,9 @@ export default function Profile() {
           setPrompt2Answer(userData.prompt_2_answer || null);
           setPrompt3(userData.prompt_3 || null);
           setPrompt3Answer(userData.prompt_3_answer || null);
+          
+          // Reset saved state after loading data
+          setSaved(true);
         } else {
           console.error('Failed to fetch user data');
         }
@@ -127,6 +132,8 @@ export default function Profile() {
 
   // Save updated profile to database
   const handleSave = async () => {
+    if (saved) return; // Don't save if already saved
+    
     try {
       const updatedData = {
         profile_picture_url: profilePicture,
@@ -157,7 +164,7 @@ export default function Profile() {
 
       if (response.ok) {
         console.log('Profile updated successfully');
-        // Optionally show success message or navigate back
+        setSaved(true);
       } else {
         console.error('Failed to update profile');
       }
@@ -168,223 +175,237 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={{flex:1, backgroundColor: backgroundColor}}>
-      <ScrollView>
-        <View style={[styles.container, {backgroundColor: backgroundColor}]}>
-          
-          {/* Show message if no user is logged in */}
-          {!loggedInUser && (
-            <View style={styles.messageContainer}>
-              <Text style={[styles.messageText, {color: textColor}]}>
-                Please log in to edit your profile
-              </Text>
-            </View>
-          )}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{flex: 1}}
+      >
+        <ScrollView 
+          contentContainerStyle={{flexGrow: 1}}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.container, {backgroundColor: backgroundColor}]}>
+            
+            {/* Show message if no user is logged in */}
+            {!loggedInUser && (
+              <View style={styles.messageContainer}>
+                <Text style={[styles.messageText, {color: textColor}]}>
+                  Please log in to edit your profile
+                </Text>
+              </View>
+            )}
 
-          {/* Show loading state */}
-          {isLoading && (
-            <View style={styles.messageContainer}>
-              <Text style={[styles.messageText, {color: textColor}]}>
-                Loading profile...
-              </Text>
-            </View>
-          )}
+            {/* Show loading state */}
+            {isLoading && (
+              <View style={styles.messageContainer}>
+                <Text style={[styles.messageText, {color: textColor}]}>
+                  Loading profile...
+                </Text>
+              </View>
+            )}
 
-          {/* Show profile content only if user is logged in and not loading */}
-          {loggedInUser && !isLoading && (
-            <>
-              <ArrowLeft 
-                size={24} 
-                color={textColor}
-                onPress={() => router.back()}
+            {/* Show profile content only if user is logged in and not loading */}
+            {loggedInUser && !isLoading && (
+              <>
+                <ArrowLeft 
+                  size={24} 
+                  color={textColor}
+                  onPress={() => router.back()}
+                />
+
+                <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: -25}]}>
+                  Profile
+                </Text>
+
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}>
+              Picture
+            </Text>
+            <ImageUpload 
+              value={profilePicture}
+              onChangeImage={(image) => { setProfilePicture(image); setSaved(false); }}
+              isDarkMode={isDarkMode}
+            />
+
+            <Text style={[styles.subheaderText, {color: textColor , marginTop: 10, marginBottom: 5}]}>
+              Banner
+            </Text>
+              <View style={styles.bannerColorContainer}>
+              <TouchableOpacity 
+                style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 0 && styles.ring]}
+                onPress={() => { setBannerColor(0); setSaved(false); }} 
               />
+              <TouchableOpacity 
+                style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 1 && styles.ring]} 
+                onPress={() => { setBannerColor(1); setSaved(false); }} 
+              />
+              <TouchableOpacity 
+                style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 2 && styles.ring]} 
+                onPress={() => { setBannerColor(2); setSaved(false); }} 
+              />
+              <TouchableOpacity 
+                style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 3 && styles.ring]} 
+                onPress={() => { setBannerColor(3); setSaved(false); }} 
+              />
+              <TouchableOpacity 
+                style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 4 && styles.ring]} 
+                onPress={() => { setBannerColor(4); setSaved(false); }} 
+              />
+              </View>
 
-              <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: -25}]}>
-                Profile
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
+              Name 
+            </Text>
+            <TextInput 
+              style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
+              placeholder="Enter your name."
+              placeholderTextColor={placeholderColor}
+              value={name}
+              onChangeText={(text) => { setName(text); setSaved(false); }}
+              textAlign="left"
+              textAlignVertical="top" 
+              maxLength={50}
+              numberOfLines={1}
+            />
+
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
+              Username
+            </Text>
+            <TextInput 
+              style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
+              placeholder="Enter your username."
+              placeholderTextColor={placeholderColor}
+              value={username}
+              onChangeText={(text) => { setUsername(text); setSaved(false); }}
+              textAlign="left"
+              textAlignVertical="top" 
+              maxLength={50} 
+              numberOfLines={1}
+            />
+            
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
+              School
+            </Text>
+            <TextInput 
+              style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
+              placeholder="Enter your school."
+              placeholderTextColor={placeholderColor}
+              value={school}
+              onChangeText={(text) => { setSchool(text); setSaved(false); }}
+              textAlign="left"
+              textAlignVertical="top" 
+              maxLength={50}
+              numberOfLines={1}
+            />
+
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
+              Major
+            </Text>
+            <TextInput 
+              style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
+              placeholder="Enter your major."
+              placeholderTextColor={placeholderColor}
+              value={major}
+              onChangeText={(text) => { setMajor(text); setSaved(false); }}
+              textAlign="left"
+              textAlignVertical="top"
+              maxLength={50}
+              numberOfLines={1}
+            />
+
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
+              Class Level
+            </Text>
+            <TextInput 
+              style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
+              placeholder="Enter your class level."
+              placeholderTextColor={placeholderColor}
+              value={classLevel}
+              onChangeText={(text) => { setClassLevel(text); setSaved(false); }}
+              textAlign="left"
+              textAlignVertical="top"
+              maxLength={25}
+              numberOfLines={1}
+            />
+
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
+              Pronouns
+            </Text>
+            <TextInput 
+              style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
+              placeholder="Enter your pronouns."
+              placeholderTextColor={placeholderColor}
+              value={pronouns}
+              onChangeText={(text) => { setPronouns(text); setSaved(false); }}
+              textAlign="left"
+              textAlignVertical="top"
+              maxLength={25}
+              numberOfLines={1}
+            />
+
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
+              Transfer?
+            </Text>
+            <Slider
+              leftLabel="No"
+              rightLabel="Yes"
+              width={125}
+              value={isTransfer}
+              onChangeSlider={(value) => { setIsTransfer(value); setSaved(false); }}
+              lightMode={!isDarkMode}
+            />
+
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
+              Bio
+            </Text>
+            <TextInput
+              style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
+              placeholder="Enter bio."
+              placeholderTextColor={placeholderColor}
+              value={bio}
+              onChangeText={(text) => { setBio(text); setSaved(false); }}
+              textAlign="left"
+              textAlignVertical="top"
+              maxLength={150}
+              multiline={true}
+            />
+
+            <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}>
+              Prompts
+            </Text>
+            <Dropdown
+              options={prompts}
+              style = {{marginLeft: 20, marginRight: 20}}
+              option1={prompt1}
+              onChangeOption1={text => { setPrompt1(text); setSaved(false); }}
+              option1Answer={prompt1Answer}
+              onChangeOption1Answer={(text) => { setPrompt1Answer(text); setSaved(false); }}
+              option2={prompt2}
+              onChangeOption2={text => { setPrompt2(text); setSaved(false); }}
+              option2Answer={prompt2Answer}
+              onChangeOption2Answer={(text) => { setPrompt2Answer(text); setSaved(false); }}
+              option3={prompt3}
+              onChangeOption3={text => { setPrompt3(text); setSaved(false); }}
+              option3Answer={prompt3Answer}
+              onChangeOption3Answer={(text) => { setPrompt3Answer(text); setSaved(false); }}
+              isDarkMode={isDarkMode}
+            />
+
+            <TouchableOpacity 
+              style={[
+                styles.buttonContainer, 
+                {marginTop: 20, opacity: saved ? 0.7 : 1.0}
+              ]}
+              onPress={handleSave}
+              disabled={saved}
+            >
+              <Text style={[styles.subheaderText, {color: textColor}]}>
+                {saved ? 'Saved!' : 'Save'}
               </Text>
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}>
-            Picture
-          </Text>
-          <ImageUpload 
-            value={profilePicture}
-            onChangeImage={setProfilePicture}
-            isDarkMode={isDarkMode}
-          />
-
-          <Text style={[styles.subheaderText, {color: textColor , marginTop: 10, marginBottom: 5}]}>
-            Banner
-          </Text>
-            <View style={styles.bannerColorContainer}>
-            <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[0]}, bannerColor === 0 && styles.ring]}
-              onPress={() => setBannerColor(0)} 
-            />
-            <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[1]}, bannerColor === 1 && styles.ring]} 
-              onPress={() => setBannerColor(1)} 
-            />
-            <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[2]}, bannerColor === 2 && styles.ring]} 
-              onPress={() => setBannerColor(2)} 
-            />
-            <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[3]}, bannerColor === 3 && styles.ring]} 
-              onPress={() => setBannerColor(3)} 
-            />
-            <TouchableOpacity 
-              style={[styles.bannerColor, {backgroundColor: bannerColors[4]}, bannerColor === 4 && styles.ring]} 
-              onPress={() => setBannerColor(4)} 
-            />
-            </View>
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
-            Name 
-          </Text>
-          <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
-            placeholder="Enter your name."
-            placeholderTextColor={placeholderColor}
-            value={name}
-            onChangeText={setName}
-            textAlign="left"
-            textAlignVertical="top" 
-            maxLength={50}
-            numberOfLines={1}
-          />
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
-            Username
-          </Text>
-          <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
-            placeholder="Enter your username."
-            placeholderTextColor={placeholderColor}
-            value={username}
-            onChangeText={setUsername}
-            textAlign="left"
-            textAlignVertical="top" 
-            maxLength={50} 
-            numberOfLines={1}
-          />
-          
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
-            School
-          </Text>
-          <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
-            placeholder="Enter your school."
-            placeholderTextColor={placeholderColor}
-            value={school}
-            onChangeText={setSchool}
-            textAlign="left"
-            textAlignVertical="top" 
-            maxLength={50}
-            numberOfLines={1}
-          />
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
-            Major
-          </Text>
-          <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
-            placeholder="Enter your major."
-            placeholderTextColor={placeholderColor}
-            value={major}
-            onChangeText={setMajor}
-            textAlign="left"
-            textAlignVertical="top"
-            maxLength={50}
-            numberOfLines={1}
-          />
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
-            Class Level
-          </Text>
-          <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
-            placeholder="Enter your class level."
-            placeholderTextColor={placeholderColor}
-            value={classLevel}
-            onChangeText={setClassLevel}
-            textAlign="left"
-            textAlignVertical="top"
-            maxLength={25}
-            numberOfLines={1}
-          />
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
-            Pronouns
-          </Text>
-          <TextInput 
-            style={[styles.bodyText, styles.textInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
-            placeholder="Enter your pronouns."
-            placeholderTextColor={placeholderColor}
-            value={pronouns}
-            onChangeText={setPronouns}
-            textAlign="left"
-            textAlignVertical="top"
-            maxLength={25}
-            numberOfLines={1}
-          />
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
-            Transfer?
-          </Text>
-          <Slider
-            leftLabel="No"
-            rightLabel="Yes"
-            width={125}
-            value={isTransfer}
-            onChangeSlider={setIsTransfer}
-            lightMode={!isDarkMode}
-          />
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}> 
-            Bio
-          </Text>
-          <TextInput
-            style={[styles.bodyText, styles.largeTextInputContainer, {backgroundColor: textInputColor, color: textColor}]} 
-            placeholder="Enter bio."
-            placeholderTextColor={placeholderColor}
-            value={bio}
-            onChangeText={setBio}
-            textAlign="left"
-            textAlignVertical="top"
-            maxLength={150}
-            multiline={true}
-          />
-
-          <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}>
-            Prompts
-          </Text>
-          < Dropdown
-            options={prompts}
-            style = {{marginLeft: 20, marginRight: 20}}
-            option1={prompt1}
-            onChangeOption1={setPrompt1}
-            option1Answer={prompt1Answer}
-            onChangeOption1Answer={setPrompt1Answer}
-            option2={prompt2}
-            onChangeOption2={setPrompt2}
-            option2Answer={prompt2Answer}
-            onChangeOption2Answer={setPrompt2Answer}
-            option3={prompt3}
-            onChangeOption3={setPrompt3}
-            option3Answer={prompt3Answer}
-            onChangeOption3Answer={setPrompt3Answer}
-            isDarkMode={isDarkMode}
-          />
-
-          <TouchableOpacity 
-            style={[styles.buttonContainer, {marginTop: 20}]}
-            onPress={handleSave}
-          >
-            <Text style={[styles.subheaderText, {color: textColor}]}>Save</Text>
-          </TouchableOpacity>
-            </>
-          )}
-        </View>
-      </ScrollView>
+            </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -408,7 +429,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 20,
-    height: 1600,
+    minHeight: 1600,
   },
   iconContainer: {
     width: 25,
@@ -440,7 +461,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 80,
     borderRadius: 10,
-    
     padding: 10
   },
   buttonContainer: {
@@ -454,7 +474,6 @@ const styles = StyleSheet.create({
   collapsibleContainer: {
     width: '100%',
     backgroundColor: '#ee5e5e',
-
   },
   messageContainer: {
     flex: 1,

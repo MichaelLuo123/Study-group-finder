@@ -3,7 +3,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+    KeyboardAvoidingView,
+    Platform,
     SafeAreaView,
+    ScrollView,
     StatusBar,
     StyleSheet,
     Text,
@@ -119,153 +122,132 @@ const SetNewPasswordScreen = () => {
         }
     };
 
-    const getMessageStyle = () => {
-        if (!message.text) return null;
-        
-        switch (message.type) {
-            case 'success':
-                return styles.successMessage;
-            case 'error':
-                return styles.errorMessage;
-            case 'info':
-                return styles.infoMessage;
-            default:
-                return styles.infoMessage;
-        }
-    };
-
     const styles = getStyles(isDarkMode);
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: backgroundColor }]}>
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
             
-            <View style={styles.header}>
-                <TouchableOpacity 
-                    style={styles.backButton} 
-                    onPress={() => router.back()}
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{flex: 1}}
+            >
+                <ScrollView 
+                    contentContainerStyle={{flexGrow: 1}}
+                    keyboardShouldPersistTaps="handled"
                 >
-                    <Ionicons 
-                        name="arrow-back" 
-                        size={24} 
-                        color={textColor} 
-                    />
-                </TouchableOpacity>
-            </View>
-
-            <View style={[styles.card, {backgroundColor: backgroundColor}]}>
-                <Text style={[styles.cardTitle, {color: textColor}]}>Reset Password</Text>
-                <Text style={[styles.description, {color: placeholderColor}]}>
-                    Enter your new password below.
-                </Text>
-
-                <View style={styles.fieldContainer}>
-                    <View style={[styles.inputContainer, {backgroundColor: textInputColor}]}>
-                        <Ionicons 
-                            name="lock-closed-outline" 
-                            size={20} 
-                            color={textColor}
-                            style={styles.inputIcon} 
-                        />
-                        <TextInput
-                            style={[styles.input, styles.passwordInput]}
-                            value={newPassword}
-                            onChangeText={text => {
-                                setNewPassword(text);
-                                if (errors.newPassword) setErrors({ ...errors, newPassword: '' });
-                                
-                                if (message.type === 'error') {
-                                    setMessage({ text: '', type: '' });
-                                }
-                            }}
-                            secureTextEntry={!showNewPassword}
-                            placeholder="Enter new password"
-                            placeholderTextColor={placeholderColor}
-                        />
+                    <View style={styles.header}>
                         <TouchableOpacity 
-                            style={styles.eyeIcon} 
-                            onPress={() => setShowNewPassword(!showNewPassword)}
+                            style={styles.backButton} 
+                            onPress={() => router.back()}
                         >
                             <Ionicons 
-                                name={showNewPassword ? "eye-off-outline" : "eye-outline"} 
-                                size={20} 
-                                color={textColor}
+                                name="arrow-back" 
+                                size={24} 
+                                color={textColor} 
                             />
                         </TouchableOpacity>
                     </View>
-                    {errors.newPassword ? <Text style={styles.errorText}>{errors.newPassword}</Text> : null}
-                </View>
 
-                <View style={styles.fieldContainer}>
-                    <View style={[styles.inputContainer, errors.confirmPassword ? styles.inputError : null, {backgroundColor: textInputColor}]}>
-                        <Ionicons 
-                            name="lock-closed-outline" 
-                            size={20} 
-                            color={textColor}
-                            style={styles.inputIcon} 
-                        />
-                        <TextInput
-                            style={[styles.input, styles.passwordInput]}
-                            value={confirmPassword}
-                            onChangeText={text => {
-                                setConfirmPassword(text);
-                                if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
-                                
-                                if (message.type === 'error') {
-                                    setMessage({ text: '', type: '' });
-                                }
-                            }}
-                            secureTextEntry={!showConfirmPassword}
-                            placeholder="Confirm new password"
-                            placeholderTextColor={placeholderColor}
-                        />
-                        <TouchableOpacity 
-                            style={styles.eyeIcon} 
-                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                            <Ionicons 
-                                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
-                                size={20} 
-                                color={textColor}
-                            />
-                        </TouchableOpacity>
-                    </View>
-                    {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
-                </View>
-
-                <TouchableOpacity 
-                    style={[styles.resetButton, isLoading && styles.resetButtonDisabled]} 
-                    onPress={handleResetPassword}
-                    disabled={isLoading}
-                >
-                    <Text style={[styles.resetButtonText, { color: textColor }]}>
-                        {isLoading ? 'Resetting Password...' : 'Reset Password'}
-                    </Text>
-                </TouchableOpacity>
-
-                {/* Message display */}
-                {message.text && (
-                    <View style={[styles.messageContainer, getMessageStyle()]}>
-                        <Ionicons 
-                            name={
-                                message.type === 'success' ? 'checkmark-circle' : 
-                                message.type === 'error' ? 'close-circle' : 
-                                'information-circle'
-                            } 
-                            size={16} 
-                            color={
-                                message.type === 'success' ? '#10B981' : 
-                                message.type === 'error' ? '#EF4444' : 
-                                '#3B82F6'
-                            } 
-                            style={styles.messageIcon}
-                        />
-                        <Text style={[styles.messageText, getMessageStyle()]}>
-                            {message.text}
+                    <View style={[styles.card, {backgroundColor: backgroundColor}]}>
+                        <Text style={[styles.cardTitle, {color: textColor}]}>Reset Password</Text>
+                        <Text style={[styles.description, {color: placeholderColor}]}>
+                            Enter your new password below.
                         </Text>
+
+                        <View style={styles.fieldContainer}>
+                            <View style={[styles.inputContainer, {backgroundColor: textInputColor}]}>
+                                <Ionicons 
+                                    name="lock-closed-outline" 
+                                    size={20} 
+                                    color={textColor}
+                                    style={styles.inputIcon} 
+                                />
+                                <TextInput
+                                    style={[styles.input, styles.passwordInput]}
+                                    value={newPassword}
+                                    onChangeText={text => {
+                                        setNewPassword(text);
+                                        if (errors.newPassword) setErrors({ ...errors, newPassword: '' });
+                                        
+                                        if (message.type === 'error') {
+                                            setMessage({ text: '', type: '' });
+                                        }
+                                    }}
+                                    secureTextEntry={!showNewPassword}
+                                    placeholder="Enter new password"
+                                    placeholderTextColor={placeholderColor}
+                                />
+                                <TouchableOpacity 
+                                    style={styles.eyeIcon} 
+                                    onPress={() => setShowNewPassword(!showNewPassword)}
+                                >
+                                    <Ionicons 
+                                        name={showNewPassword ? "eye-off-outline" : "eye-outline"} 
+                                        size={20} 
+                                        color={textColor}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                            {errors.newPassword ? <Text style={styles.errorText}>{errors.newPassword}</Text> : null}
+                        </View>
+
+                        <View style={styles.fieldContainer}>
+                            <View style={[styles.inputContainer, errors.confirmPassword ? styles.inputError : null, {backgroundColor: textInputColor}]}>
+                                <Ionicons 
+                                    name="lock-closed-outline" 
+                                    size={20} 
+                                    color={textColor}
+                                    style={styles.inputIcon} 
+                                />
+                                <TextInput
+                                    style={[styles.input, styles.passwordInput]}
+                                    value={confirmPassword}
+                                    onChangeText={text => {
+                                        setConfirmPassword(text);
+                                        if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
+                                        
+                                        if (message.type === 'error') {
+                                            setMessage({ text: '', type: '' });
+                                        }
+                                    }}
+                                    secureTextEntry={!showConfirmPassword}
+                                    placeholder="Confirm new password"
+                                    placeholderTextColor={placeholderColor}
+                                />
+                                <TouchableOpacity 
+                                    style={styles.eyeIcon} 
+                                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                >
+                                    <Ionicons 
+                                        name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
+                                        size={20} 
+                                        color={textColor}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                            {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
+                        </View>
+
+                        <TouchableOpacity 
+                            style={[styles.resetButton, isLoading && styles.resetButtonDisabled]} 
+                            onPress={handleResetPassword}
+                            disabled={isLoading}
+                        >
+                            <Text style={[styles.resetButtonText, { color: textColor }]}>
+                                {isLoading ? 'Resetting Password...' : 'Reset Password'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* Message display */}
+                        {message.text && (
+                            <Text style={[styles.messageText, {color: textColor}]}>
+                                {message.text}
+                            </Text>
+                        )}
                     </View>
-                )}
-            </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
@@ -358,30 +340,11 @@ const getStyles = (isDarkMode: boolean) => StyleSheet.create({
         fontFamily: 'Poppins-Regular',
         fontSize: 16,
     },
-    messageContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderRadius: 8,
-        borderWidth: 1,
-    },
-    messageIcon: {
-        marginRight: 8,
-    },
     messageText: {
-        flex: 1,
         fontSize: 14,
-        lineHeight: 20,
-    },
-    successMessage: {
-        borderColor: '#10B981',
-    },
-    errorMessage: {
-        borderColor: '#EF4444',
-    },
-    infoMessage: {
-        backgroundColor: isDarkMode ? '#1E3A8A' : '#EFF6FF',
-        borderColor: '#3B82F6',
+        fontFamily: 'Poppins-Regular',
+        textAlign: 'center',
+        marginTop: 10,
     },
 });
 

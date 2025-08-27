@@ -109,8 +109,6 @@ const TwoFAPage = () => {
         inputs.current[0]?.focus();
     };
 
-    if (!fontsLoaded) return null;
-
     return (
         <SafeAreaView style={[styles.container, { backgroundColor }]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.inner}>

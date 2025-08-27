@@ -338,9 +338,7 @@ export default function AmbientNoise() {
         <Text style={[styles.heading, { color: textColor }]}>Music</Text>
 
         {isLoading && (
-          <Text style={[styles.loadingText, { color: textColor }]}>
-            Loading sounds...
-          </Text>
+          <></>
         )}
 
 

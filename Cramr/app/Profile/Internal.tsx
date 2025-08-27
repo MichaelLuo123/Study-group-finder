@@ -253,7 +253,7 @@ export default function Internal() {
     }
   };
 
-  const [visibleEvents, setVisibleEvents] = useState<'rsvped' | 'saved' | 'own'>('saved');
+  const [visibleEvents, setVisibleEvents] = useState<'rsvped' | 'saved' | 'own'>('own');
 
   return (
     <View style={[styles.container, {backgroundColor: backgroundColor, height: 'auto'}]}>

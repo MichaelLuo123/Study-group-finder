@@ -53,8 +53,9 @@ const LoginScreen = () => {
                     setUser(result.user);
                     // Navigate to 2FA page after successful login
                     setTimeout(() => {
-                        router.push('/TwoFactor/TwoFAPage');
+                        router.push('./TwoFactor/TwoFAPage');
                     }, 1000); // Small delay to show success message
+                    setLoginMessage('Login successful.');
                 } else {
                     setLoginStatus('error');
                     setLoginMessage(result.message || 'Login failed.');
@@ -110,7 +111,7 @@ const LoginScreen = () => {
                    <View style={styles.formContainer}>
                        <View style={styles.fieldContainer}>
                            <View style={[styles.inputContainer, errors.email ? styles.inputError : null]}>
-                               <Ionicons name="mail-outline" size={16} color="#9CA3AF" style={styles.inputIcon} />
+                               <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                <TextInput
                                    style={styles.input}
                                    value={email}
@@ -131,7 +132,7 @@ const LoginScreen = () => {
 
                        <View style={styles.fieldContainer}>
                            <View style={[styles.inputContainer, errors.password ? styles.inputError : null]}>
-                               <Ionicons name="lock-closed-outline" size={16} color="#9CA3AF" style={styles.inputIcon} />
+                               <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                <TextInput
                                    style={[styles.input, styles.passwordInput]}
                                    value={password}
@@ -144,7 +145,7 @@ const LoginScreen = () => {
                                    placeholderTextColor={placeholderTextColor}
                                />
                                <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-                                   <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={16} color="#9CA3AF" />
+                                   <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#9CA3AF" />
                                </TouchableOpacity>
                            </View>
                            {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}

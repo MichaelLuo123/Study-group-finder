@@ -4,9 +4,12 @@ import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Image,
-  Modal, Pressable,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
   SafeAreaView, ScrollView, StyleSheet, Text, TextInput,
-  TouchableOpacity, View,
+  TouchableOpacity, View
 } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 
@@ -14,6 +17,7 @@ const AccountPage = () => {
   // All state and hooks must be declared at the top of the component
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
@@ -21,7 +25,13 @@ const AccountPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
-  const { user: loggedInUser } = useUser(); // <-- Re-enabled the correct way to get the user object
+  const [hasChanges, setHasChanges] = useState(false);
+  
+  // Store original values to track changes
+  const [originalEmail, setOriginalEmail] = useState('');
+  const [originalPhoneNumber, setOriginalPhoneNumber] = useState('');
+  
+  const { user: loggedInUser } = useUser();
   const {isDarkMode, toggleDarkMode} = useUser();
 
   // Colors
@@ -29,6 +39,15 @@ const AccountPage = () => {
   const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const placeholderTextColor= (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
+
+  // Function to check if there are any changes
+  const checkForChanges = (emailValue: string, phoneValue: string, oldPwd: string, newPwd: string, confirmPwd: string) => {
+    const emailChanged = emailValue !== originalEmail;
+    const phoneChanged = phoneValue !== originalPhoneNumber;
+    const passwordChanging = oldPwd || newPwd || confirmPwd;
+    
+    setHasChanges(emailChanged || phoneChanged || passwordChanging);
+  };
 
   // First useEffect to fetch all user data
   useEffect(() => {
@@ -42,18 +61,24 @@ const AccountPage = () => {
         const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
         if (response.ok) {
           const data = await response.json();
-          setEmail(data.email || '');
-          setPhoneNumber(data.phone_number || '');
+          const userEmail = data.email || '';
+          const userPhone = data.phone_number || '';
+          
+          setEmail(userEmail);
+          setPhoneNumber(userPhone);
+          setOriginalEmail(userEmail);
+          setOriginalPhoneNumber(userPhone);
           setBlockedIds(data.blocked_ids || []);
+          setHasChanges(false); // Reset changes after loading
         } else {
           console.error('Failed to fetch user data:', await response.text());
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
       }
-    }; // <-- Function definition ends here
+    };
 
-    fetchUserData(); // <-- Call the function here
+    fetchUserData();
   }, [loggedInUser?.id]);
 
   // Second useEffect to fetch data for blocked users
@@ -97,8 +122,17 @@ const AccountPage = () => {
   }, [blockedIds]);
 
   const handleSave = async () => {
+    if (!hasChanges) {
+      return; // Don't save if no changes
+    }
+
     if (newPassword && newPassword !== confirmPassword) {
       alert('New passwords do not match!');
+      return;
+    }
+
+    if (newPassword && !oldPassword) {
+      alert('Please enter your old password to change your password.');
       return;
     }
   
@@ -106,6 +140,7 @@ const AccountPage = () => {
       const payload = {
         email,
         phone_number: phoneNumber,
+        old_password: oldPassword || undefined,
         password: newPassword || undefined,
       };
   
@@ -121,6 +156,14 @@ const AccountPage = () => {
         const data = await response.json();
         console.log('Account updated:', data);
         alert('Account updated successfully!');
+        
+        // Update original values and reset password fields
+        setOriginalEmail(email);
+        setOriginalPhoneNumber(phoneNumber);
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setHasChanges(false);
       } else {
         console.error('Failed to update account:', await response.text());
         alert('Failed to update account.');
@@ -153,8 +196,13 @@ const AccountPage = () => {
             const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}`);
             if (response.ok) {
               const data = await response.json();
-              setEmail(data.email || '');
-              setPhoneNumber(data.phone_number || '');
+              const userEmail = data.email || '';
+              const userPhone = data.phone_number || '';
+              
+              setEmail(userEmail);
+              setPhoneNumber(userPhone);
+              setOriginalEmail(userEmail);
+              setOriginalPhoneNumber(userPhone);
               setBlockedIds(data.blocked_ids || []);
             } else {
               console.error('Failed to fetch user data:', await response.text());
@@ -178,136 +226,170 @@ const AccountPage = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        
-        {/* Show message if no user is logged in */}
-        {!loggedInUser && (
-          <View style={styles.messageContainer}>
-            <Text style={[styles.messageText, { color: textColor }]}>
-              Please log in to edit your account
-            </Text>
-          </View>
-        )}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{flex: 1}}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          
+          {/* Show message if no user is logged in */}
+          {!loggedInUser && (
+            <View style={styles.messageContainer}>
+              <Text style={[styles.messageText, { color: textColor }]}>
+                Please log in to edit your account
+              </Text>
+            </View>
+          )}
 
-        {/* Show loading state */}
-        {isLoading && (
-          <View style={styles.messageContainer}>
-            <Text style={[styles.messageText, { color: textColor }]}>
-              Loading account...
-            </Text>
-          </View>
-        )}
+          {/* Show loading state */}
+          {isLoading && (
+            <View style={styles.messageContainer}>
+              <Text style={[styles.messageText, { color: textColor }]}>
+                Loading account...
+              </Text>
+            </View>
+          )}
 
-        {/* Show account content only if user is logged in and not loading */}
-        {loggedInUser && !isLoading && (
-          <>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ArrowLeft 
-                size={24} 
-                color={textColor}
-                onPress={() => router.back()}
-              />
-            </TouchableOpacity>
-
-            <Text style={[styles.heading, { color: textColor, marginTop: -40, marginBottom: 20 }]}>Account</Text>
-
-            <Text style={[styles.subheading, { color: textColor }]}>Email</Text>
-            <TextInput 
-              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]} 
-              placeholder="email@ucsd.edu" 
-              placeholderTextColor={placeholderTextColor}
-              value={email}
-              onChangeText={setEmail}
-            />
-
-            <Text style={[styles.subheading, { color: textColor }]}>Phone Number</Text>
-            <TextInput 
-              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]} 
-              placeholder="(123) 456-7890"  
-              placeholderTextColor={placeholderTextColor}
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-            />
-
-            <Text style={[styles.subheading, { color: textColor }]}>Change Password</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
-              placeholder="Enter old password."
-              placeholderTextColor={placeholderTextColor}
-              secureTextEntry
-            />
-
-            <TextInput
-              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
-              placeholder="Enter new password."
-              placeholderTextColor={placeholderTextColor}
-              secureTextEntry
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
-
-            <TextInput
-              style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
-              placeholder="Re-enter new password."
-              placeholderTextColor={placeholderTextColor}
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-
-            {newPassword && confirmPassword && newPassword !== confirmPassword && (
-              <Text style={styles.errorText}>New passwords do not match!</Text>
-            )}
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={[styles.saveButtonText, {color: textColor}]}>Save</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.divider} />
-            <Text style={[styles.subheading, { color: textColor }]}>Blocked Accounts</Text>
-            
-            {blockedUsers.map((user) => (
-              <View key={user.id} style={[styles.blockedContainer, {backgroundColor: textInputColor, flexDirection: 'row', alignItems: 'center'}]}>
-                <Image
-                  source={{ uri: user.profilePicture }}
-                  style={{ width: 40, height: 40, borderRadius: 20 }}
+          {/* Show account content only if user is logged in and not loading */}
+          {loggedInUser && !isLoading && (
+            <>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <ArrowLeft 
+                  size={24} 
+                  color={textColor}
+                  onPress={() => router.back()}
                 />
-                <Text style={[styles.normalText, { color: textColor, marginLeft: 12}]}>
-                  {user.username}
+              </TouchableOpacity>
+
+              <Text style={[styles.heading, { color: textColor, marginTop: -40, marginBottom: 20 }]}>Account</Text>
+
+              <Text style={[styles.subheading, { color: textColor }]}>Email</Text>
+              <TextInput 
+                style={[styles.input, { backgroundColor: textInputColor, color: textColor }]} 
+                placeholder="email@ucsd.edu" 
+                placeholderTextColor={placeholderTextColor}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  checkForChanges(text, phoneNumber, oldPassword, newPassword, confirmPassword);
+                }}
+              />
+
+              <Text style={[styles.subheading, { color: textColor }]}>Phone Number</Text>
+              <TextInput 
+                style={[styles.input, { backgroundColor: textInputColor, color: textColor }]} 
+                placeholder="(123) 456-7890"  
+                placeholderTextColor={placeholderTextColor}
+                value={phoneNumber}
+                onChangeText={(text) => {
+                  setPhoneNumber(text);
+                  checkForChanges(email, text, oldPassword, newPassword, confirmPassword);
+                }}
+              />
+
+              <Text style={[styles.subheading, { color: textColor }]}>Change Password</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+                placeholder="Enter old password."
+                placeholderTextColor={placeholderTextColor}
+                secureTextEntry
+                value={oldPassword}
+                onChangeText={(text) => {
+                  setOldPassword(text);
+                  checkForChanges(email, phoneNumber, text, newPassword, confirmPassword);
+                }}
+              />
+
+              <TextInput
+                style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+                placeholder="Enter new password."
+                placeholderTextColor={placeholderTextColor}
+                secureTextEntry
+                value={newPassword}
+                onChangeText={(text) => {
+                  setNewPassword(text);
+                  checkForChanges(email, phoneNumber, oldPassword, text, confirmPassword);
+                }}
+              />
+
+              <TextInput
+                style={[styles.input, { backgroundColor: textInputColor, color: textColor }]}
+                placeholder="Re-enter new password."
+                placeholderTextColor={placeholderTextColor}
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  checkForChanges(email, phoneNumber, oldPassword, newPassword, text);
+                }}
+              />
+
+              {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                <Text style={styles.errorText}>New passwords do not match!</Text>
+              )}
+
+              <TouchableOpacity 
+                style={[
+                  styles.saveButton, 
+                  { opacity: hasChanges ? 1.0 : 0.7 }
+                ]} 
+                onPress={handleSave}
+                disabled={!hasChanges}
+              >
+                <Text style={[styles.saveButtonText, {color: textColor}]}>
+                  {hasChanges ? 'Save' : 'Saved!'}
                 </Text>
-                <TouchableOpacity onPress={() => handleUnblock(user.id)}>
-                    <Text style={[styles.normalBoldText, { color: '#E36062', marginLeft: 150}]}> ✕ </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+              </TouchableOpacity>
+              
+              <View style={styles.divider} />
+              <Text style={[styles.subheading, { color: textColor }]}>Blocked Accounts</Text>
+              
+              {blockedUsers.map((user) => (
+                <View key={user.id} style={[styles.blockedContainer, {backgroundColor: textInputColor, flexDirection: 'row', alignItems: 'center'}]}>
+                  <Image
+                    source={{ uri: user.profilePicture }}
+                    style={{ width: 40, height: 40, borderRadius: 20 }}
+                  />
+                  <Text style={[styles.normalText, { color: textColor, marginLeft: 12}]}>
+                    {user.username}
+                  </Text>
+                  <TouchableOpacity onPress={() => handleUnblock(user.id)}>
+                      <Text style={[styles.normalBoldText, { color: '#E36062', marginLeft: 150}]}> ✕ </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
 
-            <View style={styles.divider} />
-            <Text style={[styles.subheading, { color: textColor }]}>Delete Account</Text>
+              <View style={styles.divider} />
+              <Text style={[styles.subheading, { color: textColor }]}>Delete Account</Text>
 
-            <TouchableOpacity style={styles.deleteButton} onPress={() => setModalVisible(true)}>
-              <Text style={[styles.deleteButtonText, {color: textColor}]}>Delete</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteButton} onPress={() => setModalVisible(true)}>
+                <Text style={[styles.deleteButtonText, {color: textColor}]}>Delete</Text>
+              </TouchableOpacity>
 
-            <Modal transparent visible={modalVisible} animationType="fade">
-              <View style={styles.modalBackground}>
-                <View style={[styles.modalCard, { backgroundColor: textInputColor }]}>
-                  <Text style={[styles.modalTitle, { color: textColor }]}>Delete account? This action cannot be undone.</Text>
-                  <View style={styles.modalButtons}>
-                    <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
-                      <Text style={styles.cancelText}>Cancel</Text>
-                    </Pressable>
-                    <Pressable style={[styles.modalButton, styles.confirmButton]} onPress={() => {
-                      setModalVisible(false);
-                    }}>
-                      <Text style={styles.confirmText}>Delete</Text>
-                    </Pressable>
+              <Modal transparent visible={modalVisible} animationType="fade">
+                <View style={styles.modalBackground}>
+                  <View style={[styles.modalCard, { backgroundColor: textInputColor }]}>
+                    <Text style={[styles.modalTitle, { color: textColor }]}>Delete account? This action cannot be undone.</Text>
+                    <View style={styles.modalButtons}>
+                      <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
+                        <Text style={styles.cancelText}>Cancel</Text>
+                      </Pressable>
+                      <Pressable style={[styles.modalButton, styles.confirmButton]} onPress={() => {
+                        setModalVisible(false);
+                      }}>
+                        <Text style={styles.confirmText}>Delete</Text>
+                      </Pressable>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </Modal>
-          </>
-        )}
-      </ScrollView>
+              </Modal>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -340,6 +422,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+    flexGrow: 1,
   },
   backArrow: {
     fontSize: 25,
