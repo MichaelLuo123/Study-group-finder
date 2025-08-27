@@ -223,7 +223,8 @@ export default function HomeScreen() {
             placeholderTextColor={placeholderTextColor}
             style={[styles.searchInput, { color: textColor}]}
             contentStyle={[styles.searchInputContent, {color: textColor}]} // Add this for font styling
-            outlineStyle={styles.searchInputOutline} // Add this for border radius
+            // This is causing issues with Android. 
+            //outlineStyle={styles.searchInputOutline} // Add this for border radius
             left={<TextInput.Icon icon="magnify" color={textColor} />}
             underlineColor="transparent"
             activeUnderlineColor="transparent"
