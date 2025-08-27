@@ -34,6 +34,8 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
+    volumes:
+      - ./uploads:/app/uploads  # Mount uploads directory
     networks:
       - cramr-network
 

@@ -1,6 +1,5 @@
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Dropdown from '../../components/Dropdown';
@@ -43,6 +42,8 @@ export default function Profile() {
   // User
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { user: loggedInUser } = useUser();
 
   // Form state;
@@ -125,11 +126,109 @@ export default function Profile() {
     fetchUserData();
   }, [loggedInUser?.id]);
 
+  // Check if there are unsaved changes
+  const checkForUnsavedChanges = () => {
+    const originalUser = user;
+    if (!originalUser) return false;
+    
+    return (
+      profilePicture !== originalUser.profile_picture_url ||
+      bannerColor !== originalUser.banner_color ||
+      name !== originalUser.name ||
+      username !== originalUser.username ||
+      school !== originalUser.school ||
+      major !== originalUser.major ||
+      classLevel !== originalUser.class_level ||
+      pronouns !== originalUser.pronouns ||
+      isTransfer !== originalUser.is_transfer ||
+      bio !== originalUser.bio ||
+      prompt1 !== originalUser.prompt_1 ||
+      prompt1Answer !== originalUser.prompt_1_answer ||
+      prompt2 !== originalUser.prompt_2 ||
+      prompt2Answer !== originalUser.prompt_2_answer ||
+      prompt3 !== originalUser.prompt_3 ||
+      prompt3Answer !== originalUser.prompt_3_answer
+    );
+  };
+
+  // Handle back button press
+  const handleBackPress = () => {
+    console.log('Back button pressed');
+    router.back();
+  };
+
   // Save updated profile to database
   const handleSave = async () => {
+    if (!loggedInUser?.id) {
+      console.error('No logged in user ID');
+      return;
+    }
+    
+    setIsSaving(true);
     try {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://132.249.242.182:8080';
+      let finalProfilePictureUrl = profilePicture;
+
+      console.log('Profile picture value:', profilePicture);
+      
+      // If profilePicture is a local file URI, upload it first
+      if (profilePicture && profilePicture.startsWith('file://')) {
+        try {
+          // Create form data for image upload
+          const formData = new FormData();
+          
+          // Determine the correct MIME type based on file extension
+          let mimeType = 'image/jpeg';
+          let fileName = 'profile_picture.jpg';
+          
+          if (profilePicture.includes('.png')) {
+            mimeType = 'image/png';
+            fileName = 'profile_picture.png';
+          } else if (profilePicture.includes('.gif')) {
+            mimeType = 'image/gif';
+            fileName = 'profile_picture.gif';
+          } else if (profilePicture.includes('.webp')) {
+            mimeType = 'image/webp';
+            fileName = 'profile_picture.webp';
+          }
+          
+          console.log('Uploading image with type:', mimeType, 'filename:', fileName);
+          
+          formData.append('profile_picture', {
+            uri: profilePicture,
+            type: mimeType,
+            name: fileName
+          } as any);
+
+          // Upload the image first
+          const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://132.249.242.182:8080';
+          console.log('Sending upload request to:', `${backendUrl}/users/${loggedInUser?.id}/profile-picture`);
+          
+          const uploadResponse = await fetch(`${backendUrl}/users/${loggedInUser?.id}/profile-picture`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          console.log('Upload response status:', uploadResponse.status);
+          
+          if (uploadResponse.ok) {
+            const uploadResult = await uploadResponse.json();
+            console.log('Upload result:', uploadResult);
+            finalProfilePictureUrl = uploadResult.profile_picture_url;
+            console.log('Profile picture uploaded successfully, URL:', finalProfilePictureUrl);
+          } else {
+            const errorText = await uploadResponse.text();
+            console.error('Failed to upload profile picture. Status:', uploadResponse.status, 'Error:', errorText);
+            return;
+          }
+        } catch (uploadError) {
+          console.error('Error uploading profile picture:', uploadError);
+          return;
+        }
+      }
+
       const updatedData = {
-        profile_picture_url: profilePicture,
+        profile_picture_url: finalProfilePictureUrl,
         banner_color: bannerColor,
         full_name: name,
         username: username,
@@ -147,7 +246,7 @@ export default function Profile() {
         prompt_3_answer: prompt3Answer,
       };
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser?.id}/profile`, {
+      const response = await fetch(`${backendUrl}/users/${loggedInUser?.id}/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -157,12 +256,19 @@ export default function Profile() {
 
       if (response.ok) {
         console.log('Profile updated successfully');
+        // Update the local state with the new profile picture URL
+        if (finalProfilePictureUrl !== profilePicture) {
+          setProfilePicture(finalProfilePictureUrl);
+        }
         // Optionally show success message or navigate back
+        router.back();
       } else {
         console.error('Failed to update profile');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -192,13 +298,11 @@ export default function Profile() {
           {/* Show profile content only if user is logged in and not loading */}
           {loggedInUser && !isLoading && (
             <>
-              <ArrowLeft 
-                size={24} 
-                color={textColor}
-                onPress={() => router.back()}
-              />
+              <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+                <Text style={{color: textColor, fontSize: 24}}>←</Text>
+              </TouchableOpacity>
 
-              <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: -25}]}>
+              <Text style={[styles.headerText, {color: textColor, marginTop: -40}]}>
                 Profile
               </Text>
 
@@ -377,10 +481,13 @@ export default function Profile() {
           />
 
           <TouchableOpacity 
-            style={[styles.buttonContainer, {marginTop: 20}]}
+            style={[styles.buttonContainer, {marginTop: 20, opacity: isSaving ? 0.6 : 1}]}
             onPress={handleSave}
+            disabled={isSaving}
           >
-            <Text style={[styles.subheaderText, {color: textColor}]}>Save</Text>
+            <Text style={[styles.subheaderText, {color: textColor}]}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Text>
           </TouchableOpacity>
             </>
           )}
@@ -394,6 +501,12 @@ const styles = StyleSheet.create({
   headerText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
+  },
+  heading: {
+    fontSize: 18,
+    alignSelf: 'center',
+    marginBottom: 20,
+    fontFamily: 'Poppins-Bold',
   },
   subheaderText: {
     fontFamily: 'Poppins-Regular',
@@ -467,5 +580,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
     textAlign: 'center',
+  },
+  backButton: {
+    width: 25,
+    height: 25,
+    marginBottom: 12,
   },
 });

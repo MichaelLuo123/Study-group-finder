@@ -2715,6 +2715,34 @@ app.post('/upload/image', upload.single('image'), (req, res) => {
   }
 });
 
+// Get leaderboard
+app.get('/leaderboard', async (req, res) => {
+  try {
+    // Get users ranked by number of events they've created
+    const result = await client.query(`
+      SELECT 
+        u.id,
+        u.username as name,
+        u.profile_picture_url as avatar,
+        COUNT(e.id) as events
+      FROM users u
+      LEFT JOIN events e ON u.id = e.creator_id
+      GROUP BY u.id, u.username, u.profile_picture_url
+      HAVING COUNT(e.id) > 0
+      ORDER BY events DESC, u.username ASC
+      LIMIT 10
+    `);
+    
+    res.json({
+      success: true,
+      leaderboard: result.rows
+    });
+  } catch (err) {
+    console.error('Error fetching leaderboard:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 // Error handling for multer
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
