@@ -496,7 +496,7 @@ export default function EventList({
       <ScrollView 
         ref={scrollViewRef}
         contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
         style={{ flex: 1 }}
         bounces={true}
