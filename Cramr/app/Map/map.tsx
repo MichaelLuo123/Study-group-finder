@@ -75,6 +75,8 @@ export default function MapScreen() {
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   // State
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [currentPage, setCurrentPage] = useState('map');
