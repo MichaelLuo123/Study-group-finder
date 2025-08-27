@@ -35,7 +35,10 @@ export default function RootLayout() {
               const swipeRightSet = new Set<string>([
                 'TwoFactor/TwoFAPage',
                 'ViewEvent/viewvent',
-                'Settings'
+                'Settings/SettingsFrontPage',
+                'Settings/AboutPage',
+                'Settings/AccountPage',
+                'Settings/PreferencesPage'
               ]);
               return {
                 headerShown: false,
