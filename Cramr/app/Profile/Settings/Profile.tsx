@@ -206,11 +206,12 @@ export default function Profile() {
             {/* Show profile content only if user is logged in and not loading */}
             {loggedInUser && !isLoading && (
               <>
-                <ArrowLeft 
-                  size={24} 
-                  color={textColor}
-                  onPress={() => router.back()}
-                />
+                <TouchableOpacity onPress={() => router.back()}>
+                  <ArrowLeft 
+                    size={24} 
+                    color={textColor}
+                  />
+                </TouchableOpacity>
 
                 <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: -25}]}>
                   Profile

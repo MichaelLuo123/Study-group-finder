@@ -685,7 +685,7 @@ app.get('/users/search', async (req, res) => {
   
   try {
     let query = `
-      SELECT id, username, full_name, email, following, followers, profile_picture_url
+      SELECT id, username, full_name, email, following, followers, profile_picture_url, banner_color
       FROM users
       WHERE
         (LOWER(username) LIKE LOWER($1) OR
@@ -1572,6 +1572,7 @@ app.put('/events/:id', async (req, res) => {
     virtual_room_link,
     study_room,
     event_format,
+    banner_color,
   } = req.body;
   
   console.log('PUT /events/:id request:', { id, body: req.body });
@@ -1660,6 +1661,14 @@ app.put('/events/:id', async (req, res) => {
       if (hasUpdates) query += ',';
       query += ` event_format = $${paramIndex}`;
       params.push(event_format);
+      paramIndex++;
+      hasUpdates = true;
+    }
+
+    if (banner_color !== undefined) {
+      if (hasUpdates) query += ',';
+      query += ` banner_color = $${paramIndex}`;
+      params.push(banner_color);
       paramIndex++;
       hasUpdates = true;
     }

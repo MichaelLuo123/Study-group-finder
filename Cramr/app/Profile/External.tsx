@@ -124,46 +124,25 @@ export default function External() {
     fetchUserData();
   }, [fetchUserData, userId]);
 
-  // Pull to refresh handler
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    
-    try {
-      // Fetch user data
-      await fetchUserData();
-      
-      // Re-check following status
-      if (profileId && userId) {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/followers`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+  // Add a refresh key state to force child components to refresh
+    const [refreshKey, setRefreshKey] = useState(0);
+  
+    // Update the onRefresh function
+    const onRefresh = React.useCallback(async () => {
+      setRefreshing(true);
+      try {
+        // Refresh user data first
+        await fetchUserData();
+
+        // Force child components to refresh by incrementing the key
+        setRefreshKey(prev => prev + 1);
         
-        if (response.ok) {
-          const data = await response.json();
-          const isUserFollowing = data.followers.some(
-            (user: { id: string }) => user.id === userId
-          );
-          setIsFollowing(isUserFollowing);
-        }
+      } catch (error) {
+        console.error('Error during refresh:', error);
+      } finally {
+        setRefreshing(false);
       }
-      
-      // Re-check block status
-      if (loggedInUser?.id && profileId) {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}/blocks/check/${profileId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setIsBlocked(data.is_blocked);
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [fetchUserData, profileId, userId, loggedInUser?.id]);
+    }, [loggedInUser?.id,]);
 
   // More Modal
   const [isMoreModalVisible, setIsMoreModalVisible] = useState(false);
@@ -397,8 +376,8 @@ export default function External() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={textColor}
-            colors={[textColor]}
+            tintColor={'#5CAEF1'}
+            colors={['#5CAEF1']}
           />
         }
       >
@@ -529,6 +508,7 @@ export default function External() {
           <Text style={[styles.subheaderBoldText, {color: textColor, marginTop: 10}]}>{name}'s Events</Text>
 
           <EventList
+            key={refreshKey}
             creatorUserId={profileId}
             />
             
