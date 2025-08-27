@@ -38,7 +38,7 @@ export default function HomeScreen() {
 
     // Profile and Settings
     { title: 'Profile Page (Internal)', route: '/Profile/Internal' },
-    { title: 'Settings', route: '/Settings/SettingsFrontPage' },
+    { title: 'Settings', route: 'Profile/Settings/SettingsFrontPage' },
     { title: 'Profile Page (External)', route: '/Profile/External' },
     { title: 'Follow Page', route: '/Follow/follow' },
     { title: 'Notifications', route: '/Profile/NotificationsPage' },
