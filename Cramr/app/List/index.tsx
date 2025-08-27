@@ -2,7 +2,7 @@ import Slider from '@/components/Slider';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
@@ -17,14 +17,11 @@ export default function HomeScreen() {
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
   const bannerColors = Colors.bannerColors
-  const buttonColor = Colors.button
   const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
 
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
-  const scheme = useColorScheme();
-  const lightMode = scheme !== 'dark';
 
   const [currentPage, setCurrentPage] = useState('listView');
   const [showFilter, setShowFilter] = useState(false);
@@ -53,7 +50,17 @@ export default function HomeScreen() {
           />
         </View>
       ),
-      headerRight: () => (<></>),
+      headerRight: () => (
+        <TouchableOpacity onPress={() => router.push('../List/Messages/messages')} style={styles.addButton}>
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={28}
+            marginRight={10}
+            marginTop={10}
+            color={textColor}
+          />
+        </TouchableOpacity>
+      ),
       headerTitle: '', // Hide "index"
       headerShadowVisible: false, // Optional: removes shadow/border under header
     });
@@ -303,7 +310,7 @@ export default function HomeScreen() {
               return (
                 <TouchableOpacity
                   key={person.id}
-                  style={[styles.personCard, {backgroundColor: bannerColors[person.banner_color]}]}
+                  style={[styles.personCard, {backgroundColor: bannerColors[person.banner_color] || 'white'}]}
                   onPress={() => navigateToProfile(person.id)}
                 >
                   <View style={styles.personInfo}>

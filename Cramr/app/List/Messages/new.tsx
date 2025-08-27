@@ -16,10 +16,18 @@ const NewMessageScreen = () => {
   const { isDarkMode } = useUser();
   const router = useRouter();
 
+  // Consistent color scheme using Colors.ts
   const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
   const textColor = !isDarkMode ? Colors.light.text : Colors.dark.text;
   const textInputColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
   const placeholderColor = !isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText;
+  const trackColor = !isDarkMode ? Colors.light.track : Colors.dark.track;
+  
+  // Additional theme colors for consistent styling
+  const cardBackgroundColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
+  const borderColor = !isDarkMode ? '#e0e0e0' : Colors.dark.track;
+  const sendButtonColor = '#5CAEF1'; // Keep brand color for send button
+  const sendButtonTextColor = '#FFFFFF'; // White text on blue button
 
   const [recipient, setRecipient] = useState('');
   const [messageText, setMessageText] = useState('');
@@ -33,21 +41,27 @@ const NewMessageScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#F8F8F8' }]}>
-      {/* White Box Container */}
-      <View style={styles.whiteBox}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+      {/* Card Container */}
+      <View style={[styles.whiteBox, { backgroundColor: cardBackgroundColor }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: borderColor }]}>
           <TouchableOpacity onPress={() => router.back()}>
             <ArrowLeft size={24} color={textColor} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: textColor }]}>New Message</Text>
           <TouchableOpacity 
-            style={[styles.sendButton, { opacity: recipient.trim() && messageText.trim() ? 1 : 0.5 }]}
+            style={[
+              styles.sendButton, 
+              { 
+                backgroundColor: sendButtonColor,
+                opacity: recipient.trim() && messageText.trim() ? 1 : 0.5 
+              }
+            ]}
             onPress={handleSendMessage}
             disabled={!recipient.trim() || !messageText.trim()}
           >
-            <Text style={[styles.sendButtonText, { color: textColor }]}>Send</Text>
+            <Text style={[styles.sendButtonText, { color: sendButtonTextColor }]}>Send</Text>
           </TouchableOpacity>
         </View>
 
@@ -59,7 +73,8 @@ const NewMessageScreen = () => {
             <TextInput
               style={[styles.input, { 
                 backgroundColor: textInputColor, 
-                color: textColor 
+                color: textColor,
+                borderColor: borderColor
               }]}
               placeholder="Enter username or email"
               placeholderTextColor={placeholderColor}
@@ -74,7 +89,8 @@ const NewMessageScreen = () => {
             <TextInput
               style={[styles.messageInput, { 
                 backgroundColor: textInputColor, 
-                color: textColor 
+                color: textColor,
+                borderColor: borderColor
               }]}
               placeholder="Type your message here..."
               placeholderTextColor={placeholderColor}
@@ -96,7 +112,6 @@ const styles = StyleSheet.create({
   },
   whiteBox: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     margin: 20,
     borderRadius: 12,
     shadowColor: '#000',
@@ -112,7 +127,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   headerTitle: {
     fontSize: 18,
@@ -122,12 +136,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#5CAEF1',
   },
   sendButtonText: {
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
-    color: 'white',
   },
   formContainer: {
     flex: 1,
@@ -146,6 +158,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
+    borderWidth: 1,
   },
   messageInput: {
     borderRadius: 10,
@@ -153,6 +166,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
     height: 200,
+    borderWidth: 1,
   },
 });
 

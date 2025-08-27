@@ -1,9 +1,12 @@
 import { useUser } from '@/contexts/UserContext';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -11,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-// import SendLogo from '../../assets/images/Send.png';
 import { Colors } from '../../../constants/Colors';
 
 interface Message {
@@ -25,30 +27,44 @@ const ChatScreen = () => {
   const { isDarkMode } = useUser();
   const router = useRouter();
 
+  // Consistent color scheme using Colors.ts
   const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
   const textColor = !isDarkMode ? Colors.light.text : Colors.dark.text;
   const textInputColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
   const placeholderColor = !isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText;
+  const trackColor = !isDarkMode ? Colors.light.track : Colors.dark.track;
+  
+  // Additional theme colors for chat bubbles and header
+  const headerBackgroundColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
+  const myMessageBubbleColor = '#5CAEF1'; // Keep brand color for sent messages
+  const theirMessageBubbleColor = trackColor; // Use theme track color for received messages
+  const myMessageTextColor = '#FFFFFF'; // White text on blue bubble
+  const theirMessageTextColor = textColor; // Theme text color for received messages
 
   const [messageText, setMessageText] = useState('');
   const [messages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hi',
+      text: 'Hi there! How are you doing?',
       isFromMe: false,
       timestamp: '1 day ago'
     },
     {
       id: '2',
-      text: 'Hi',
+      text: 'Hey! I\'m doing great, thanks for asking. How about you?',
       isFromMe: true,
+      timestamp: '1 day ago'
+    },
+    {
+      id: '3',
+      text: 'That\'s wonderful to hear! I\'m doing well too.',
+      isFromMe: false,
       timestamp: '1 day ago'
     }
   ]);
 
   const handleSendMessage = () => {
     if (messageText.trim()) {
-      // Placeholder for sending message
       console.log('Sending message:', messageText);
       setMessageText('');
     }
@@ -61,11 +77,13 @@ const ChatScreen = () => {
     ]}>
       <View style={[
         styles.messageBubble,
-        item.isFromMe ? styles.myMessageBubble : styles.theirMessageBubble
+        item.isFromMe 
+          ? [styles.myMessageBubble, { backgroundColor: myMessageBubbleColor }]
+          : [styles.theirMessageBubble, { backgroundColor: theirMessageBubbleColor }]
       ]}>
         <Text style={[
           styles.messageText,
-          item.isFromMe ? styles.myMessageText : styles.theirMessageText
+          { color: item.isFromMe ? myMessageTextColor : theirMessageTextColor }
         ]}>
           {item.text}
         </Text>
@@ -75,61 +93,61 @@ const ChatScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      {/* Header */}
-      <View style={styles.chatHeader}>
-  {/* White Bubble Around Name & Username */}
-  <View style={styles.chatHeaderBubble}>
-    <Image 
-      source={require('../../../assets/images/avatar_1.png')} 
-      style={styles.chatProfilePicture}
-    />
-    <View style={styles.chatHeaderInfo}>
-      <Text style={[styles.chatName, { color: textColor }]}>
-        Jessica Stacy
-      </Text>
-      <Text style={[styles.chatUsername, { color: placeholderColor }]}>
-        @Jessica_Stacy
-      </Text>
-    </View>
-  </View>
-</View>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        {/* Header */}
+        <View style={[styles.chatHeader, { backgroundColor }]}>
+          <View style={[styles.chatHeaderBubble, { backgroundColor: headerBackgroundColor }]}>
+            <Image 
+              source={require('../../../assets/images/avatar_1.png')} 
+              style={styles.chatProfilePicture}
+            />
+            <View style={styles.chatHeaderInfo}>
+              <Text style={[styles.chatName, { color: textColor }]}>
+                Jessica Stacy
+              </Text>
+              <Text style={[styles.chatUsername, { color: placeholderColor }]}>
+                @Jessica_Stacy
+              </Text>
+            </View>
+          </View>
+        </View>
 
+        {/* Messages */}
+        <FlatList
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          style={[styles.messagesList, { backgroundColor }]}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+        />
 
-      {/* Messages */}
-      <FlatList
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        style={styles.messagesList}
-        contentContainerStyle={styles.messagesContent}
-      />
-
-      {/* Message Input */}
-<View style={[styles.messageInputWrapper, { backgroundColor: textInputColor }]}>
-  <TextInput
-    style={[styles.messageInput, { color: textColor }]}
-    placeholder="Send a message..."
-    placeholderTextColor={placeholderColor}
-    value={messageText}
-    onChangeText={setMessageText}
-    multiline
-  />
-  
-  <TouchableOpacity 
-  style={styles.messageSendButton}
-  onPress={handleSendMessage}
->
-  <Image
-    source={require('../../../assets/images/Send.png')}
-    style={[styles.sendButtonImage, { width: 24, height: 24 }]} // adjust size
-    resizeMode="contain"
-  />
-</TouchableOpacity>
-
-
-</View>
-
-
+        {/* Message Input */}
+        <View style={[styles.messageInputContainer, { backgroundColor }]}>
+          <View style={[styles.messageInputWrapper, { backgroundColor: textInputColor }]}>
+            <TextInput
+              style={[styles.messageInput, { color: textColor }]}
+              placeholder="Send a message..."
+              placeholderTextColor={placeholderColor}
+              value={messageText}
+              onChangeText={setMessageText}
+              multiline
+              maxLength={500}
+            />
+            
+            <TouchableOpacity 
+              style={styles.messageSendButton}
+              onPress={handleSendMessage}
+            >
+              <Ionicons name="send" size={20} color={myMessageBubbleColor} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -138,33 +156,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
+  // Header Styles
   chatHeader: {
     width: '100%',
-    paddingHorizontal: 15,      // leaves space for rounded corners
+    paddingHorizontal: 15,
     paddingVertical: 10,
-    alignItems: 'center',       // centers the bubble horizontally
+    alignItems: 'center',
     justifyContent: 'center',
   },
   
   chatHeaderBubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 10,
-    width: '100%',              // full width minus parent padding
-    justifyContent: 'flex-start',  // align content to the left
+    width: '100%',
+    justifyContent: 'flex-start',
   },
   
   chatHeaderInfo: {
     flexDirection: 'column',
-    alignItems: 'flex-start',   // aligns text to the left of avatar
+    alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  
-  
-  
   
   chatProfilePicture: {
     width: 50,
@@ -172,102 +188,85 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 12,
   },
+
   chatName: {
     fontSize: 18,
     fontFamily: 'Poppins-Regular',
   },
+
   chatUsername: {
     fontSize: 12,
     fontFamily: 'Poppins-Regular',
   },
+
+  // Messages Styles
   messagesList: {
     flex: 1,
   },
+
   messagesContent: {
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
+
   messageContainer: {
     marginVertical: 5,
   },
+
   myMessageContainer: {
     alignItems: 'flex-end',
   },
+
   theirMessageContainer: {
     alignItems: 'flex-start',
   },
+
   messageBubble: {
     maxWidth: '80%',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
   },
+
   myMessageBubble: {
-    backgroundColor: '#5CAEF1',
+    // backgroundColor set dynamically
   },
+
   theirMessageBubble: {
-    backgroundColor: '#f0f0f0',
+    // backgroundColor set dynamically
   },
+
   messageText: {
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
   },
-  myMessageText: {
-    color: '#333',
+
+  // Input Styles
+  messageInputContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 16,
   },
-  theirMessageText: {
-    color: '#333',
-  },
+
   messageInputWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',  // vertically center contents
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    margin: 16,
+    alignItems: 'center',
+    padding: 10,
     borderRadius: 10,
-    backgroundColor: '#fff',  // or textInputColor
   },
-  
+
   messageInput: {
     flex: 1,
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
-    paddingVertical: 8,      // ensures space for multiline
-    paddingRight: 12,
+    padding: 5,
   },
-  
-  
-  messageInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
 
-  },
-  // messageInput: {
-  //   flex: 1,
-  //   borderRadius: 20,
-  //   paddingHorizontal: 16,
-  //   paddingVertical: 10,
-  //   maxHeight: 100,
-  //   marginRight: 10,
-  //   fontSize: 16,
-  //   fontFamily: 'Poppins-Regular',
-  // },
   messageSendButton: {
-    width: 40,           // keeps a reasonable clickable area
+    width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    // removed backgroundColor and borderRadius
   },
-  
-  sendButtonImage: {
-    width: 24,
-    height: 24,
-  },
-  
-  
 });
 
 export default ChatScreen;
