@@ -58,7 +58,7 @@ const Messages = () => {
   const renderMessageItem = ({ item }: { item: MessagePreview }) => (
     <TouchableOpacity
       style={[styles.messageContainer, { backgroundColor: cardBackgroundColor, borderColor }]}
-      onPress={() => router.push('/Messages/chat' as any)}
+      onPress={() => router.push('List/Messages/chat' as any)}
     >
       <Image 
         source={require('../../../assets/images/avatar_1.png')} 
@@ -82,18 +82,14 @@ const Messages = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleWrapper}>
-          <Text style={styles.headerTitle}>Messages</Text>
+          <Text style={[styles.headerTitle, {color: textColor}]}>Messages</Text>
         </View>
 
         <TouchableOpacity
           style={styles.createButton}
-          onPress={() => router.push('/Messages/new' as any)}
+          onPress={() => router.push('List/Messages/new' as any)}
         >
-          <Image
-            source={require('../../../assets/images/NewMessage.png')}
-            style={[styles.createImage, { width: 27, height: 27}]} // adjust width/height here
-            resizeMode="contain"
-          />
+          <Ionicons name="create-outline" size={27} color={textColor}/>
         </TouchableOpacity>
       </View>
 
@@ -128,15 +124,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative', // needed for absolute positioning of the button
-    paddingHorizontal: 20,
   },
   
   headerTitleWrapper: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    top: '55%', 
+    alignItems: 'center', 
   },
   
   headerTitle: {
@@ -147,12 +139,7 @@ const styles = StyleSheet.create({
   createButton: {
     position: 'absolute',
     right: 20,
-    top: '50%',
-    transform: [{ translateY: -12 }], // vertically center the button
-  },
-  createImage: {
-    width: 14,   // default size, you can override inline like above
-    height: 14,
+    marginTop: -5,
   },
   
   
@@ -161,14 +148,13 @@ const styles = StyleSheet.create({
   messageContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: 10,
     borderRadius: 10,
     marginBottom: 10,
-    
   },
   avatar: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 24,
     marginRight: 12,
   },
