@@ -1,5 +1,5 @@
 import { useUser } from '@/contexts/UserContext';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
@@ -21,8 +21,7 @@ interface Event {
   description: string;
   location: string;
   class: string;
-  date: string;
-  time: string;
+  date_and_time: Date;
   creator_id: string;
   creator_profile_picture: string;
   created_at: string;
@@ -44,6 +43,7 @@ const EventViewScreen = () => {
   const { isDarkMode, user } = useUser();
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const router = useRouter();
+  const { user: loggedInUser, updateUserData } = useUser();
 
   // Colors
   const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
@@ -51,6 +51,7 @@ const EventViewScreen = () => {
   const textInputColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
   const bannerColors = Colors.bannerColors;
   const placeholderTextColor = !isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText;
+  const cancelButtonColor = !isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton;
 
   const userId = user?.id;
   const [comment, setComment] = useState('');
@@ -61,6 +62,36 @@ const EventViewScreen = () => {
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+
+  const formatDate = (dateAndTime: Date | string | null) => {
+    if (!dateAndTime) return 'Invalid date';
+    try {
+      const date = new Date(dateAndTime);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      const year = date.getUTCFullYear();
+      const month = date.getUTCMonth() + 1;
+      const day = date.getUTCDate();
+      return `${month}/${day}/${year}`;
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  const formatTime = (dateAndTime: Date | string | null) => {
+    if (!dateAndTime) return 'Select Time';
+    try {
+      const date = new Date(dateAndTime);
+      if (isNaN(date.getTime())) return 'Select Time';
+      const hours = date.getUTCHours();
+      const minutes = date.getUTCMinutes();
+      const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const minutesStr = minutes.toString().padStart(2, '0');
+      return `${hour12}:${minutesStr} ${ampm}`;
+    } catch {
+      return 'Select Time';
+    }
+  };
 
   // -------- Fetch Event --------
   const fetchEvent = async () => {
@@ -77,6 +108,39 @@ const EventViewScreen = () => {
       setLoading(false);
     }
   };
+
+  const [bannerColor, setBannerColor] = useState<string | null>(null);
+
+  useEffect(() => {
+      const fetchBannerColor = async () => {
+        if (!event?.creator_id) return;
+        try {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${event.creator_id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setBannerColor(bannerColors[data.banner_color] || null);
+          } else {
+            setBannerColor(null);
+          }
+        } catch (error) {
+          console.error('Error fetching banner color:', error);
+          setBannerColor(null);
+        }
+      };
+      fetchBannerColor();
+    }, [bannerColors, event?.creator_id]);
+    
+  const [isOwner, setIsOwner] = useState(false);
+
+  const checkIfOwner = () => {
+    if (event?.creator_id === loggedInUser?.id) {
+      setIsOwner(true);
+    }
+  };
+
+  useEffect(() => {
+    checkIfOwner();
+  }, [event, loggedInUser]);
 
   const fetchRSVPs = async () => {
     if (!eventId) return;
@@ -220,9 +284,11 @@ const EventViewScreen = () => {
           <ArrowLeft size={24} color={textColor} onPress={() => router.back()} style={{ marginBottom: 15 }} />
 
           <View style={[styles.eventCard, { backgroundColor: textInputColor }]}>
-            <View style={[styles.eventHeader, { backgroundColor: bannerColors[event.bannerColor || 1] }]}>
+            <View style={[styles.eventHeader, { backgroundColor: bannerColor || textInputColor}]}>
               <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
-              <Image source={{ uri: event.creator_profile_picture }} style={styles.ownerAvatar} />
+              <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: event.creator_id } })}>
+                <Image source={{ uri: event.creator_profile_picture }} style={styles.ownerAvatar} />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.eventContent}>
@@ -247,11 +313,11 @@ const EventViewScreen = () => {
                 </View>
                 <View style={styles.detailRow}>
                   <Calendar size={20} color={textColor} />
-                  <Text style={[styles.detailText, { color: textColor }]}>{event.date}</Text>
+                  <Text style={[styles.detailText, { color: textColor }]}>{formatDate(event.date_and_time)}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Clock size={20} color={textColor} />
-                  <Text style={[styles.detailText, { color: textColor }]}>{event.time}</Text>
+                  <Text style={[styles.detailText, { color: textColor }]}>{formatTime(event.date_and_time)  }</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Users size={20} color={textColor} />
@@ -263,10 +329,12 @@ const EventViewScreen = () => {
                 <View style={styles.avatarsContainer}>
                   {displayedRSVPs.map((r, i) => (
                     <View key={i} style={styles.rsvpAvatar}>
-                      <Image
-                        source={r.profile_picture_url ? { uri: r.profile_picture_url } : require('../../assets/images/default_profile.jpg')}
-                        style={styles.avatarImage}
-                      />
+                      <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: r.user_id } })}>
+                        <Image
+                          source={r.profile_picture_url ? { uri: r.profile_picture_url } : require('../../assets/images/default_profile.jpg')}
+                          style={styles.avatarImage}
+                        />
+                      </TouchableOpacity>
                     </View>
                   ))}
                 </View>
@@ -282,13 +350,21 @@ const EventViewScreen = () => {
               )}
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <TouchableOpacity onPress={toggleRSVP} disabled={busy} style={[styles.rsvpButton, { backgroundColor: isRSVPed ? '#e0e0e0' : '#5CAEF1' }]}>
-                  <Text style={[styles.rsvpButtonText, { color: textColor }]}>{isRSVPed ? 'RSVPed' : 'RSVP'}</Text>
-                </TouchableOpacity>
+                {isOwner && (
 
-                <TouchableOpacity onPress={toggleSave}>
-                  <Bookmark color={textColor} size={25} fill={isSaved ? textColor : 'none'} style={styles.saveButtonContainer} />
+                <TouchableOpacity onPress={() => router.push({ pathname: '/CreateEvent/EditEvent', params: { eventId } })} style={styles.editButton}>
+                  <Text style={[styles.editButtonText, { color: textColor }]}>Edit</Text>
                 </TouchableOpacity>
+                
+                )}
+
+                {!isOwner && (
+                <><TouchableOpacity onPress={toggleRSVP} disabled={busy} style={[styles.rsvpButton, { backgroundColor: isRSVPed ? cancelButtonColor : '#5CAEF1' }]}>
+                    <Text style={[styles.rsvpButtonText, { color: textColor }]}>{isRSVPed ? 'RSVPed' : 'RSVP'}</Text>
+                  </TouchableOpacity><TouchableOpacity onPress={toggleSave}>
+                      <Bookmark color={textColor} size={25} fill={isSaved ? textColor : 'none'} style={styles.saveButtonContainer} />
+                    </TouchableOpacity></>
+                )}
               </View>
             </View>
           </View>
@@ -304,21 +380,23 @@ const EventViewScreen = () => {
             <Text style={[styles.commentsTitle, { color: textColor }]}>Comments ({comments.length})</Text>
 
             {comments.map(c => (
-              <View key={c.id} style={[styles.commentItem, { borderBottomColor: '#99999955' }]}>
+              <View key={c.id} style={[styles.commentItem, { backgroundColor: textInputColor, borderRadius: 10, padding: 10}]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <Image
-                    source={c.profile_picture_url ? { uri: c.profile_picture_url } : require('../../assets/images/default_profile.jpg')}
-                    style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8 }}
-                  />
-                  <View style={{ flex: 1 }}>
+                  <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: c.user_id } })}>
+                    <Image
+                      source={c.profile_picture_url ? { uri: c.profile_picture_url } : require('../../assets/images/default_profile.jpg')}
+                      style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8 }}
+                    />
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 ,}}>
                     <Text style={{ color: textColor, fontFamily: 'Poppins-SemiBold' }}>{c.full_name || c.username}</Text>
-                    <Text style={{ color: '#999', fontFamily: 'Poppins-Regular', fontSize: 12 }}>
+                    <Text style={{ color: placeholderTextColor, fontFamily: 'Poppins-Regular', fontSize: 12 }}>
                       {new Date(c.created_at).toLocaleDateString()}
                     </Text>
                   </View>
                   {c.user_id === userId && (
                     <TouchableOpacity onPress={() => deleteComment(c.id)} style={{ padding: 4 }}>
-                      <Text style={{ color: '#ff4444', fontSize: 18 }}>×</Text>
+                      <Text style={{ color: '#E36062', fontSize: 18 }}>×</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -338,7 +416,7 @@ const EventViewScreen = () => {
                 multiline
               />
               <TouchableOpacity onPress={addComment} disabled={!comment.trim()}>
-                <View style={{ padding: 8, opacity: comment.trim() ? 1 : 0.5 }}>
+                <View style={{ padding: 10, opacity: comment.trim() ? 1 : 0.5, marginTop: -45}}>
                   <Send size={20} color={comment.trim() ? '#5CAEF1' : placeholderTextColor} strokeWidth={2} />
                 </View>
               </TouchableOpacity>
@@ -357,10 +435,10 @@ const styles = StyleSheet.create({
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { fontSize: 18, fontFamily: 'Poppins-Regular' },
   scrollContent: { flexGrow: 1 },
-  content: { padding: 16 },
+  content: { padding: 20},
   eventCard: {
-    borderRadius: 16,
-    marginBottom: 20,
+    borderRadius: 10,
+    marginBottom: 5,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -368,10 +446,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  eventTitle: { fontSize: 18, fontFamily: 'Poppins-SemiBold', flex: 1 },
-  ownerAvatar: { width: 32, height: 32, borderRadius: 16 },
-  eventContent: { padding: 16 },
+  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 10,},
+  eventTitle: { fontSize: 16, fontFamily: 'Poppins-SemiBold', flex: 1 },
+  ownerAvatar: { width: 35, height: 35, borderRadius: 50 },
+  eventContent: { padding: 16},
   tagsRow: { flexDirection: 'row', marginBottom: 16 },
   tag: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, marginRight: 8 },
   tagText: { fontSize: 14, fontFamily: 'Poppins-Regular' },
@@ -380,16 +458,19 @@ const styles = StyleSheet.create({
   detailText: { fontSize: 14, fontFamily: 'Poppins-Regular', marginLeft: 8, flex: 1 },
   avatarsContainer: { flexDirection: 'row', marginLeft: 30 },
   rsvpAvatar: { marginRight: 5 },
-  avatarImage: { width: 25, height: 25, borderRadius: 12 },
+  avatarImage: { width: 30, height: 30, borderRadius: 50 },
   infoSection: { marginBottom: 20 },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start' },
   infoText: { fontSize: 14, fontFamily: 'Poppins-Regular', marginLeft: 8, flex: 1, lineHeight: 20 },
-  rsvpButton: { paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 10, marginRight: 15, flex: 1 },
+  rsvpButton: { padding: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 0, marginRight: 15, flex: 1 },
+  editButton: { padding: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 0, flex: 1, backgroundColor: '#5CAEF1' },
   rsvpButtonText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
+  editButtonText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
   saveButtonContainer: { top: 10 },
-  studyMaterialsTitle: { fontSize: 18, fontFamily: 'Poppins-SemiBold', marginBottom: 15, marginTop: 20 },
+  studyMaterialsTitle: { fontSize: 16, fontFamily: 'Poppins-SemiBold', marginBottom: 15, marginTop: 20 },
   materialsContainer: { flexDirection: 'row', marginBottom: 20 },
   addMaterialCard: { width: 60, height: 60, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
-  commentInput: { flex: 1, borderRadius: 10, paddingHorizontal: 15, paddingVertical: 10, marginRight: -40, maxHeight: 100, fontSize: 14, fontFamily: 'Poppins-Regular' },
-  commentItem: { marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1 },
+  commentInput: { flex: 1, borderRadius: 10, padding: 15, marginRight: -40, maxHeight: 100, fontSize: 14, fontFamily: 'Poppins-Regular' },
+  commentItem: { marginBottom: 5,},
+  commentsTitle: { fontSize: 16, fontFamily: 'Poppins-SemiBold', marginBottom: 10 },
 });

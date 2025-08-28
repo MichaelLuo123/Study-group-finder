@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Bookmark, BookOpen, Calendar, Clock, Dot, Edit3, Laptop, MapPin, Users } from 'lucide-react-native';
+import { Bookmark, BookOpen, Calendar, Clock, Dot, Laptop, MapPin, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
@@ -328,8 +328,7 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
               {isOwner && (
                 <TouchableOpacity onPress={() => router.push({ pathname: '/CreateEvent/EditEvent', params: { eventId } })} style={{ marginTop: 10 }}>
                   <View style={[styles.buttonContainer, { backgroundColor: buttonColor }]}>
-                    <Edit3 size={16} color={textColor} style={{ marginRight: 5 }} />
-                    <Text style={[styles.normalText, { color: textColor }]}>Edit</Text>
+                    <Text style={[styles.subheaderText, { color: textColor }]}>Edit</Text>
                   </View>
                 </TouchableOpacity>
               )}
@@ -382,7 +381,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center'
   },
-  contentContainer: { padding: 10 },
+  contentContainer: { padding: 10, },
   tagContainer: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   tag: { borderWidth: 1, borderRadius: 20, marginLeft: 2, marginRight: 2, padding: 5 },
   mainContentContainer: { flexDirection: 'column', justifyContent: 'space-between' },
@@ -393,7 +392,7 @@ const styles = StyleSheet.create({
   smallProfilePictureContainer: { width: 25, height: 25, borderRadius: 12.5, marginLeft: 3, marginRight: 3 },
   buttonContainer: {
     width: '100%',
-    height: 35,
+    padding: 8,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
