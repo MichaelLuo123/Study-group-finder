@@ -374,6 +374,16 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
                 }}
                 value={location}
                 scrollEnabled={false}
+                style={{
+                  //style for the textInput is incompatable with GoogleTextInputStyle 
+                  input: {
+                    fontSize: 14,
+                    borderRadius:10,
+                    fontFamily: "Poppins-Regular",
+                    padding: 10,
+                    marginBottom: 10
+                  }
+                }}
                 />
 
               <TextInput
