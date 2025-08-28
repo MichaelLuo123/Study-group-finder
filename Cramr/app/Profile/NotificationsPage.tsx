@@ -120,14 +120,6 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
           
           // Refresh notifications to update the UI
           await fetchNotifications();
-          
-          Alert.alert(
-            'Success', 
-            status === 'accepted' 
-              ? 'You have accepted the event invitation!' 
-              : 'You have declined the event invitation.',
-            [{ text: 'OK' }]
-          );
         } else {
           Alert.alert('Error', result.message || 'Failed to process invitation');
         }
@@ -193,32 +185,49 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
                 
                 {/* Event Invitation Action Buttons */}
                 {shouldShowInvitationButtons(notif) && (
-                  <View style={styles.actionButtonsContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.actionButton,
-                        styles.acceptButton,
-                        { opacity: processingInvitation === notif.id ? 0.6 : 1 }
-                      ]}
-                      onPress={() => handleEventInvitation(notif.event_id!, 'accepted', notif.id)}
-                      disabled={processingInvitation === notif.id}
-                    >
-                      <Text style={styles.acceptButtonText}>
-                        {processingInvitation === notif.id ? 'Processing...' : 'Accept'}
-                      </Text>
-                    </TouchableOpacity>
+                  <View>
+                    <View style={styles.actionButtonsContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.actionButton,
+                          styles.acceptButton,
+                          { opacity: processingInvitation === notif.id ? 0.6 : 1 }
+                        ]}
+                        onPress={() => handleEventInvitation(notif.event_id!, 'accepted', notif.id)}
+                        disabled={processingInvitation === notif.id}
+                      >
+                        <Text style={styles.acceptButtonText}>
+                          {processingInvitation === notif.id ? 'Processing...' : 'Accept'}
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[
+                          styles.actionButton,
+                          styles.rejectButton,
+                          { opacity: processingInvitation === notif.id ? 0.6 : 1 }
+                        ]}
+                        onPress={() => handleEventInvitation(notif.event_id!, 'declined', notif.id)}
+                        disabled={processingInvitation === notif.id}
+                      >
+                        <Text style={styles.rejectButtonText}>
+                          {processingInvitation === notif.id ? 'Processing...' : 'Decline'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                     
+                    {/* View Event Button */}
                     <TouchableOpacity
                       style={[
                         styles.actionButton,
-                        styles.rejectButton,
+                        styles.viewEventButton,
                         { opacity: processingInvitation === notif.id ? 0.6 : 1 }
                       ]}
-                      onPress={() => handleEventInvitation(notif.event_id!, 'declined', notif.id)}
+                      onPress={() => router.push(`/ViewEvent/viewevent?eventId=${notif.event_id}`)}
                       disabled={processingInvitation === notif.id}
                     >
-                      <Text style={styles.rejectButtonText}>
-                        {processingInvitation === notif.id ? 'Processing...' : 'Decline'}
+                      <Text style={styles.viewEventButtonText}>
+                        View Event
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -289,7 +298,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   acceptButton: {
-    backgroundColor: '#5CAEF1',
+    backgroundColor: '#77DD77',
   },
   rejectButton: {
     backgroundColor: '#E36062',
@@ -300,6 +309,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   rejectButtonText: {
+    color: 'white',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+  },
+  viewEventButton: {
+    backgroundColor: '#5CAEF1',
+    marginTop: 8,
+  },
+  viewEventButtonText: {
     color: 'white',
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
