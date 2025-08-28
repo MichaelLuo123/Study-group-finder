@@ -1,9 +1,10 @@
 import { useUser } from '@/contexts/UserContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Image,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -62,6 +63,9 @@ const EventViewScreen = () => {
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  
+  // Add refresh state
+  const [refreshing, setRefreshing] = useState(false);
 
   const formatDate = (dateAndTime: Date | string | null) => {
     if (!dateAndTime) return 'Invalid date';
@@ -164,6 +168,45 @@ const EventViewScreen = () => {
     } catch {}
   };
 
+  // -------- RSVP and Save status --------
+  const fetchUserStatuses = async () => {
+    if (!eventId || !userId) return;
+    try {
+      // Fetch RSVP status
+      const rsvpRes = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd?user_id=${userId}`);
+      if (rsvpRes.ok) {
+        const rsvpData = await rsvpRes.json();
+        setIsRSVPed(Boolean(rsvpData.rsvp?.status === 'accepted'));
+      }
+
+      // Fetch save status
+      const saveRes = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`);
+      if (saveRes.ok) {
+        const saveData = await saveRes.json();
+        setIsSaved(Boolean(saveData.is_saved));
+      }
+    } catch (error) {
+      console.error('Error fetching user statuses:', error);
+    }
+  };
+
+  // -------- Refresh function --------
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchEvent(),
+        fetchRSVPs(), 
+        fetchComments(),
+        fetchUserStatuses()
+      ]);
+    } catch (error) {
+      console.error('Error during refresh:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [eventId, userId]);
+
   // -------- Comment Handling --------
   const addComment = async () => {
     if (!comment.trim() || !userId) return;
@@ -254,15 +297,7 @@ const EventViewScreen = () => {
   }, [eventId]);
 
   useEffect(() => {
-    if (!eventId || !userId) return;
-    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd?user_id=${userId}`)
-      .then(res => res.json())
-      .then(data => setIsRSVPed(Boolean(data.rsvp?.status === 'accepted')))
-      .catch(() => {});
-    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`)
-      .then(res => res.json())
-      .then(data => setIsSaved(Boolean(data.is_saved)))
-      .catch(() => {});
+    fetchUserStatuses();
   }, [eventId, userId]);
 
   if (!event) {
@@ -279,7 +314,19 @@ const EventViewScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        enableOnAndroid 
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#5CAEF1']} // Android
+            tintColor={'#5CAEF1'} // iOS
+          />
+        }
+      >
         <View style={styles.content}>
           <ArrowLeft size={24} color={textColor} onPress={() => router.back()} style={{ marginBottom: 15 }} />
 
