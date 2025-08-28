@@ -30,7 +30,7 @@ export default function HomeScreen() {
     { title: 'Edit event', route: '/CreateEvent/EditEvent' },
 
     //Messages
-    { title: 'Messages', route: '/Messages/messages' },
+    { title: 'Messages', route: 'List/Messages/messages' },
 
    
     // Saved/RSVPed Events

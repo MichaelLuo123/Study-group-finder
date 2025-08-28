@@ -36,7 +36,7 @@ const CreateEventScreen = () => {
 
   // Other state variables
   const [title, setTitle] = useState('');
-  const [bannerColor, setBannerColor] = useState(1);
+  const [bannerColor, setBannerColor] = useState(0 || null);
   const [description, setDescription] = useState('');
   const studyTags = [
     'Pomodoro',
