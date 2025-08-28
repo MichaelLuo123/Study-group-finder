@@ -14,9 +14,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
 } from 'react-native';
 import type { Filters } from './filter';
+
+import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface EventListProps {
   filters?: Filters | null;
@@ -29,74 +32,23 @@ interface EventListProps {
   onCenterMapOnEvent?: (eventId: string) => void;
 }
 
-export default function EventList({ 
-  filters, 
-  selectedEventId, 
-  searchQuery, 
+export default function EventList({
+  filters,
+  selectedEventId,
+  searchQuery,
   creatorUserId,
   isDistanceVisible,
   eventDistances,
   onClearSelectedEvent,
   onCenterMapOnEvent,
 }: EventListProps) {
-  // Colors
-  const {isDarkMode, toggleDarkMode, user} = useUser();
-  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
-  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const { isDarkMode, user } = useUser();
+  const textColor = !isDarkMode ? Colors.light.text : Colors.dark.text;
+  const router = useRouter();
 
   const [refreshing, setRefreshing] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false); // Additional state for better UX
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Debounced refresh function to prevent multiple simultaneous calls
-  const onRefresh = useCallback(async () => {
-    // Prevent multiple refresh calls
-    if (refreshing || isRefreshing) return;
-    
-    setRefreshing(true);
-    setIsRefreshing(true);
-    
-    // Clear any existing timeout
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-    }
-
-    try {
-      // Add minimum refresh duration for smooth UX (prevents flash)
-      const refreshPromise = fetchEvents();
-      const minDurationPromise = new Promise(resolve => 
-        setTimeout(resolve, 800) // Minimum 800ms for smooth feel
-      );
-      
-      await Promise.all([refreshPromise, minDurationPromise]);
-      
-    } catch (error) {
-      console.error('Refresh failed:', error);
-      // Show user-friendly error without breaking the flow
-      Alert.alert(
-        'Refresh Failed', 
-        'Unable to refresh events. Please check your connection and try again.',
-        [{ text: 'OK', style: 'default' }]
-      );
-    } finally {
-      // Ensure smooth transition with slight delay
-      refreshTimeoutRef.current = setTimeout(() => {
-        setRefreshing(false);
-        setIsRefreshing(false);
-      }, 200);
-    }
-  }, [refreshing, isRefreshing]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const userId = user?.id;
 
@@ -104,317 +56,233 @@ export default function EventList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collapsedEvents, setCollapsedEvents] = useState<Set<string>>(new Set());
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [busyEventId, setBusyEventId] = useState<string | null>(null);
-  const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
-  const { expoPushToken, scheduleEventReminder } = usePushNotifications();
-  
+  const { scheduleEventReminder } = usePushNotifications();
+
+  // -------- fetch / refresh ----------
   const fetchEvents = async () => {
     try {
-      // Only show loading spinner on initial load, not on refresh
-      if (!refreshing && !isRefreshing && events.length === 0) {
-        setLoading(true);
-      }
+      if (!refreshing && !isRefreshing && events.length === 0) setLoading(true);
       setError(null);
-      
+
       const factory = new PublicStudySessionFactory();
-      
-      // 1. Fetch events from backend
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const eventsData = await response.json();
-      
-      // 2. Process each event with error handling
+
       const processedEvents = await Promise.all(
         eventsData.map(async (event: any) => {
           try {
-            // Default coordinates (fallback to Carlsbad coordinates)
-            let coordinates = { 
-              lat: 33.1581, 
-              lng: -117.3506,
-              isAccurate: false 
-            };
-            
-            // Try geocoding if location exists
+            // geocode (best effort)
+            let coordinates = { lat: 33.1581, lng: -117.3506, isAccurate: false };
             if (event.location) {
               try {
                 const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
                 const geocodeResult = await studySession.addressToCoordinates();
-                
                 if (geocodeResult?.geometry?.location) {
                   coordinates = {
                     lat: geocodeResult.geometry.location.lat,
                     lng: geocodeResult.geometry.location.lng,
-                    isAccurate: true
+                    isAccurate: true,
                   };
                 }
-              } catch (geocodeError) {
-                console.warn(`Geocoding failed for ${event.location}:`, geocodeError);
-              }
+              } catch {}
             }
-            
-            // Check RSVP status
+
+            // RSVP
             let isRSVPed = false;
             try {
-              const rsvpResponse = await fetch(
+              const rsvpRes = await fetch(
                 `${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${event.id}/rsvpd?user_id=${userId}`
               );
-              
-              if (rsvpResponse.ok) {
-                const rsvpData = await rsvpResponse.json();
+              if (rsvpRes.ok) {
+                const rsvpData = await rsvpRes.json();
                 isRSVPed = rsvpData.rsvp?.status === 'accepted';
               }
-            } catch (rsvpError) {
-              console.warn(`RSVP check failed for event ${event.id}:`, rsvpError);
-            }
-            
-            // Check saved status
+            } catch {}
+
+            // Saved
             let isSaved = false;
             try {
-              const savedResponse = await fetch(
+              const savedRes = await fetch(
                 `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${event.id}`
               );
-              
-              if (savedResponse.ok) {
-                const savedData = await savedResponse.json();
+              if (savedRes.ok) {
+                const savedData = await savedRes.json();
                 isSaved = savedData.is_saved;
               }
-            } catch (savedError) {
-              console.warn(`Saved check failed for event ${event.id}:`, savedError);
-            }
-            
-            return {
-              ...event,
-              coordinates,
-              isRSVPed,
-              isSaved,
-              geocodeError: !coordinates.isAccurate
-            };
-            
-          } catch (eventProcessingError) {
-            console.error(`Error processing event ${event.id}:`, eventProcessingError);
+            } catch {}
+
+            return { ...event, coordinates, isRSVPed, isSaved, geocodeError: !coordinates.isAccurate };
+          } catch {
             return {
               ...event,
               coordinates: { lat: 0, lng: 0, isAccurate: false },
               isRSVPed: false,
               isSaved: false,
-              geocodeError: true
+              geocodeError: true,
             };
           }
         })
       );
-      
-      // 3. Sort events by distance
-      const sortedEvents = processedEvents.sort((a, b) => {
-        const aDistance = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
-        const bDistance = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
-        return aDistance - bDistance;
+
+      // sort by approx distance
+      const sorted = processedEvents.sort((a, b) => {
+        const da = compareDistanceFromLocation(a.coordinates.lat, a.coordinates.lng);
+        const db = compareDistanceFromLocation(b.coordinates.lat, b.coordinates.lng);
+        return da - db;
       });
-      
-      setEvents(sortedEvents);
-      
-    } catch (mainError) {
-      console.error('Failed to fetch events:', mainError);
-      setError(mainError instanceof Error ? mainError.message : 'Unknown error');
+
+      setEvents(sorted);
+    } catch (e: any) {
+      setError(e?.message || 'Unknown error');
       setEvents([]);
     } finally {
-      // Only set loading to false if not refreshing AND we were actually loading
-      if ((!refreshing && !isRefreshing) || events.length === 0) {
-        setLoading(false);
-      }
+      if ((!refreshing && !isRefreshing) || events.length === 0) setLoading(false);
     }
   };
 
+  const onRefresh = useCallback(async () => {
+    if (refreshing || isRefreshing) return;
+    setRefreshing(true);
+    setIsRefreshing(true);
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    try {
+      await Promise.all([fetchEvents(), new Promise(res => setTimeout(res, 800))]);
+    } catch {
+      Alert.alert('Refresh Failed', 'Unable to refresh events. Please try again.');
+    } finally {
+      refreshTimeoutRef.current = setTimeout(() => {
+        setRefreshing(false);
+        setIsRefreshing(false);
+      }, 200);
+    }
+  }, [refreshing, isRefreshing]);
+
   useEffect(() => {
     fetchEvents();
-
-    async function getCurrentLocation() {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        return;
-      }
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location);
-    }
-    getCurrentLocation();
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc);
+    })();
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const scheduleRSVPNotifications = (events:any[]) => {
-    const rsvpEvents = events.filter(event => event.isRSVPed);
-    
-    rsvpEvents.forEach(event => {
-      const eventDate = event.date_and_time;
-      if(eventDate){
-        const reminderTime = eventDate.getTime() -  60 * 60 * 1000
+  useFocusEffect(React.useCallback(() => { fetchEvents(); }, []));
 
-        scheduleEventReminder?.(reminderTime, event.id);
-      }
+  // -------- helpers ----------
+  const compareDistanceFromLocation = (lat: number, long: number) => {
+    const latDistance = (location?.coords.latitude || 0) - lat;
+    const longDistance = (location?.coords.longitude || 0) - long;
+    return Math.sqrt(latDistance ** 2 + longDistance ** 2);
+  };
+
+  const handleEventToggle = (eventId: string) => {
+    if (selectedEventId && onClearSelectedEvent) onClearSelectedEvent();
+    setCollapsedEvents(prev => {
+      const s = new Set(prev);
+      s.has(eventId) ? s.delete(eventId) : s.add(eventId);
+      return s;
     });
-  }
+  };
 
-  const toggleRSVP = async (eventId: string, currentStatus: boolean) => {
-    if (busyEventId) return; 
+  const toggleRSVP = async (eventId: string, current: boolean) => {
+    if (busyEventId) return;
     setBusyEventId(eventId);
-
     try {
-      if (currentStatus) {
+      if (current) {
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId }),
         });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`Failed to cancel RSVP: ${txt}`);
-        }
-        
-        setEvents(prevEvents => {
-          const currentEvent = prevEvents.find(e => e.id === eventId);
-          const newCount = Math.max(0, (currentEvent?.accepted_count || 0) - 1);
-          return prevEvents.map(event => 
-            event.id === eventId 
-              ? { ...event, isRSVPed: false, accepted_count: newCount }
-              : event
-          );
-        });
+        if (!res.ok) throw new Error(await res.text());
+        setEvents(prev => prev.map(e => e.id === eventId
+          ? { ...e, isRSVPed: false, accepted_count: Math.max(0, (e.accepted_count || 0) - 1) }
+          : e
+        ));
       } else {
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId, status: 'accepted' }),
         });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`Failed to RSVP: ${txt}`);
-        }
-        
-        setEvents(prevEvents => {
-          const currentEvent = prevEvents.find(e => e.id === eventId);
-          const newCount = (currentEvent?.accepted_count || 0) + 1;
-          return prevEvents.map(event => 
-            event.id === eventId 
-              ? { ...event, isRSVPed: true, accepted_count: newCount }
-              : event
-          );
-        });
+        if (!res.ok) throw new Error(await res.text());
+        setEvents(prev => prev.map(e => e.id === eventId
+          ? { ...e, isRSVPed: true, accepted_count: (e.accepted_count || 0) + 1 }
+          : e
+        ));
       }
-    } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Unexpected error');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Unexpected error');
     } finally {
       setBusyEventId(null);
     }
   };
 
-  const toggleSave = async (eventId: string, currentStatus: boolean) => {
-    if (busyEventId) return; 
+  const toggleSave = async (eventId: string, current: boolean) => {
+    if (busyEventId) return;
     setBusyEventId(eventId);
-
     try {
-      if (currentStatus) {
-        const res = await fetch(
-          `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`,
-          { method: 'DELETE' }
-        );
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`Failed to unsave event: ${txt}`);
-        }
-        
-        setEvents(prevEvents => 
-          prevEvents.map(event => 
-            event.id === eventId 
-              ? { ...event, isSaved: false }
-              : event
-          )
-        );
+      if (current) {
+        const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) throw new Error(await res.text());
+        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isSaved: false } : e));
       } else {
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ event_id: eventId }),
         });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`Failed to save event: ${txt}`);
-        }
-        
-        setEvents(prevEvents => 
-          prevEvents.map(event => 
-            event.id === eventId 
-              ? { ...event, isSaved: true }
-              : event
-          )
-        );
+        if (!res.ok) throw new Error(await res.text());
+        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isSaved: true } : e));
       }
-    } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Unexpected error');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Unexpected error');
     } finally {
       setBusyEventId(null);
     }
   };
 
-  const compareDistanceFromLocation = (lat: number, long: number) => {
-    let latDistance = (location?.coords.latitude || 0) - lat;
-    let longDistance = (location?.coords.longitude || 0) - long;
-    return Math.sqrt(latDistance ** 2 + longDistance ** 2);
+  const openEvent = (id: string) => {
+    // navigate to detail
+    router.push({ pathname: '/ViewEvent/viewevent', params: { eventId: id } });
   };
 
-  const handleEventToggle = (eventId: string) => {
-    if (selectedEventId && onClearSelectedEvent) {
-      onClearSelectedEvent();
-    }
-    
-    setCollapsedEvents(prev => {
-      const newSet = new Set(prev);
-      
-      if (newSet.has(eventId)) {
-        newSet.delete(eventId);
-      } else {
-        newSet.add(eventId);
-      }
-      
-      return newSet;
-    });
-  };
-
-  // ----------- FILTERING LOGIC -----------
+  // -------- filters ----------
   const filteredEvents = events.filter((event: any) => {
     if (!filters) return true;
-  
     if (filters.attendees) {
       const count = event.accepted_count ?? event.rsvped_count ?? 0;
       if (count < filters.attendees) return false;
     }
-  
     if (filters.noise) {
-      const wanted = filters.noise.toLowerCase();
+      const wanted = (filters.noise || '').toLowerCase();
       const hasTag = Array.isArray(event.tags) && event.tags.some((t: string) => (t || '').toLowerCase() === wanted);
       if (!hasTag) return false;
     }
-  
     if (filters.location) {
-      const wanted = filters.location.toLowerCase();
+      const wanted = (filters.location || '').toLowerCase();
       const hasTag = Array.isArray(event.tags) && event.tags.some((t: string) => (t || '').toLowerCase() === wanted);
       if (!hasTag) return false;
     }
-  
     return true;
   });
 
-  // ----------- CREATOR FILTER -----------
-  const creatorFilteredEvents = creatorUserId 
+  const creatorFilteredEvents = creatorUserId
     ? filteredEvents.filter((event: any) => event.creator_id === creatorUserId)
     : filteredEvents;
 
-  // ----------- SEARCH FILTER -----------
   const normalizedQuery = (searchQuery || '').trim().toLowerCase();
   const searchedEvents = normalizedQuery
     ? creatorFilteredEvents.filter((event: any) => {
@@ -431,46 +299,32 @@ export default function EventList({
 
   useEffect(() => {
     if (selectedEventId) {
-      setCollapsedEvents(new Set(
-        events
-          .map(event => event.id)
-          .filter(id => id !== selectedEventId)
-      ));
+      setCollapsedEvents(new Set(events.map(e => e.id).filter(id => id !== selectedEventId)));
     }
-  }, [selectedEventId]);
+  }, [selectedEventId, events]);
 
   useEffect(() => {
     if (selectedEventId && searchedEvents.length > 0) {
-      const eventIndex = searchedEvents.findIndex(event => event.id === selectedEventId);
+      const eventIndex = searchedEvents.findIndex(e => e.id === selectedEventId);
       if (eventIndex !== -1) {
         setTimeout(() => {
-          let scrollPosition = 0;
+          let y = 0;
           for (let i = 0; i < eventIndex; i++) {
-            const event = searchedEvents[i];
-            
-            let eventHeight = 60; 
-            
-            if (!collapsedEvents.has(event.id)) {
-              eventHeight += 120; 
-              if (event.tags?.length) {
-                eventHeight += 30;
-              }
+            const e = searchedEvents[i];
+            let h = 60;
+            if (!collapsedEvents.has(e.id)) {
+              h += 120;
+              if (e.tags?.length) h += 30;
             }
-            
-            scrollPosition += eventHeight;
+            y += h;
           }
-      
-           scrollViewRef.current?.scrollTo({ 
-             y: Math.max(0, scrollPosition - 60), 
-             animated: true 
-           });
-        }, 100); 
+          scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 60), animated: true });
+        }, 100);
       }
     }
   }, [selectedEventId, searchedEvents, collapsedEvents]);
 
-  // ----------- RENDER LOGIC -----------
-  // Only show loading screen on initial load when there are no events
+  // -------- render ----------
   if (loading && events.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -492,263 +346,78 @@ export default function EventList({
   }
 
   return (
-    <>
-      <ScrollView 
-        ref={scrollViewRef}
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-        style={{ flex: 1 }}
-        bounces={true}
-        // Enhanced RefreshControl with better colors and smoother animation
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={isDarkMode ? ['#5CAEF1', '#7CC8FF'] : ['#5CAEF1', '#4A9EE0']} // Dynamic colors for dark/light mode
-            tintColor={isDarkMode ? '#5CAEF1' : '#4A9EE0'} // iOS color
-            progressBackgroundColor={isDarkMode ? '#2D2D2D' : '#FFFFFF'} // Background adapts to theme
-            titleColor={textColor} // Title color matches theme
-            size="default" // Use default size for smoother animation
-          />
-        }
-      >
-        {/* Remove the refresh overlay since RefreshControl handles this better */}
-        
-        {searchedEvents.map((event: any) => {
-          const isCollapsed = collapsedEvents.has(event.id);
+    <ScrollView
+      ref={scrollViewRef}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
+      style={{ flex: 1 }}
+      bounces
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={isDarkMode ? ['#5CAEF1', '#7CC8FF'] : ['#5CAEF1', '#4A9EE0']}
+          tintColor={isDarkMode ? '#5CAEF1' : '#4A9EE0'}
+          progressBackgroundColor={isDarkMode ? '#2D2D2D' : '#FFFFFF'}
+          titleColor={textColor}
+          // IMPORTANT: no size="default" (Android expects number)
+        />
+      }
+    >
+      {searchedEvents.map((event: any) => {
+        const isCollapsed = collapsedEvents.has(event.id);
+        const include = (creatorUserId ? event.creator_id === creatorUserId : event.creator_id !== userId);
+        if (!include) return null;
 
-          return (
-            (creatorUserId ? event.creator_id === creatorUserId : event.creator_id !== userId) && (
-              <EventCollapsible
-                key={event.id}
-                eventId={event.id}
-                ownerId={event.creator_id}
-                ownerProfile={event.creator_profile_picture}
-                title={event.title}
-                tag1={event.tags?.[0] || null}
-                tag2={event.tags?.[1] || null}
-                tag3={event.tags?.[2] || null}
-                subject={event.class || 'invalid'}
-                isOnline={event.event_format === 'Online'}
-                location={event.location || 'invalid'}
-                studyRoom={event.study_room || null}
-                virtualRoomLink={event.virtual_room_link || null}
-                dateAndTime={event.date_and_time}
-                rsvpedCount={event.accepted_count || event.rsvped_count || 0}
-                capacity={event.capacity || '∞'}
-                isOwner={event.creator_id === userId}
-                isSaved={event.isSaved}
-                onSavedChange={() => toggleSave(event.id, event.isSaved)}
-                isRsvped={event.isRSVPed}
-                onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
-                isCollapsed={isCollapsed}
-                onToggleCollapse={() => handleEventToggle(event.id)}
-                onCenterMapOnEvent={onCenterMapOnEvent}
-                isDistanceVisible={isDistanceVisible ? true : false}
-                distanceUnit={filters?.unit || 'mi'}
-                distance={isDistanceVisible && eventDistances ? eventDistances[event.id] : null}
-                isDarkMode={isDarkMode}
-                style={{marginBottom: 5}}
-              />
-            )
-          );
-        })}
-        <View style={[styles.extraSpace, { height: Math.max(searchedEvents.length * 75 + 160, 300) }]} />
-      </ScrollView>
-    </>
+        return (
+          <EventCollapsible
+            key={event.id}
+            eventId={event.id}
+            ownerId={event.creator_id}
+            ownerProfile={event.creator_profile_picture}
+            title={event.title}
+            tag1={event.tags?.[0] || null}
+            tag2={event.tags?.[1] || null}
+            tag3={event.tags?.[2] || null}
+            subject={event.class || 'invalid'}
+            isOnline={event.event_format === 'Online'}
+            location={event.location || 'invalid'}
+            studyRoom={event.study_room || null}
+            virtualRoomLink={event.virtual_room_link || null}
+            dateAndTime={event.date_and_time}
+            rsvpedCount={event.accepted_count || event.rsvped_count || 0}
+            capacity={event.capacity || '∞'}
+            isOwner={event.creator_id === userId}
+            isSaved={event.isSaved}
+            onSavedChange={() => toggleSave(event.id, event.isSaved)}
+            isRsvped={event.isRSVPed}
+            onRsvpedChange={() => toggleRSVP(event.id, event.isRSVPed)}
+            isCollapsed={isCollapsed}
+            onToggleCollapse={() => handleEventToggle(event.id)}
+            onCenterMapOnEvent={onCenterMapOnEvent}
+            isDistanceVisible={!!isDistanceVisible}
+            distanceUnit={filters?.unit || 'mi'}
+            distance={isDistanceVisible && eventDistances ? eventDistances[event.id] : null}
+            isDarkMode={isDarkMode}
+            style={{ marginBottom: 5 }}
+            // 🔑 navigate on click (visuals unchanged)
+            onOpen={() => openEvent(event.id)}
+          />
+        );
+      })}
+      <View style={[styles.extraSpace, { height: Math.max(searchedEvents.length * 75 + 160, 300) }]} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 4,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 50,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
-  },
-  // New styles for refresh overlay
-  refreshOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    borderRadius: 8,
-    margin: 10,
-  },
-  refreshText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 50,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#ff0000',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#5CAEF1',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 12,
-    marginVertical: 10,
-    marginHorizontal: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 6,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    marginBottom: 8,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profilePicture: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  title: {
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  creatorName: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  emoji: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  collapseIcon: {
-    fontSize: 12,
-    color: '#666',
-  },
-  labels: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
-  },
-  label: {
-    backgroundColor: '#eee',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    fontSize: 12,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 3,
-  },
-  icon: {
-    marginRight: 6,
-    fontSize: 14,
-  },
-  detail: {
-    fontSize: 13,
-  },
-  footer: {
-    marginTop: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  count: {
-    fontSize: 13,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  saveButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderRadius: 22,
-  },
-  attendees: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatars: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  extraCount: {
-    fontSize: 12,
-    color: '#666',
-  },
-  rsvpButton: {
-    backgroundColor: '#5CAEF1',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
+  container: {},
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
+  loadingText: { marginTop: 10, fontSize: 14 },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
+  errorText: { fontSize: 16, color: '#ff0000', textAlign: 'center', marginBottom: 20 },
+  retryButton: { backgroundColor: '#5CAEF1', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
+  retryButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
   extraSpace: {},
 });
