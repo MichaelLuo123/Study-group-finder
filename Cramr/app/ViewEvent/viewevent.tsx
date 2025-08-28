@@ -405,12 +405,15 @@ const EventViewScreen = () => {
                 
                 )}
 
-                {!isOwner && (
-                <><TouchableOpacity onPress={toggleRSVP} disabled={busy} style={[styles.rsvpButton, { backgroundColor: isRSVPed ? cancelButtonColor : '#5CAEF1' }]}>
-                    <Text style={[styles.rsvpButtonText, { color: textColor }]}>{isRSVPed ? 'RSVPed' : 'RSVP'}</Text>
-                  </TouchableOpacity><TouchableOpacity onPress={toggleSave}>
+                {!isOwner && rsvps.length < event.capacity && !isRSVPed && (
+                  <>
+                    <TouchableOpacity onPress={toggleRSVP} disabled={busy} style={[styles.rsvpButton, { backgroundColor: isRSVPed ? cancelButtonColor : '#5CAEF1' }]}>
+                      <Text style={[styles.rsvpButtonText, { color: textColor }]}>{isRSVPed ? 'RSVPed' : 'RSVP'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={toggleSave}>
                       <Bookmark color={textColor} size={25} fill={isSaved ? textColor : 'none'} style={styles.saveButtonContainer} />
-                    </TouchableOpacity></>
+                    </TouchableOpacity>
+                  </>
                 )}
               </View>
             </View>
