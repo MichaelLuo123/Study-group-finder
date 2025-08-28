@@ -334,13 +334,13 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
               )}
             </View>
 
-            {!isOwner && RSVPs.length < capacity && !isRsvped &&(
+            {!isOwner && (RSVPs.length < capacity || isRsvped) &&(
               <TouchableOpacity
                 onPress={handleRSVPPress}
                 style={[styles.rsvpButtonContainer, { opacity: isLoading ? 0.6 : 1 }]}
                 disabled={isLoading}
               >
-                 <View style={[styles.rsvpButton, { backgroundColor: isRsvped ? cancelButtonColor : '#5CAEF1', marginTop: -50, marginRight: 3 }]}>
+                 <View style={[styles.rsvpButton, { backgroundColor: isRsvped ? cancelButtonColor : '#5CAEF1', marginTop: -45, marginRight: 3 }]}>
                   <Text style={[styles.subheaderText, { color: textColor }]}>{isRsvped ? 'RSVPed' : 'RSVP'}</Text>
                 </View>
               </TouchableOpacity>

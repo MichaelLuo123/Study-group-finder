@@ -1,9 +1,10 @@
 import { useUser } from '@/contexts/UserContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, MapPin, Send, Users } from 'lucide-react-native';
+import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, Laptop, MapPin, Send, Users } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Image,
+  Linking,
   RefreshControl,
   SafeAreaView,
   StyleSheet,
@@ -20,8 +21,11 @@ interface Event {
   title: string;
   bannerColor: number;
   description: string;
-  location: string;
+  location?: string | null;
+  study_room?: string | null;
+  virtual_room_link?: string | null;
   class: string;
+  event_format: string;
   date_and_time: Date;
   creator_id: string;
   creator_profile_picture: string;
@@ -30,6 +34,7 @@ interface Event {
   status: string;
   capacity: number;
   tags: string[];
+  is_online?: boolean;
 }
 
 interface RSVP {
@@ -334,7 +339,7 @@ const EventViewScreen = () => {
             <View style={[styles.eventHeader, { backgroundColor: bannerColor || textInputColor}]}>
               <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
               <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: event.creator_id } })}>
-                <Image source={{ uri: event.creator_profile_picture }} style={styles.ownerAvatar} />
+                <Image source={{ uri: event.creator_profile_picture }} style={styles.ownerAvatar ? styles.ownerAvatar : require('../../assets/images/default_profile.jpg')} />
               </TouchableOpacity>
             </View>
 
@@ -354,17 +359,45 @@ const EventViewScreen = () => {
                   <BookOpen size={20} color={textColor} />
                   <Text style={[styles.detailText, { color: textColor }]}>{event.class}</Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <MapPin size={20} color={textColor} />
-                  <Text style={[styles.detailText, { color: textColor }]}>{event.location}</Text>
-                </View>
+
+                {/* Updated location handling to match EventCollapsible */}
+                {event.event_format === 'In Person' && (
+                  <View style={styles.detailRow}>
+                    <MapPin size={20} color={textColor} />
+                    <Text style={[styles.detailText, { color: textColor }]}>
+                      {event.location}
+                      {event.study_room && event.study_room}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Added online event handling like EventCollapsible */}
+                {event.event_format === 'Online' && (
+                  <View style={styles.detailRow}>
+                    <Laptop size={20} color={textColor} />
+                    <TouchableOpacity
+                      onPress={() =>
+                        event.virtual_room_link
+                          ? Linking.openURL(
+                              event.virtual_room_link.startsWith('http://') || event.virtual_room_link.startsWith('https://')
+                                ? event.virtual_room_link
+                                : `http://${event.virtual_room_link}`
+                            )
+                          : null
+                      }
+                    >
+                      <Text style={[styles.detailText, { color: textColor }]}>{event.virtual_room_link}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 <View style={styles.detailRow}>
                   <Calendar size={20} color={textColor} />
                   <Text style={[styles.detailText, { color: textColor }]}>{formatDate(event.date_and_time)}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Clock size={20} color={textColor} />
-                  <Text style={[styles.detailText, { color: textColor }]}>{formatTime(event.date_and_time)  }</Text>
+                  <Text style={[styles.detailText, { color: textColor }]}>{formatTime(event.date_and_time)}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Users size={20} color={textColor} />
@@ -398,21 +431,29 @@ const EventViewScreen = () => {
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 {isOwner && (
-
                 <TouchableOpacity onPress={() => router.push({ pathname: '/CreateEvent/EditEvent', params: { eventId } })} style={styles.editButton}>
                   <Text style={[styles.editButtonText, { color: textColor }]}>Edit</Text>
                 </TouchableOpacity>
-                
                 )}
 
-                {!isOwner && rsvps.length < event.capacity && !isRSVPed && (
+                {!isOwner && (
                   <>
-                    <TouchableOpacity onPress={toggleRSVP} disabled={busy} style={[styles.rsvpButton, { backgroundColor: isRSVPed ? cancelButtonColor : '#5CAEF1' }]}>
-                      <Text style={[styles.rsvpButtonText, { color: textColor }]}>{isRSVPed ? 'RSVPed' : 'RSVP'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={toggleSave}>
-                      <Bookmark color={textColor} size={25} fill={isSaved ? textColor : 'none'} style={styles.saveButtonContainer} />
-                    </TouchableOpacity>
+                    {(rsvps.length < event.capacity || isRSVPed) &&(
+                      <>
+                      <TouchableOpacity onPress={toggleRSVP} disabled={busy} style={[styles.rsvpButton, { backgroundColor: isRSVPed ? cancelButtonColor : '#5CAEF1' }]}>
+                        <Text style={[styles.rsvpButtonText, { color: textColor }]}>{isRSVPed ? 'RSVPed' : 'RSVP'}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity onPress={toggleSave}>
+                        <Bookmark color={textColor} size={25} fill={isSaved ? textColor : 'none'} style={styles.saveButtonContainer} />
+                      </TouchableOpacity>
+                      </>
+                    )}
+                    {!(rsvps.length < event.capacity || isRSVPed) && (
+                      <TouchableOpacity onPress={toggleSave}>
+                        <Bookmark color={textColor} size={25} fill={isSaved ? textColor : 'none'} style={[styles.saveButtonContainer, {marginTop: -20, marginLeft: 290, marginBottom: 10}]} />
+                      </TouchableOpacity>
+                    )}
                   </>
                 )}
               </View>
@@ -523,4 +564,5 @@ const styles = StyleSheet.create({
   commentInput: { flex: 1, borderRadius: 10, padding: 15, marginRight: -40, maxHeight: 100, fontSize: 14, fontFamily: 'Poppins-Regular' },
   commentItem: { marginBottom: 5,},
   commentsTitle: { fontSize: 16, fontFamily: 'Poppins-SemiBold', marginBottom: 10 },
+  addMaterialPlus: { fontSize: 24 }
 });
