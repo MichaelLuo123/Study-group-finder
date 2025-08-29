@@ -206,16 +206,17 @@ export default function Profile() {
             {/* Show profile content only if user is logged in and not loading */}
             {loggedInUser && !isLoading && (
               <>
-                <TouchableOpacity onPress={() => router.back()}>
-                  <ArrowLeft 
-                    size={24} 
-                    color={textColor}
-                  />
-                </TouchableOpacity>
+                <TouchableOpacity 
+      onPress={() => router.push('/Profile/Internal')} 
+      style={styles.backButton}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    >
+      <ArrowLeft size={24} color={textColor} />
+    </TouchableOpacity>
 
-                <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: -25}]}>
-                  Profile
-                </Text>
+    <Text style={[styles.headerText, {color: textColor , textAlign: 'center', marginTop: -25}]}>
+      Profile
+    </Text>
 
             <Text style={[styles.subheaderText, {color: textColor, marginTop: 10, marginBottom: 5}]}>
               Picture
@@ -486,5 +487,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
     textAlign: 'center',
+    
+  },
+  backButton: {
+    padding: 6,
+    marginBottom: 10,
+    alignSelf: 'flex-start',
   },
 });
