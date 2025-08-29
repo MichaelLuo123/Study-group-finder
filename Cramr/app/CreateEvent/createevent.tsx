@@ -369,6 +369,7 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
               <GooglePlacesTextInput
                 apiKey={process.env.EXPO_PUBLIC_GOOGLE_API_KEY}
                 placeHolderText='Ex.: 9500 Gilman Drive, La Jolla, CA 92093'
+                placeholderTextColor={placeholderColor}
                 fetchDetails={true}
                 detailsField={['formatedAddress', 'location']}
                 onPlaceSelect={(place) => {
@@ -386,7 +387,9 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
                     fontFamily: "Poppins-Regular",
                     padding: 10,
                     marginBottom: 10,
-                    backgroundColor: textInputColor
+                    backgroundColor: textInputColor,
+                    borderWidth: 0,
+                    color: textColor,
                   }
                 }}
                 />
