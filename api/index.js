@@ -2766,8 +2766,12 @@ app.use((error, req, res, next) => {
 });
 
 const PORT = 8080;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log('Environment:', process.env.NODE_ENV);
-  console.log('Database host:', process.env.NODE_ENV === 'production' ? 'postgres' : process.env.CRAMR_DB_IP_ADDR);
-});
+
+// Only start the server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('Database host:', process.env.NODE_ENV === 'production' ? 'postgres' : process.env.CRAMR_DB_IP_ADDR);
+  });
+}
