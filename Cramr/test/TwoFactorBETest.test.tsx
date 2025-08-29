@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from '@jest/globals';
-import { TwoFactorBE } from '../app/TwoFactor/TwoFactorBE';
+import { TwoFactorBE } from '../app/SignIn/TwoFactor/TwoFactorBE';
 
 var testTwoFactor: TwoFactorBE;
 
