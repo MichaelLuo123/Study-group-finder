@@ -18,14 +18,15 @@ import {
 } from 'react-native';
 import type { Filters } from './filter';
 
-import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 
 interface EventListProps {
   filters?: Filters | null;
   selectedEventId?: string | null;
   searchQuery?: string;
   creatorUserId?: string;
+  onMap?: boolean | false;
   isDistanceVisible?: boolean;
   eventDistances?: { [eventId: string]: number };
   onClearSelectedEvent?: () => void;
@@ -37,6 +38,7 @@ export default function EventList({
   selectedEventId,
   searchQuery,
   creatorUserId,
+  onMap,
   isDistanceVisible,
   eventDistances,
   onClearSelectedEvent,
@@ -359,6 +361,7 @@ export default function EventList({
         const isCollapsed = collapsedEvents.has(event.id);
         const include = (creatorUserId ? event.creator_id === creatorUserId : event.creator_id !== userId);
         if (!include) return null;
+        if (onMap && event.event_format === 'Online') return null;
 
         return (
           <EventCollapsible

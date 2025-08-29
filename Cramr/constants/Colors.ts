@@ -31,5 +31,5 @@ export const Colors = {
     rsvpedButton: '#6e6e6e'
   },
   button: '#5CAEF1',
-  bannerColors: ['#F49AA2', '#FFB876', '#EBD4A2', '#A8BF8A', '#89B7C2']
+  bannerColors: ['#E37083', '#FFB876', '#EFD9AA', '#537557', '#6698CC']
 };

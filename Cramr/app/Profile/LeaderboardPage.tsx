@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
@@ -65,12 +66,8 @@ export default function LeaderboardPage() {
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={{color: textColor, fontSize: 24}}>←</Text>
+          <ArrowLeft size={24} color={textColor} style={{marginLeft: 15}}/>
         </TouchableOpacity>
-
-        <Text style={[styles.heading, {color: textColor, marginTop: -40}]}>
-          Leaderboard
-        </Text>
 
         <LeaderboardCard data={leaderboardData} title="Event Creators Leaderboard" />
       </ScrollView>
@@ -83,13 +80,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: 5,
   },
   heading: {
     fontSize: 18,
     alignSelf: 'center',
     marginBottom: 20,
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
   },
   backButton: {
     width: 25,
