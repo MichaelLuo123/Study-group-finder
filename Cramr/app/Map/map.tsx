@@ -312,7 +312,7 @@ useEffect(() => {
                 placeholder="Search events..."
                 style={styles.searchInput}
                 contentStyle={[styles.searchInputContent, {color: textColor}]} // Add this for font styling
-                outlineStyle={styles.searchInputOutline} // Add this for border radius
+                //outlineStyle={styles.searchInputOutline} // Add this for border radius (This crashes the page on android)
                 left={<TextInput.Icon icon="magnify" color={textColor}/>}
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
