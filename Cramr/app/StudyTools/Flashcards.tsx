@@ -1,72 +1,264 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Edit3, Plus } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Edit3, Plus, Save } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import {
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
 
 interface Flashcard {
   id: string;
+  set_id: string;
   front: string;
   back: string;
-  isFlipped: boolean;
-  isCompleted: boolean;
+  is_checked: boolean;
+  position: number;
+  user_id: string;
+  isFlipped?: boolean;
 }
 
 interface FlashcardSet {
   id: string;
-  title: string;
-  card_count: number;
+  name: string;
+  description: string;
+  user_id: string;
 }
 
-interface FlashcardSetProps {
-  flashcardSetId: string;
-}
-
-export default function FlashcardSet({ flashcardSetId }: FlashcardSetProps) {
+export default function FlashcardSet() {
   const router = useRouter();
-  const { isDarkMode } = useUser();
+  const { isDarkMode, user: loggedInUser } = useUser();
+  const params = useLocalSearchParams();
+  const setId = params.setId ? String(params.setId) : null;
 
   // Colors
   const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
   const textColor = !isDarkMode ? Colors.light.text : Colors.dark.text;
   const textInputColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
   const placeholderColor = !isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText;
-  const cardBackgroundColor = !isDarkMode ? '#F8F9FA' : '#2C2C2E';
+  const cardBackgroundColor = textInputColor;
 
   // State
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [flashcardSet, setFlashcardSet] = useState<FlashcardSet | null>(null);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([
-    {
-      id: '1',
-      front: 'What is the capital of France?',
-      back: 'Paris',
-      isFlipped: false,
-      isCompleted: false,
-    }
-  ]);
   const [loading, setLoading] = useState(false);
   const [editingCard, setEditingCard] = useState<string | null>(null);
+  const [editingSet, setEditingSet] = useState(false);
+  
+  // Separate state for editing set details
+  const [editSetName, setEditSetName] = useState('');
+  const [editSetDescription, setEditSetDescription] = useState('');
 
-  const addCard = () => {
-    const newCard: Flashcard = {
-      id: Date.now().toString(),
-      front: '',
-      back: '',
-      isFlipped: false,
-      isCompleted: false,
-    };
-    setFlashcards([...flashcards, newCard]);
-    setEditingCard(newCard.id);
+  // GET - Fetch flashcard set details
+  const fetchFlashcardSet = async () => {
+    if (!loggedInUser?.id || !setId) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcard_sets/${setId}?user_id=${loggedInUser.id}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setFlashcardSet(data.data);
+        setEditSetName(data.data.name);
+        setEditSetDescription(data.data.description || '');
+      } else {
+        const data = await response.json();
+        Alert.alert('Error', data.error || 'Failed to fetch flashcard set');
+        if (response.status === 404) {
+          router.back();
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching flashcard set:', error);
+      Alert.alert('Error', 'Network error while fetching set details');
+    }
+  };
+
+  // GET - Fetch flashcards for the set
+  const fetchFlashcards = async () => {
+    if (!loggedInUser?.id || !setId) {
+      Alert.alert('Error', 'User not logged in or set ID missing');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcards/${setId}?user_id=${loggedInUser.id}`
+      );
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || `Server returned ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setFlashcards(data.data || []);
+    } catch (error: any) {
+      console.error('Fetch error:', error);
+      Alert.alert('Error', 'Failed to fetch flashcards: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // POST - Create new flashcard
+  const createFlashcard = async () => {
+    if (!loggedInUser?.id || !setId) {
+      Alert.alert('Error', 'User not logged in or set ID missing');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcards/${setId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            front: 'New Question',
+            back: 'New Answer',
+            position: flashcards.length + 1,
+            user_id: loggedInUser.id,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setFlashcards([...flashcards, data.data]);
+        Alert.alert('Success', 'New flashcard added!');
+      } else {
+        Alert.alert('Error', data.error || 'Failed to create flashcard');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Network error: ' + error.message);
+    }
+  };
+
+  // PUT - Update flashcard
+  const updateFlashcard = async (cardId: string, updatedData: Partial<Flashcard>) => {
+    if (!loggedInUser?.id) {
+      Alert.alert('Error', 'User not logged in');
+      return false;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcards/${cardId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...updatedData,
+            user_id: loggedInUser.id,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        Alert.alert('Error', data.error || 'Failed to update flashcard');
+        return false;
+      }
+      return true;
+    } catch (error: any) {
+      Alert.alert('Error', 'Network error: ' + error.message);
+      return false;
+    }
+  };
+
+  // PUT - Update flashcard set title/description
+  const saveFlashcardSet = async () => {
+    if (!loggedInUser?.id || !setId) {
+      Alert.alert('Error', 'User not logged in or set ID missing');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcard_sets/${setId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: editSetName,
+            description: editSetDescription,
+            user_id: loggedInUser.id,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setFlashcardSet(data.data);
+        setEditingSet(false);
+      } else {
+        const data = await response.json();
+        Alert.alert('Error', data.error || 'Failed to update flashcard set');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Network error: ' + error.message);
+    }
+  };
+
+  // Cancel editing set
+  const cancelEditingSet = () => {
+    setEditSetName(flashcardSet?.name || '');
+    setEditSetDescription(flashcardSet?.description || '');
+    setEditingSet(false);
+  };
+
+  // DELETE - Delete flashcard
+  const deleteFlashcard = async (id: string) => {
+    Alert.alert(
+      'Delete Flashcard',
+      'Are you sure you want to delete this flashcard? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(
+                `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcards/${id}?user_id=${loggedInUser?.id}`,
+                {
+                  method: 'DELETE',
+                }
+              );
+
+              if (response.ok) {
+                setFlashcards(flashcards.filter(card => card.id !== id));
+                Alert.alert('Success', 'Flashcard deleted!');
+              } else {
+                const data = await response.json();
+                Alert.alert('Error', data.error || 'Failed to delete flashcard');
+              }
+            } catch (error: any) {
+              Alert.alert('Error', 'Network error: ' + error.message);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const flipCard = (cardId: string) => {
@@ -75,10 +267,21 @@ export default function FlashcardSet({ flashcardSetId }: FlashcardSetProps) {
     ));
   };
 
-  const toggleComplete = (cardId: string) => {
-    setFlashcards(flashcards.map(card => 
-      card.id === cardId ? { ...card, isCompleted: !card.isCompleted } : card
+  const toggleComplete = async (cardId: string) => {
+    const card = flashcards.find(c => c.id === cardId);
+    if (!card) return;
+
+    const updatedCard = { ...card, is_checked: !card.is_checked };
+    setFlashcards(flashcards.map(c => 
+      c.id === cardId ? updatedCard : c
     ));
+    
+    // Update on server - include all required fields to prevent null constraint violations
+    await updateFlashcard(cardId, { 
+      is_checked: updatedCard.is_checked,
+      front: card.front,
+      back: card.back
+    });
   };
 
   const updateCard = (cardId: string, field: 'front' | 'back', value: string) => {
@@ -87,8 +290,17 @@ export default function FlashcardSet({ flashcardSetId }: FlashcardSetProps) {
     ));
   };
 
-  const deleteCard = (cardId: string) => {
-    setFlashcards(flashcards.filter(card => card.id !== cardId));
+  const saveCardEdits = async (cardId: string) => {
+    const card = flashcards.find(c => c.id === cardId);
+    if (card) {
+      const success = await updateFlashcard(cardId, { 
+        front: card.front, 
+        back: card.back 
+      });
+      if (success) {
+        setEditingCard(null);
+      }
+    }
   };
 
   const renderFlashcard = (card: Flashcard) => {
@@ -104,52 +316,66 @@ export default function FlashcardSet({ flashcardSetId }: FlashcardSetProps) {
             <View style={[
               styles.checkboxInner, 
               { borderColor: textColor },
-              card.isCompleted && { backgroundColor: '#369942' }
+              card.is_checked && { backgroundColor: '#369942' }
             ]}>
-              {card.isCompleted && (
-                <Ionicons name="checkmark" size={20} style={[styles.checkmark, {color: textColor}]} />
+              {card.is_checked && (
+                <Ionicons name="checkmark" size={12} color="white" />
               )}
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.editButton}
-            onPress={() => setEditingCard(isEditing ? null : card.id)}
-          >
-            <Edit3 size={18} color={textColor} />
-          </TouchableOpacity>
+          <View style={styles.cardActions}>
+            {isEditing ? (
+              <>
+                <TouchableOpacity
+                  onPress={() => saveCardEdits(card.id)}
+                >
+                  <Save size={20} color={textColor} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setEditingCard(card.id)}
+              >
+                <Edit3 size={20} color={textColor} />
+              </TouchableOpacity>
+            )}
 
-          <TouchableOpacity 
-            style={styles.deleteButton}
-            onPress={() => deleteCard(card.id)}
-          >
-            <Text style={styles.deleteButtonText}>✕</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={() => deleteFlashcard(card.id)}
+            >
+              <Text style={styles.deleteButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.flashcardContent}
+        <TouchableOpacity
           onPress={() => !isEditing && flipCard(card.id)}
           disabled={isEditing}
         >
           <View style={styles.flashcardSide}>
-            <Text style={[styles.flashcardLabel, { color: textColor }]}>
-              {card.isFlipped ? 'BACK' : 'FRONT'}
-            </Text>
-            
             {isEditing ? (
               <View>
+                <Text style={[styles.flashcardLabel, { color: textColor }]}>FRONT</Text>
                 <TextInput
-                  style={[styles.flashcardInput, { color: textColor, borderColor: textColor }]}
+                  style={[styles.flashcardInput, { 
+                    color: textColor,
+                    borderColor: placeholderColor 
+                  }]}
                   value={card.front}
                   onChangeText={(text) => updateCard(card.id, 'front', text)}
                   placeholder="Enter front text..."
                   placeholderTextColor={placeholderColor}
                   multiline
                 />
+                
                 <Text style={[styles.flashcardLabel, { color: textColor, marginTop: 10 }]}>BACK</Text>
                 <TextInput
-                  style={[styles.flashcardInput, { color: textColor, borderColor: textColor }]}
+                  style={[styles.flashcardInput, { 
+                    color: textColor,
+                    borderColor: placeholderColor 
+                  }]}
                   value={card.back}
                   onChangeText={(text) => updateCard(card.id, 'back', text)}
                   placeholder="Enter back text..."
@@ -158,15 +384,48 @@ export default function FlashcardSet({ flashcardSetId }: FlashcardSetProps) {
                 />
               </View>
             ) : (
-              <Text style={[styles.flashcardText, { color: textColor }]}>
-                {card.isFlipped ? card.back : card.front}
-              </Text>
+              <View>
+                <Text style={[styles.flashcardLabel, { color: textColor }]}>
+                  {card.isFlipped ? 'BACK' : 'FRONT'}
+                </Text>
+                <Text style={[styles.flashcardText, { color: textColor }]}>
+                  {card.isFlipped ? card.back : card.front}
+                </Text>
+                {!card.isFlipped && (
+                  <View style={styles.flipHint}>
+                    <Text style={[styles.flipHintText, { color: textColor, opacity: 0.6 }]}>
+                      Tap to reveal answer
+                    </Text>
+                  </View>
+                )}
+              </View>
             )}
           </View>
         </TouchableOpacity>
       </View>
     );
   };
+
+  // Load data when component mounts
+  useEffect(() => {
+    if (setId && loggedInUser?.id) {
+      fetchFlashcardSet();
+      fetchFlashcards();
+    }
+  }, [setId, loggedInUser?.id]);
+
+  if (!setId) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color={textColor} />
+          </TouchableOpacity>
+          <Text style={[styles.heading, { color: textColor }]}>Error: Set ID missing</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -176,25 +435,86 @@ export default function FlashcardSet({ flashcardSetId }: FlashcardSetProps) {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ArrowLeft size={24} color={textColor} />
           </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <TextInput 
-              placeholder='Flashcard Set Title' 
-              placeholderTextColor={placeholderColor} 
-              style={[styles.heading, { color: textColor }]} 
-            />
-          </View>
 
-          <TouchableOpacity
-          onPress={addCard}
-         >
-            <Plus size={24} color={textColor} />
+          <View style={styles.headerActions}>
+            
+            <TouchableOpacity onPress={createFlashcard} style={styles.addButton}>
+              <Plus size={24} color={textColor} />
             </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Set Title and Description */}
+        <View style={styles.headerContent}>
+          {editingSet ? (
+            <View>
+              <TextInput
+                style={[styles.headingInput, { 
+                  color: textColor,
+                  borderColor: placeholderColor 
+                }]}
+                value={editSetName}
+                onChangeText={setEditSetName}
+                placeholder="Set Title"
+                placeholderTextColor={placeholderColor}
+              />
+              <TextInput
+                style={[styles.descriptionInput, { 
+                  color: textColor,
+                  borderColor: placeholderColor 
+                }]}
+                value={editSetDescription}
+                onChangeText={setEditSetDescription}
+                placeholder="Set Description"
+                placeholderTextColor={placeholderColor}
+                multiline
+              />
+              <View style={styles.editActions}>
+                <TouchableOpacity 
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={cancelEditingSet}
+                >
+                  <Text style={[styles.cancelButtonText, {color: textColor}]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.button, styles.saveButton]}
+                  onPress={saveFlashcardSet}
+                >
+                  <Text style={[styles.saveButtonText, {color: textColor}]}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setEditingSet(true)}>
+              <Text style={[styles.heading, { color: textColor }]}>
+                {flashcardSet?.name || 'Flashcard Set'}
+              </Text>
+              {flashcardSet?.description && (
+                <Text style={[styles.description, { color: textColor }]}>
+                  {flashcardSet.description}
+                </Text>
+              )}
+              <Text style={[styles.editHint, { color: textColor, opacity: 0.6 }]}>
+                Tap to edit
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Flashcards List */}
         <View style={styles.flashcardsContainer}>
-          {flashcards.map(renderFlashcard)}
+          {loading ? (
+            <Text style={[styles.loadingText, { color: textColor }]}>Loading flashcards...</Text>
+          ) : flashcards.length > 0 ? (
+            flashcards.map(renderFlashcard)
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: textColor }]}>No flashcards yet</Text>
+              <Text style={[styles.emptySubtext, { color: textColor, opacity: 0.7 }]}>
+                Tap the + button to add your first flashcard
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -205,47 +525,85 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-
   scrollContent: {
     padding: 20,
   },
-
-  // Header Styles
   header: {
-    marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-
   backButton: {
-    width: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 5,
   },
-
-  headerContent: {
-    alignItems: 'center',
-  },
-
-  heading: {
-    fontSize: 18,
-    fontFamily: 'Poppins-SemiBold',
-  },
-
-  // Add Button
-  addButton: {
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding:10,
+    gap: 15,
+  },
+  saveSetButton: {
+    padding: 5,
+  },
+  addButton: {
+    padding: 5,
+  },
+  headerContent: {
+    marginBottom: 30,
+  },
+  heading: {
+    fontSize: 24,
+    fontFamily: 'Poppins-Bold',
+    marginBottom: 5,
+  },
+  description: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    marginBottom: 5,
+  },
+  editHint: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+    fontStyle: 'italic',
+  },
+  headingInput: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    borderWidth: 1,
     borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  descriptionInput: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 15,
+    textAlignVertical: 'top',
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  button: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  cancelButtonText: {
+    fontFamily: 'Poppins-Regular',
+  },
+  saveButtonText: {
+    fontFamily: 'Poppins-Regular',
   },
 
   // Flashcards
   flashcardsContainer: {
     marginBottom: 20,
   },
-
   flashcard: {
     borderRadius: 12,
     padding: 16,
@@ -259,18 +617,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-
   flashcardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-
   checkbox: {
     padding: 5,
   },
-
   checkboxInner: {
     width: 20,
     height: 20,
@@ -279,35 +634,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-
   editButton: {
     padding: 5,
   },
-
-  deleteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+  saveButton: {
+    backgroundColor: '#5CAEF1',
+    padding: 10,
+    borderRadius: 10,
   },
-
+  cancelButton: {
+    padding: 5,
+  },
+  cancelText: {
+    color: '#666',
+    fontSize: 12,
+    fontFamily: 'Poppins-Medium',
+  },
+  deleteButton: {
+    padding: 5,
+  },
   deleteButtonText: {
     color: '#E36062',
     fontSize: 18,
     fontFamily: 'Poppins-Bold',
   },
-
   flashcardSide: {
     flex: 1,
   },
-
   flashcardLabel: {
     fontSize: 12,
     fontFamily: 'Poppins-SemiBold',
@@ -315,14 +673,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 8,
   },
-
   flashcardText: {
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
     lineHeight: 22,
     minHeight: 44,
   },
-
   flashcardInput: {
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
@@ -333,47 +689,31 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     marginBottom: 8,
   },
-
   flipHint: {
     alignItems: 'center',
     marginTop: 8,
   },
-
   flipHintText: {
     fontSize: 12,
     fontFamily: 'Poppins-Regular',
     fontStyle: 'italic',
   },
-
-  // Study Button
-  studyButton: {
-    backgroundColor: '#5CAEF1',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
+  loadingText: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    marginTop: 50,
   },
-
-  studyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-  },
-
-  // Empty State
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 40,
   },
-
   emptyText: {
     fontSize: 18,
     fontFamily: 'Poppins-Medium',
     textAlign: 'center',
     marginBottom: 8,
   },
-
   emptySubtext: {
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
