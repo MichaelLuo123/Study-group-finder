@@ -211,31 +211,43 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
           onPress={() => (onOpen ? onOpen() : onCenterMapOnEvent?.(eventId))}
           activeOpacity={0.7}
         >
-          <View style={[styles.tagContainer, { marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between' }]}>
-            <View style={{ flexDirection: 'row' }}>
-              {tag1 !== null && (
-                <View style={[styles.tag, { borderColor: textColor }]}>
-                  <Text style={[styles.normalText, { color: textColor }]}>{tag1}</Text>
-                </View>
-              )}
-              {tag2 !== null && (
-                <View style={[styles.tag, { borderColor: textColor }]}>
-                  <Text style={[styles.normalText, { color: textColor }]}>{tag2}</Text>
-                </View>
-              )}
+            <View style={[styles.tagContainer, { marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between' }]}>
+              {(tag1 || tag2 || tag3) ? (
+                <>
+                <View style={{ flexDirection: 'row' }}>
+                  {tag1 !== null && (
+                    <View style={[styles.tag, { borderColor: textColor }]}>
+                      <Text style={[styles.normalText, { color: textColor }]}>{tag1}</Text>
+                    </View>
+                  )}
+                  {tag2 !== null && (
+                    <View style={[styles.tag, { borderColor: textColor }]}>
+                      <Text style={[styles.normalText, { color: textColor }]}>{tag2}</Text>
+                    </View>
+                  )}
               {tag3 !== null && (
                 <View style={[styles.tag, { borderColor: textColor }]}>
                   <Text style={[styles.normalText, { color: textColor }]}>{tag3}</Text>
                 </View>
               )}
-            </View>
-            <TouchableOpacity
+              </View>
+              <TouchableOpacity
               onPress={() => {
                 onSavedChange?.(!isSaved);
               }}
             >
               {!isOwner && <Bookmark color={textColor} fill={isSaved ? textColor : 'none'} />}
             </TouchableOpacity>
+            </>
+            ) : (
+              <TouchableOpacity
+              onPress={() => {
+                onSavedChange?.(!isSaved);
+              }}
+            >
+              {!isOwner && <Bookmark color={textColor} fill={isSaved ? textColor : 'none'} style={{marginLeft: 305, marginBottom: -100, marginTop: 3}} />}
+            </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.mainContentContainer}>

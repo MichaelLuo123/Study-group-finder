@@ -3,21 +3,17 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as WebBrowser from 'expo-web-browser';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Info, Laptop, MapPin, Send, Users } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Eye, Info, MapPin,
-  Send, Trash2, Upload, Users, X
-} from 'lucide-react-native';
+import { ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Eye, Info, Laptop, MapPin, Send, Trash2, Upload, Users, X, } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert,
   Dimensions,
-  Image, Modal, SafeAreaView, StyleSheet, Text,
+  Image, Modal,
+  RefreshControl,
+  SafeAreaView, StyleSheet, Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Colors } from '../../constants/Colors';
@@ -715,7 +711,7 @@ console.log('UserContext userId:', userId);
 
             <View style={styles.eventContent}>
               {event.tags && event.tags.length > 0 && (
-                <View style={styles.tagsRow}>
+                <View style={[styles.tagsRow, { maxWidth: event.tags.length <= 2 ? 175 : 'auto'}]}>
                   {event.tags.slice(0, 3).map((tag, i) => (
                     <View key={i} style={[styles.tag, { borderColor: textColor }]}>
                       <Text style={[styles.tagText, { color: textColor }]}>{tag}</Text>
@@ -971,7 +967,7 @@ console.log('UserContext userId:', userId);
                 multiline
               />
               <TouchableOpacity onPress={addComment} disabled={!comment.trim()}>
-                <View style={{ padding: 10, opacity: comment.trim() ? 1 : 0.5, marginTop: -45}}>
+                <View style={{ padding: 10, opacity: comment.trim() ? 1 : 0.5, marginTop: -40}}>
                   <Send size={20} color={comment.trim() ? '#5CAEF1' : placeholderTextColor} strokeWidth={2} />
                 </View>
               </TouchableOpacity>
@@ -997,7 +993,7 @@ console.log('UserContext userId:', userId);
             </View>
 
             <KeyboardAwareScrollView style={styles.modalBody}>
-              <Text style={[styles.inputLabel, { color: textColor }]}>Title *</Text>
+              <Text style={[styles.inputLabel, {fontFamily: 'Poppins-Regular', color: textColor }]}>Title *</Text>
               <TextInput
                 style={[styles.uploadInput, { backgroundColor: textInputColor, color: textColor }]}
                 placeholder="Enter material title"
@@ -1006,7 +1002,7 @@ console.log('UserContext userId:', userId);
                 onChangeText={setUploadTitle}
               />
 
-              <Text style={[styles.inputLabel, { color: textColor }]}>Description</Text>
+              <Text style={[styles.inputLabel, {fontFamily: 'Poppins-Regular', color: textColor }]}>Description</Text>
               <TextInput
                 style={[styles.uploadInput, styles.descriptionInput, { backgroundColor: textInputColor, color: textColor }]}
                 placeholder="Enter description (optional)"
@@ -1166,7 +1162,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 15,
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -1284,7 +1280,6 @@ const styles = StyleSheet.create({
   commentItem: {
     marginBottom: 16,
     paddingBottom: 12,
-    borderBottomWidth: 1,
     borderBottomColor: '#666666',
   },
   commentHeader: {
@@ -1420,7 +1415,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 16,
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'Poppins-SemiBold',
     marginBottom: 8,
     marginTop: 16,
   },
@@ -1457,7 +1452,7 @@ const styles = StyleSheet.create({
   },
   selectedFileName: {
     fontSize: 16,
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'Poppins-SemiBold',
     marginBottom: 4,
   },
   selectedFileSize: {
@@ -1553,7 +1548,7 @@ const styles = StyleSheet.create({
      marginBottom: 15,
    },
    connectionWarning: {
-     backgroundColor: '#ff6b6b',
+     backgroundColor: '#E36062',
      paddingHorizontal: 12,
      paddingVertical: 6,
      borderRadius: 8,
@@ -1566,33 +1561,3 @@ const styles = StyleSheet.create({
  });
  
 export default EventViewScreen;
-
-  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 10,},
-  eventTitle: { fontSize: 16, fontFamily: 'Poppins-SemiBold', flex: 1 },
-  ownerAvatar: { width: 35, height: 35, borderRadius: 50 },
-  eventContent: { padding: 16},
-  tagsRow: { flexDirection: 'row', marginBottom: 16 },
-  tag: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, marginRight: 8 },
-  tagText: { fontSize: 14, fontFamily: 'Poppins-Regular' },
-  detailsContainer: { marginBottom: 16 },
-  detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  detailText: { fontSize: 14, fontFamily: 'Poppins-Regular', marginLeft: 8, flex: 1 },
-  avatarsContainer: { flexDirection: 'row', marginLeft: 30 },
-  rsvpAvatar: { marginRight: 5 },
-  avatarImage: { width: 30, height: 30, borderRadius: 50 },
-  infoSection: { marginBottom: 20 },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  infoText: { fontSize: 14, fontFamily: 'Poppins-Regular', marginLeft: 8, flex: 1, lineHeight: 20 },
-  rsvpButton: { padding: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 0, marginRight: 15, flex: 1 },
-  editButton: { padding: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 0, flex: 1, backgroundColor: '#5CAEF1' },
-  rsvpButtonText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
-  editButtonText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
-  saveButtonContainer: { top: 10 },
-  studyMaterialsTitle: { fontSize: 16, fontFamily: 'Poppins-SemiBold', marginBottom: 15, marginTop: 20 },
-  materialsContainer: { flexDirection: 'row', marginBottom: 20 },
-  addMaterialCard: { width: 60, height: 60, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
-  commentInput: { flex: 1, borderRadius: 10, padding: 15, marginRight: -40, maxHeight: 100, fontSize: 14, fontFamily: 'Poppins-Regular' },
-  commentItem: { marginBottom: 5,},
-  commentsTitle: { fontSize: 16, fontFamily: 'Poppins-SemiBold', marginBottom: 10 },
-  addMaterialPlus: { fontSize: 24 }
-});
