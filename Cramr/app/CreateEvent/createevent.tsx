@@ -5,6 +5,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Image, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import GooglePlacesTextInput, { Place } from 'react-native-google-places-textinput';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import FollowersDropdown from '../../components/FollowersDropdown';
 import { Colors } from '../../constants/Colors';
@@ -253,6 +254,10 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
       setIsSubmitting(false);
     }
   };
+  
+  const handlePlaceSelect = (place: Place) => {
+    console.log('Selected place: ', place.details);
+  };
 
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
@@ -353,13 +358,38 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
           />
           {isOnline === false && (
             <>
-              <TextInput
+              {/* <TextInput
                 placeholder="Ex.: 9500 Gilman Drive, La Jolla, CA 92093"
                 placeholderTextColor={placeholderColor}
                 value={location}
                 onChangeText={setLocation}
                 style={[styles.input, { color: textColor, backgroundColor: textInputColor }]}
-              />
+              /> */}
+
+              <GooglePlacesTextInput
+                apiKey={process.env.EXPO_PUBLIC_GOOGLE_API_KEY}
+                placeHolderText='Ex.: 9500 Gilman Drive, La Jolla, CA 92093'
+                fetchDetails={true}
+                detailsField={['formatedAddress', 'location']}
+                onPlaceSelect={(place) => {
+                  //send the place details to the database through the formattedAddress but have it display to the user displayname.text
+                  console.log(place.details?.formattedAddress); 
+                  setLocation(place.details?.displayName.text);
+                }}
+                value={location}
+                scrollEnabled={false}
+                style={{
+                  //style for the textInput is incompatable with GoogleTextInputStyle 
+                  input: {
+                    fontSize: 14,
+                    borderRadius:10,
+                    fontFamily: "Poppins-Regular",
+                    padding: 10,
+                    marginBottom: 10
+                  }
+                }}
+                />
+
               <TextInput
                 placeholder="Enter study room."
                 placeholderTextColor={placeholderColor}

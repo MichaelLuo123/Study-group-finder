@@ -8,10 +8,10 @@ import { PanGestureHandler } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { IconButton, TextInput } from 'react-native-paper';
 import Animated, {
-    useAnimatedGestureHandler,
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
@@ -383,8 +383,8 @@ export default function MapScreen() {
                 mode="flat"
                 placeholder="Search events..."
                 style={styles.searchInput}
-                contentStyle={[styles.searchInputContent, {color: textColor}]}
-                outlineStyle={styles.searchInputOutline}
+                contentStyle={[styles.searchInputContent, {color: textColor}]} // Add this for font styling
+                //outlineStyle={styles.searchInputOutline} // Add this for border radius (This crashes the page on android)
                 left={<TextInput.Icon icon="magnify" color={textColor}/>}
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
