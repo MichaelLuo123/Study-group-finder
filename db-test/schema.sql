@@ -52,7 +52,8 @@ CREATE TABLE events (
     tags TEXT[],
     banner_color VARCHAR(100),
     event_format VARCHAR(20) DEFAULT 'In Person',
-    virtual_room_link TEXT
+    virtual_room_link TEXT,
+    materials_count INTEGER DEFAULT 0
 );
 
 -- Create event_attendees table
@@ -151,3 +152,17 @@ INSERT INTO notifications (user_id, sender_id, type, message, event_id, metadata
   ('2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', 'follow', 'jessicastacy started following you.', NULL, '{"action": "follow"}'),
   ('2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', 'event_invite', 'You''ve been invited to CS101 Study Group', NULL, '{"event_title": "CS101 Study Group", "location": "Room 101, UCSD"}'),
   ('2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', '2e629fee-b5fa-4f18-8a6a-2f3a950ba8f5', 'event_rsvp', 'caileymnm RSVPed to In-N-Out Study Session', NULL, '{"event_title": "In-N-Out Study Session", "status": "accepted"}');
+
+CREATE TABLE study_materials (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    file_name VARCHAR(255) NOT NULL,
+    file_url TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    file_type VARCHAR(100) NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_public BOOLEAN DEFAULT true
+);

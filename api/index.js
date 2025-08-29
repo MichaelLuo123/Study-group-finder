@@ -85,6 +85,44 @@ const upload = multer({
   }
 });
 
+// Configure multer for study material uploads 
+const studyMaterialStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const studyMaterialsDir = path.join(__dirname, 'uploads', 'study-materials');
+    if (!fs.existsSync(studyMaterialsDir)) {
+      fs.mkdirSync(studyMaterialsDir, { recursive: true });
+    }
+    cb(null, studyMaterialsDir);
+  },
+  filename: function (req, file, cb) {
+    // Generate unique filename with original extension
+    const uniqueName = uuidv4() + path.extname(file.originalname);
+    cb(null, uniqueName);
+  }
+});
+
+const studyMaterialUpload = multer({
+  storage: studyMaterialStorage,
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20MB limit for study materials
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = [
+      'application/pdf',                                                    // PDF
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+      'image/jpeg',                                                        // JPG
+      'image/png',                                                         // PNG
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation' // PPTX
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed! Only PDF, DOCX, PNG, JPG, and PPTX files are accepted.'), false);
+    }
+  }
+});
+
 // Health check endpoint for Docker
 app.get('/health', (req, res) => {
   res.json({ 
@@ -2753,7 +2791,7 @@ app.get('/leaderboard', async (req, res) => {
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+      return res.status(400).json({ error: 'File too large. Maximum size is 20MB.' });
     }
     return res.status(400).json({ error: 'File upload error', details: error.message });
   }
@@ -2762,7 +2800,269 @@ app.use((error, req, res, next) => {
     return res.status(400).json({ error: 'Only image files are allowed!' });
   }
   
+  if (error.message.includes('File type not allowed!')) {
+    return res.status(400).json({ error: error.message });
+  }
+  
   next(error);
+});
+
+// Upload study material
+app.post('/events/:eventId/materials', studyMaterialUpload.single('file'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { title, description, isPublic = true, userId } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    if (!title || !userId) {
+      return res.status(400).json({ error: 'Title and userId are required' });
+    }
+
+    const maxFileSize = 20 * 1024 * 1024;
+    if (req.file.size > maxFileSize) {
+      return res.status(400).json({ error: 'File size must be 20MB or less' });
+    }
+
+    const eventCheck = await client.query(
+      'SELECT creator_id FROM events WHERE id = $1',
+      [eventId]
+    );
+    
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const materialsCountCheck = await client.query(
+      'SELECT COUNT(*) as count FROM study_materials WHERE event_id = $1',
+      [eventId]
+    );
+    
+    if (parseInt(materialsCountCheck.rows[0].count) >= 10) {
+      return res.status(400).json({ error: 'Event already has the maximum of 10 study materials' });
+    }
+
+    const attendeeCheck = await client.query(
+      'SELECT status FROM event_attendees WHERE event_id = $1 AND user_id = $2',
+      [eventId, userId]
+    );
+    
+    if (eventCheck.rows[0].creator_id !== userId && 
+        (attendeeCheck.rows.length === 0 || attendeeCheck.rows[0].status !== 'accepted')) {
+      return res.status(403).json({ error: 'Not authorized to upload materials to this event' });
+    }
+
+    // Generate file URL
+    const fileUrl = `http://132.249.242.182/uploads/study-materials/${req.file.filename}`;
+    
+    // Insert into database
+    const result = await client.query(
+      `INSERT INTO study_materials (
+        event_id, user_id, title, description, file_name, file_url, 
+        file_size, file_type, is_public
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [
+        eventId, userId, title, description, req.file.originalname, fileUrl,
+        req.file.size, req.file.mimetype, isPublic
+      ]
+    );
+
+    // Update materials count in events table
+    await client.query(
+      'UPDATE events SET materials_count = materials_count + 1 WHERE id = $1',
+      [eventId]
+    );
+
+    // Ensure materials_count is accurate by syncing with actual count
+    await client.query(
+      `UPDATE events 
+       SET materials_count = (
+         SELECT COUNT(*) FROM study_materials WHERE event_id = $1
+       ) 
+       WHERE id = $1`,
+      [eventId]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Study material uploaded successfully',
+      material: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Study material upload error:', error);
+    res.status(500).json({ error: 'Failed to upload study material', details: error.message });
+  }
+});
+
+// Get study materials for an event
+app.get('/events/:eventId/materials', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const result = await client.query(
+      `SELECT 
+        sm.*,
+        u.username as uploader_username,
+        u.full_name as uploader_full_name
+      FROM study_materials sm
+      LEFT JOIN users u ON sm.user_id = u.id
+      WHERE sm.event_id = $1
+      ORDER BY sm.uploaded_at DESC`,
+      [eventId]
+    );
+
+    res.json({
+      success: true,
+      materials: result.rows
+    });
+  } catch (error) {
+    console.error('Get study materials error:', error);
+    res.status(500).json({ error: 'Failed to get study materials', details: error.message });
+  }
+});
+
+// Delete study material
+app.delete('/events/:eventId/materials/:materialId', async (req, res) => {
+  try {
+    const { eventId, materialId } = req.params;
+    const { userId } = req.query; // From query parameters
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+    
+    // Check if user owns the material or is event creator
+    const materialCheck = await client.query(
+      `SELECT sm.user_id, e.creator_id, sm.file_name
+       FROM study_materials sm
+       JOIN events e ON sm.event_id = e.id
+       WHERE sm.id = $1 AND sm.event_id = $2`,
+      [materialId, eventId]
+    );
+    
+    if (materialCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Material not found' });
+    }
+    
+    const material = materialCheck.rows[0];
+    if (material.user_id !== userId && material.creator_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this material' });
+    }
+
+    // Delete file from filesystem
+    const filePath = path.join(__dirname, 'uploads', 'study-materials', materialCheck.rows[0].file_name);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Delete from database
+    await client.query(
+      'DELETE FROM study_materials WHERE id = $1',
+      [materialId]
+    );
+
+    // Update materials count
+    await client.query(
+      'UPDATE events SET materials_count = GREATEST(materials_count - 1, 0) WHERE id = $1',
+      [eventId]
+    );
+
+    // Ensure materials_count is accurate by syncing with actual count
+    await client.query(
+      `UPDATE events 
+       SET materials_count = (
+         SELECT COUNT(*) FROM study_materials WHERE event_id = $1
+       ) 
+       WHERE id = $1`,
+      [eventId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Study material deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete study material error:', error);
+    res.status(500).json({ error: 'Failed to delete study material', details: error.message });
+  }
+});
+
+// Update study material (title, description, is_public)
+app.put('/events/:eventId/materials/:materialId', async (req, res) => {
+  try {
+    const { eventId, materialId } = req.params;
+    const { title, description, isPublic, userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+    
+    // Check if user owns the material
+    const materialCheck = await client.query(
+      'SELECT user_id FROM study_materials WHERE id = $1 AND event_id = $2',
+      [materialId, eventId]
+    );
+    
+    if (materialCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Material not found' });
+    }
+    
+    if (materialCheck.rows[0].user_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to update this material' });
+    }
+
+    // Update the material
+    const result = await client.query(
+      `UPDATE study_materials 
+       SET title = COALESCE($1, title), 
+           description = COALESCE($2, description), 
+           is_public = COALESCE($3, is_public)
+       WHERE id = $4 AND event_id = $5 
+       RETURNING *`,
+      [title, description, isPublic, materialId, eventId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Study material updated successfully',
+      material: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Update study material error:', error);
+    res.status(500).json({ error: 'Failed to update study material', details: error.message });
+  }
+});
+
+// Get study material by ID
+app.get('/events/:eventId/materials/:materialId', async (req, res) => {
+  try {
+    const { eventId, materialId } = req.params;
+    
+    const result = await client.query(
+      `SELECT 
+        sm.*,
+        u.username as uploader_username,
+        u.full_name as uploader_full_name
+      FROM study_materials sm
+      LEFT JOIN users u ON sm.user_id = u.id
+      WHERE sm.id = $1 AND sm.event_id = $2`,
+      [materialId, eventId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Study material not found' });
+    }
+
+    res.json({
+      success: true,
+      material: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Get study material error:', error);
+    res.status(500).json({ error: 'Failed to get study material', details: error.message });
+  }
 });
 
 const PORT = 8080;

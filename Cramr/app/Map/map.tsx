@@ -8,10 +8,10 @@ import { PanGestureHandler } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { IconButton, TextInput } from 'react-native-paper';
 import Animated, {
-  useAnimatedGestureHandler,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring
+    useAnimatedGestureHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
