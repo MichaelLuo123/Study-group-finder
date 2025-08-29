@@ -2787,6 +2787,227 @@ app.get('/leaderboard', async (req, res) => {
   }
 });
 
+// FLASHCARD SETS ENDPOINTS
+// GET all flashcard sets for a specific user
+app.get('/flashcard_sets', async (req, res) => {
+  const { user_id } = req.query;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id query parameter is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'SELECT * FROM flashcard_sets WHERE user_id = $1 ORDER BY created_at DESC',
+      [user_id]
+    );
+    res.json({ data: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST create new flashcard set for a user
+app.post('/flashcard_sets', async (req, res) => {
+  const { name, description, user_id } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'INSERT INTO flashcard_sets (name, description, user_id) VALUES ($1, $2, $3) RETURNING *',
+      [name, description, user_id]
+    );
+    res.status(201).json({ data: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET specific flashcard set
+app.get('/flashcard_sets/:id', async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.query;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id query parameter is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'SELECT * FROM flashcard_sets WHERE id = $1 AND user_id = $2',
+      [id, user_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Flashcard set not found' });
+    }
+    res.json({ data: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update specific flashcard set
+app.put('/flashcard_sets/:id', async (req, res) => {
+  const { id } = req.params;
+  const { user_id, name, description } = req.body; // Get from body, not query
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'UPDATE flashcard_sets SET name = $1, description = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4 RETURNING *',
+      [name, description, id, user_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Flashcard set not found' });
+    }
+    res.json({ data: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE flashcard set
+app.delete('/flashcard_sets/:id', async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.query; // Get user_id from query, not body
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id query parameter is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'DELETE FROM flashcard_sets WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, user_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Flashcard set not found' });
+    }
+    res.json({ message: 'Flashcard set deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// FLASHCARDS ENDPOINTS
+
+// GET all flashcards in a set
+app.get('/flashcards/:set_id', async (req, res) => {
+  const { set_id } = req.params;
+  const { user_id } = req.query; // Get user_id from query
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id query parameter is required' });
+  }
+  
+  try {
+    // First verify the user owns the set
+    const setResult = await client.query(
+      'SELECT id FROM flashcard_sets WHERE id = $1 AND user_id = $2',
+      [set_id, user_id]
+    );
+    
+    if (setResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Flashcard set not found' });
+    }
+    
+    const result = await client.query(
+      'SELECT * FROM flashcards WHERE set_id = $1 ORDER BY position, id',
+      [set_id]
+    );
+    res.json({ data: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST create new flashcard in a set
+app.post('/flashcards/:set_id', async (req, res) => {
+  const { set_id } = req.params;
+  const { front, back, position, user_id } = req.body; // Get user_id from body
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  try {
+    // First verify the user owns the set
+    const setResult = await client.query(
+      'SELECT id FROM flashcard_sets WHERE id = $1 AND user_id = $2',
+      [set_id, user_id]
+    );
+    
+    if (setResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Flashcard set not found' });
+    }
+    
+    const result = await client.query(
+      'INSERT INTO flashcards (set_id, front, back, position, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [set_id, front, back, position, user_id]
+    );
+    res.status(201).json({ data: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update flashcard
+app.put('/flashcards/:id', async (req, res) => {
+  const { id } = req.params;
+  const { front, back, is_checked, position, user_id } = req.body; // Get user_id from body
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'UPDATE flashcards SET front = $1, back = $2, is_checked = $3, position = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 AND user_id = $6 RETURNING *',
+      [front, back, is_checked, position, id, user_id] // Use id, not cardId
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Flashcard not found' });
+    }
+    
+    res.json({ data: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE flashcard
+app.delete('/flashcards/:id', async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.query; // Get user_id from query
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id query parameter is required' });
+  }
+  
+  try {
+    const result = await client.query(
+      'DELETE FROM flashcards WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, user_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Flashcard not found' });
+    }
+    
+    res.json({ message: 'Flashcard deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // Error handling for multer
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {

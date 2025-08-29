@@ -196,7 +196,7 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
                         onPress={() => handleEventInvitation(notif.event_id!, 'accepted', notif.id)}
                         disabled={processingInvitation === notif.id}
                       >
-                        <Text style={styles.acceptButtonText}>
+                        <Text style={[styles.acceptButtonText, {color: textColor}]}>
                           {processingInvitation === notif.id ? 'Processing...' : 'Accept'}
                         </Text>
                       </TouchableOpacity>
@@ -210,7 +210,7 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
                         onPress={() => handleEventInvitation(notif.event_id!, 'declined', notif.id)}
                         disabled={processingInvitation === notif.id}
                       >
-                        <Text style={styles.rejectButtonText}>
+                        <Text style={[styles.rejectButtonText, {color: textColor}]}>
                           {processingInvitation === notif.id ? 'Processing...' : 'Decline'}
                         </Text>
                       </TouchableOpacity>
@@ -226,7 +226,7 @@ export default function NotificationsPage({ navigation }: { navigation: any }) {
                       onPress={() => router.push(`/ViewEvent/viewevent?eventId=${notif.event_id}`)}
                       disabled={processingInvitation === notif.id}
                     >
-                      <Text style={styles.viewEventButtonText}>
+                      <Text style={[styles.viewEventButtonText, {color: textColor}]}>
                         View Event
                       </Text>
                     </TouchableOpacity>
@@ -298,19 +298,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   acceptButton: {
-    backgroundColor: '#77DD77',
+    backgroundColor: '#369942',
   },
   rejectButton: {
     backgroundColor: '#E36062',
   },
   acceptButtonText: {
     color: 'white',
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
   },
   rejectButtonText: {
     color: 'white',
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
   },
   viewEventButton: {
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   },
   viewEventButtonText: {
     color: 'white',
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
   },
 

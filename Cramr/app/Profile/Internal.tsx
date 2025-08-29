@@ -1,12 +1,12 @@
+import EventCollapsible from '@/components/EventCollapsible';
 import { useUser } from '@/contexts/UserContext';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Bell, Settings } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import EventList from '../List/eventList';
-import EventCollapsible from '@/components/EventCollapsible';
 
 // --- Types ---
 interface User {
@@ -470,7 +470,7 @@ export default function Internal() {
               {/* ----- Leaderboard (single row showing YOUR placement) ----- */}
               <View style={{ marginTop: 12 }}>
                 <Text style={[styles.subheaderBoldText, { color: textColor, marginBottom: 8 }]}>
-                  Leaderboard in the Last 30 Days
+                   Leaderboard
                 </Text>
 
                 <TouchableOpacity
@@ -513,7 +513,12 @@ export default function Internal() {
               </View>
               {/* ----- /Leaderboard ----- */}
 
-              <View style={{flexDirection: 'row', justifyContent: 'space-around', marginTop: 15, backgroundColor: sliderBackgroundColor, borderRadius: 25, marginBottom: 10}}>
+
+              
+              <Text style={[styles.subheaderBoldText, { color: textColor, marginTop: 20, marginBottom: 10 }]}>
+                Events
+              </Text>
+              <View style={{flexDirection: 'row', justifyContent: 'space-around', backgroundColor: sliderBackgroundColor, borderRadius: 25, marginBottom: 10}}>
                 <TouchableOpacity onPress={() => setVisibleEvents('own')}>
                   <View style={{borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 10, paddingHorizontal: 12,...(visibleEvents === 'own' ? {backgroundColor: textInputColor,} : {})}}>
                     <Text style={[styles.normalText, {color: textColor}]}> My Events </Text>
@@ -724,7 +729,7 @@ const styles = StyleSheet.create({
   rankBadgeText: { fontFamily: 'Poppins-SemiBold', fontSize: 14 },
   lbAvatar: { width: 28, height: 28, borderRadius: 14, marginRight: 10 },
   lbName: { fontFamily: 'Poppins-SemiBold', fontSize: 14, flexShrink: 1 },
-  lbEvents: { fontFamily: 'Poppins-Medium', fontSize: 14 },
+  lbEvents: { fontFamily: 'Poppins-SemiBold', fontSize: 14 },
 
   messageContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   messageText: { fontFamily: 'Poppins-Regular', fontSize: 16, textAlign: 'center' },

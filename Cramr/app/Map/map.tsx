@@ -413,6 +413,7 @@ export default function MapScreen() {
             <EventList 
               filters={filters}
               selectedEventId={selectedEventId}
+              onMap={true}
               isDistanceVisible={true}
               eventDistances={eventDistances}
               onClearSelectedEvent={() => setSelectedEventId(null)}

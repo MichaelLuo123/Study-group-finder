@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Bookmark, BookOpen, Calendar, Clock, Dot, Edit3, Laptop, MapPin, Users } from 'lucide-react-native';
+import { Bookmark, BookOpen, Calendar, Clock, Dot, Laptop, MapPin, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
@@ -28,7 +28,7 @@ interface EventCollapsibleProps {
   studyRoom?: string | null;
   virtualRoomLink?: string | null;
   dateAndTime: Date;
-  capacity: number | string;
+  capacity: number;
   rsvpedCount: number;
   isOwner: boolean;
   isSaved: boolean;
@@ -211,31 +211,43 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
           onPress={() => (onOpen ? onOpen() : onCenterMapOnEvent?.(eventId))}
           activeOpacity={0.7}
         >
-          <View style={[styles.tagContainer, { marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between' }]}>
-            <View style={{ flexDirection: 'row' }}>
-              {tag1 !== null && (
-                <View style={[styles.tag, { borderColor: textColor }]}>
-                  <Text style={[styles.normalText, { color: textColor }]}>{tag1}</Text>
-                </View>
-              )}
-              {tag2 !== null && (
-                <View style={[styles.tag, { borderColor: textColor }]}>
-                  <Text style={[styles.normalText, { color: textColor }]}>{tag2}</Text>
-                </View>
-              )}
+            <View style={[styles.tagContainer, { marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between' }]}>
+              {(tag1 || tag2 || tag3) ? (
+                <>
+                <View style={{ flexDirection: 'row' }}>
+                  {tag1 !== null && (
+                    <View style={[styles.tag, { borderColor: textColor }]}>
+                      <Text style={[styles.normalText, { color: textColor }]}>{tag1}</Text>
+                    </View>
+                  )}
+                  {tag2 !== null && (
+                    <View style={[styles.tag, { borderColor: textColor }]}>
+                      <Text style={[styles.normalText, { color: textColor }]}>{tag2}</Text>
+                    </View>
+                  )}
               {tag3 !== null && (
                 <View style={[styles.tag, { borderColor: textColor }]}>
                   <Text style={[styles.normalText, { color: textColor }]}>{tag3}</Text>
                 </View>
               )}
-            </View>
-            <TouchableOpacity
+              </View>
+              <TouchableOpacity
               onPress={() => {
                 onSavedChange?.(!isSaved);
               }}
             >
               {!isOwner && <Bookmark color={textColor} fill={isSaved ? textColor : 'none'} />}
             </TouchableOpacity>
+            </>
+            ) : (
+              <TouchableOpacity
+              onPress={() => {
+                onSavedChange?.(!isSaved);
+              }}
+            >
+              {!isOwner && <Bookmark color={textColor} fill={isSaved ? textColor : 'none'} style={{marginLeft: 305, marginBottom: -100, marginTop: 3}} />}
+            </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.mainContentContainer}>
@@ -328,20 +340,19 @@ const EventCollapsible: React.FC<EventCollapsibleProps> = ({
               {isOwner && (
                 <TouchableOpacity onPress={() => router.push({ pathname: '/CreateEvent/EditEvent', params: { eventId } })} style={{ marginTop: 10 }}>
                   <View style={[styles.buttonContainer, { backgroundColor: buttonColor }]}>
-                    <Edit3 size={16} color={textColor} style={{ marginRight: 5 }} />
-                    <Text style={[styles.normalText, { color: textColor }]}>Edit</Text>
+                    <Text style={[styles.subheaderText, { color: textColor }]}>Edit</Text>
                   </View>
                 </TouchableOpacity>
               )}
             </View>
 
-            {!isOwner && (
+            {!isOwner && (RSVPs.length < capacity || isRsvped) &&(
               <TouchableOpacity
                 onPress={handleRSVPPress}
                 style={[styles.rsvpButtonContainer, { opacity: isLoading ? 0.6 : 1 }]}
                 disabled={isLoading}
               >
-                <View style={[styles.rsvpButton, { backgroundColor: isRsvped ? cancelButtonColor : '#5CAEF1', marginTop: -50, marginRight: 3 }]}>
+                 <View style={[styles.rsvpButton, { backgroundColor: isRsvped ? cancelButtonColor : '#5CAEF1', marginTop: -45, marginRight: 3 }]}>
                   <Text style={[styles.subheaderText, { color: textColor }]}>{isRsvped ? 'RSVPed' : 'RSVP'}</Text>
                 </View>
               </TouchableOpacity>
@@ -382,7 +393,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center'
   },
-  contentContainer: { padding: 10 },
+  contentContainer: { padding: 10, },
   tagContainer: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   tag: { borderWidth: 1, borderRadius: 20, marginLeft: 2, marginRight: 2, padding: 5 },
   mainContentContainer: { flexDirection: 'column', justifyContent: 'space-between' },
@@ -393,7 +404,7 @@ const styles = StyleSheet.create({
   smallProfilePictureContainer: { width: 25, height: 25, borderRadius: 12.5, marginLeft: 3, marginRight: 3 },
   buttonContainer: {
     width: '100%',
-    height: 35,
+    padding: 8,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
