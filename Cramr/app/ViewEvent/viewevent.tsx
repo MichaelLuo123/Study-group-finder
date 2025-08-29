@@ -1240,7 +1240,20 @@ const styles = StyleSheet.create({
     marginRight: 15,
     flex: 1,
   },
+  editButton: {
+    backgroundColor: '#5CAEF1',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    flex: 1,
+  },
   rsvpButtonText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+  },
+  editButtonText: {
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
   },
