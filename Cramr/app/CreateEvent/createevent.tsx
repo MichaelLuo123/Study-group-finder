@@ -385,7 +385,8 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
                     borderRadius:10,
                     fontFamily: "Poppins-Regular",
                     padding: 10,
-                    marginBottom: 10
+                    marginBottom: 10,
+                    backgroundColor: textInputColor
                   }
                 }}
                 />

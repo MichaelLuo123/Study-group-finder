@@ -8,12 +8,9 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert,
   Dimensions,
-  Image,
- 
+  Image, Modal,
   RefreshControl,
-  SafeAreaView,
-  StyleSheet,
-  Text,
+  SafeAreaView, StyleSheet, Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -52,6 +49,20 @@ interface RSVP {
   status: string;
 }
 
+interface Material {
+  id: string;
+  title: string;
+  description?: string;
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  user_id: string; 
+  uploaded_at: string;
+  uploader_username: string; 
+  uploader_full_name: string; 
+}
+
 const EventViewScreen = () => {
   const { isDarkMode, user } = useUser();
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
@@ -66,13 +77,18 @@ const EventViewScreen = () => {
   const placeholderTextColor = !isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText;
   const cancelButtonColor = !isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton;
 
-  const userId = user?.id;
+const userId = user?.id; // Use logged-in user's ID
+
+// Debug logging
+console.log('UserContext user:', user);
+console.log('UserContext userId:', userId);
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [event, setEvent] = useState<Event | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [comments, setComments] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   
@@ -132,7 +148,7 @@ const EventViewScreen = () => {
       const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}`);
       if (res.ok) {
         const data = await res.json();
-        setEvent(normalizeEvent(data));
+        setEvent(data);
       }
     } catch (error) {
       console.error('Failed to fetch event:', error);
@@ -182,8 +198,7 @@ const EventViewScreen = () => {
         const data = await res.json();
         setRsvps(data.rsvps || []);
       }
-    } catch (error) {
-    }
+    } catch {}
   };
 
   const fetchComments = async () => {
@@ -255,7 +270,265 @@ const EventViewScreen = () => {
         }
       }
     } catch (error) {
+      console.error('Failed to fetch materials:', error);
+      // Retry on network errors
+      if (retryCount < 3) {
+        setTimeout(() => {
+          console.log(`Retrying fetchMaterials after error (attempt ${retryCount + 1})`);
+          fetchMaterials(retryCount + 1);
+        }, Math.pow(2, retryCount) * 1000);
+      }
     }
+  };
+
+  const checkBackendHealth = async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/health`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      setIsBackendConnected(response.ok);
+      return response.ok;
+    } catch (error) {
+      console.error('Backend health check failed:', error);
+      setIsBackendConnected(false);
+      return false;
+    }
+  };
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleFilePick = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const file = result.assets[0];
+        
+        const maxSize = 20 * 1024 * 1024; // 20MB in bytes
+        if (file.size && file.size > maxSize) {
+          Alert.alert('File Too Large', 'File size must be 20MB or less');
+          return;
+        }
+        
+        // Check file type
+        const allowedTypes = [
+          'application/pdf',                                                    // PDF
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+          'image/jpeg',                                                        // JPG
+          'image/png',                                                         // PNG
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation' // PPTX
+        ];
+        
+        if (file.mimeType && !allowedTypes.includes(file.mimeType)) {
+          Alert.alert(
+            'File Type Not Allowed', 
+            'Only PDF, DOCX, PNG, JPG, and PPTX files are accepted.\n\n' +
+            'Selected file type: ' + (file.mimeType || 'Unknown')
+          );
+          return;
+        }
+        
+        setSelectedFile(file);
+      }
+    } catch (error) {
+      console.error('Error picking file:', error);
+      Alert.alert('Error', 'Failed to select file');
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !uploadTitle.trim()) {
+      Alert.alert('Error', 'Please select a file and enter a title');
+      return;
+    }
+
+    if (!userId) {
+      Alert.alert('Error', 'You must be logged in to upload materials');
+      return;
+    }
+
+    // Check if event already has maximum number of materials (10)
+    if (materials.length >= 10) {
+      Alert.alert('Maximum Materials Reached', 'This event already has the maximum of 10 study materials');
+      return;
+    }
+
+    // Double-check file type before upload
+    const allowedTypes = [
+      'application/pdf',                                                    // PDF
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+      'image/jpeg',                                                        // JPG
+      'image/png',                                                         // PNG
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation' // PPTX
+    ];
+    
+    if (selectedFile.mimeType && !allowedTypes.includes(selectedFile.mimeType)) {
+      Alert.alert(
+        'File Type Not Allowed', 
+        'The selected file type is not supported. Please select a PDF, DOCX, PNG, JPG, or PPTX file.'
+      );
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      console.log('Uploading with userId:', userId);
+      console.log('Uploading with title:', uploadTitle.trim());
+      console.log('Uploading with file:', selectedFile);
+      
+      const formData = new FormData();
+      formData.append('file', {
+        uri: selectedFile.uri,
+        type: selectedFile.mimeType || 'application/octet-stream',
+        name: selectedFile.name,
+      } as any);
+      formData.append('title', uploadTitle.trim());
+      formData.append('description', uploadDescription.trim());
+      formData.append('userId', userId);
+
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/materials`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.ok) {
+        Alert.alert('Success', 'Study material uploaded successfully!');
+        await fetchMaterials();
+        resetUploadForm();
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Error', errorData.error || 'Failed to upload material');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Failed to upload material');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const resetUploadForm = () => {
+    setShowUploadModal(false);
+    setUploadTitle('');
+    setUploadDescription('');
+    setSelectedFile(null);
+  };
+
+
+
+  const canViewFile = (fileType: string): boolean => {
+    const viewableTypes = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'pptx'];
+    return viewableTypes.some(type => fileType.toLowerCase().includes(type));
+  };
+
+  const openFileViewer = (fileUrl: string, fileName: string, fileType: string) => {
+    setSelectedFileUrl(fileUrl);
+    setSelectedFileName(fileName);
+    setSelectedFileUrl(fileUrl);
+    setSelectedFileType(fileType);
+    setShowFileViewerModal(true);
+  };
+
+  const closeFileViewer = () => {
+    setShowFileViewerModal(false);
+    setSelectedFileUrl(null);
+    setSelectedFileName('');
+    setSelectedFileType('');
+  };
+
+  const handleFileAction = async (fileUrl: string, fileName: string, fileType: string) => {
+    const fileTypeLower = fileType.toLowerCase();
+    
+    if (fileTypeLower.includes('pdf')) {
+      WebBrowser.openBrowserAsync(fileUrl);
+    } else if (fileTypeLower.includes('png') || fileTypeLower.includes('jpg') || fileTypeLower.includes('jpeg') || fileTypeLower.includes('gif')) {
+      openFileViewer(fileUrl, fileName, fileType);
+    } else if (fileTypeLower.includes('docx') || fileTypeLower.includes('pptx')) {
+      // For Office documents, try to open in browser first, fallback to sharing
+      try {
+        await WebBrowser.openBrowserAsync(fileUrl);
+      } catch (error) {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUrl);
+        } else {
+          Alert.alert('View File', 'This file type cannot be viewed directly. Please download it to view.');
+        }
+      }
+    } else {
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUrl);
+      } else {
+        Alert.alert('View File', 'This file type cannot be viewed directly. Please download it to view.');
+      }
+    }
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.toLowerCase().includes('pdf')) return 'PDF';
+    if (fileType.toLowerCase().includes('doc') || fileType.toLowerCase().includes('docx')) return 'DOCX';
+    if (fileType.toLowerCase().includes('ppt') || fileType.toLowerCase().includes('pptx')) return 'PPTX';
+    if (fileType.toLowerCase().includes('png') || fileType.toLowerCase().includes('jpg') || fileType.toLowerCase().includes('jpeg')) return 'IMG';
+    return 'FILE';
+  };
+
+  const deleteMaterial = async (materialId: string) => {
+    Alert.alert(
+      'Delete Material',
+      'Are you sure you want to delete this study material?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+                         try {
+               console.log('Deleting material with:', { materialId, userId, eventId });
+               const requestBody = { userId: userId };
+               console.log('Request body:', requestBody);
+               console.log('Request body stringified:', JSON.stringify(requestBody));
+               console.log('userId type:', typeof userId);
+               console.log('userId value:', userId);
+               
+               const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/materials/${materialId}?userId=${userId}`, {
+                 method: 'DELETE',
+                 headers: {
+                   'Accept': 'application/json',
+                 },
+               });
+
+                             if (response.ok) {
+                 await fetchMaterials();
+               } else {
+                 const errorData = await response.json();
+                 console.error('Delete response error:', errorData);
+                 Alert.alert('Error', errorData.error || 'Failed to delete material');
+               }
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete material');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // -------- Comment Handling --------
@@ -272,8 +545,7 @@ const EventViewScreen = () => {
         setComments(prev => [...prev, data.comment]);
         setComment('');
       }
-    } catch (error) {
-    }
+    } catch {}
   };
 
   const deleteComment = async (commentId: string) => {
@@ -287,9 +559,43 @@ const EventViewScreen = () => {
       if (res.ok) {
         setComments(prev => prev.filter(c => c.id !== commentId));
       }
-    } catch (error) {
-    }
+    } catch {}
   };
+
+  useEffect(() => {
+    fetchEvent();
+    fetchRSVPs();
+    fetchComments();
+    fetchMaterials();
+    checkBackendHealth(); 
+  }, [eventId]);
+
+  // Refresh materials when screen comes into focus (e.g., when navigating back)
+  useFocusEffect(
+    useCallback(() => {
+      if (eventId) {
+        fetchMaterials();
+      }
+    }, [eventId])
+  );
+
+  useEffect(() => {
+    if (!process.env.EXPO_PUBLIC_BACKEND_URL) return;
+
+    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd?user_id=${userId}`)
+      .then(res => res.json())
+      .then(data => setIsRSVPed(Boolean(data.rsvp?.status === 'accepted')))
+      .catch(console.error);
+
+    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`)
+      .then(res => res.json())
+      .then(data => setIsSaved(Boolean(data.is_saved)))
+      .catch(console.error);
+      
+    if (userId) {
+      fetchMaterials();
+    }
+  }, [eventId, userId]);
 
   // -------- RSVP / Save --------
   const toggleRSVP = async () => {
@@ -313,8 +619,7 @@ const EventViewScreen = () => {
       }
       await fetchEvent();
       await fetchRSVPs();
-    } catch (err) {
-      console.error('RSVP toggle error:', err);
+    } catch {
     } finally {
       setBusy(false);
     }
@@ -337,8 +642,7 @@ const EventViewScreen = () => {
         });
         setIsSaved(true);
       }
-    } catch (err) {
-      console.error('Save toggle error:', err);
+    } catch {
     } finally {
       setBusy(false);
     }
@@ -353,16 +657,6 @@ const EventViewScreen = () => {
 
   useEffect(() => {
     fetchUserStatuses();
-    if (!eventId || !userId) return;
-    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/rsvpd?user_id=${userId}`)
-      .then(res => res.json())
-      .then(data => setIsRSVPed(Boolean(data.rsvp?.status === 'accepted')))
-      .catch(() => {});
-
-    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}/saved-events/${eventId}`)
-      .then(res => res.json())
-      .then(data => setIsSaved(Boolean(data.is_saved)))
-      .catch(() => {});
   }, [eventId, userId]);
 
   if (!event) {
@@ -379,14 +673,10 @@ const EventViewScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <KeyboardAwareScrollView
-        
-        contentContainerStyle={styles.scrollContent}
-        
-        enableOnAndroid
-        
+      <KeyboardAwareScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        enableOnAndroid 
         keyboardShouldPersistTaps="handled"
-      
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -397,27 +687,29 @@ const EventViewScreen = () => {
         }
       >
         <View style={styles.content}>
-          {/* Back Button */}
-          <ArrowLeft
-            size={24}
-            color={textColor}
-            onPress={() => router.back()}
-            style={{ marginBottom: 15 }}
-          />
-
+          <View style={styles.headerRow}>
+            <ArrowLeft 
+              size={24} 
+              color={textColor}
+              onPress={() => router.back()}
+              style={{marginBottom: 15}}
+            />
+            {!isBackendConnected && (
+              <View style={styles.connectionWarning}>
+                <Text style={styles.connectionWarningText}> Backend Connection Issue</Text>
+              </View>
+            )}
+          </View>
           {/* Event Card */}
           <View style={[styles.eventCard, { backgroundColor: textInputColor }]}>
             <View style={[styles.eventHeader, { backgroundColor: bannerColor || textInputColor}]}>
               <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
               <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: event.creator_id } })}>
-                {!!event.creator_profile_picture && (
                 <Image source={{ uri: event.creator_profile_picture }} style={styles.ownerAvatar ? styles.ownerAvatar : require('../../assets/images/default_profile.jpg')} />
               </TouchableOpacity>
-              )}
             </View>
 
             <View style={styles.eventContent}>
-              {/* Tags */}
               {event.tags && event.tags.length > 0 && (
                 <View style={[styles.tagsRow, { maxWidth: event.tags.length <= 2 ? 175 : 'auto'}]}>
                   {event.tags.slice(0, 3).map((tag, i) => (
@@ -428,7 +720,6 @@ const EventViewScreen = () => {
                 </View>
               )}
 
-              {/* Event Details */}
               <View style={styles.detailsContainer}>
                 <View style={styles.detailRow}>
                   <BookOpen size={20} color={textColor} />
@@ -481,7 +772,6 @@ const EventViewScreen = () => {
                   </Text>
                 </View>
 
-                {/* RSVP Avatars */}
                 <View style={styles.avatarsContainer}>
                   {displayedRSVPs.map((r, i) => (
                     <View key={i} style={styles.rsvpAvatar}>
@@ -496,7 +786,6 @@ const EventViewScreen = () => {
                 </View>
               </View>
 
-              {/* Info Section */}
               {event.description && (
                 <View style={styles.infoSection}>
                   <View style={styles.infoRow}>
@@ -506,11 +795,9 @@ const EventViewScreen = () => {
                 </View>
               )}
 
-              {/* RSVP + Save Buttons */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 {isOwner && (
-                <TouchableOpacity
-                  onPress={() => router.push({ pathname: '/CreateEvent/EditEvent', params: { eventId } })} style={styles.editButton}>
+                <TouchableOpacity onPress={() => router.push({ pathname: '/CreateEvent/EditEvent', params: { eventId } })} style={styles.editButton}>
                   <Text style={[styles.editButtonText, { color: textColor }]}>Edit</Text>
                 </TouchableOpacity>
                 )}
@@ -519,22 +806,12 @@ const EventViewScreen = () => {
                   <>
                     {(rsvps.length < event.capacity || isRSVPed) &&(
                       <>
-                      <TouchableOpacity onPress={toggleRSVP}
-                  disabled={busy}
-                  style={[styles.rsvpButton, { backgroundColor: isRSVPed ? cancelButtonColor : '#5CAEF1' }]}
-                >
-                        <Text style={[styles.rsvpButtonText, { color: textColor }]}>
-                    {isRSVPed ? 'RSVPed' : 'RSVP'}
-                  </Text>
+                      <TouchableOpacity onPress={toggleRSVP} disabled={busy} style={[styles.rsvpButton, { backgroundColor: isRSVPed ? cancelButtonColor : '#5CAEF1' }]}>
+                        <Text style={[styles.rsvpButtonText, { color: textColor }]}>{isRSVPed ? 'RSVPed' : 'RSVP'}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity onPress={toggleSave}>
-                        <Bookmark
-                    color={textColor}
-                    size={25}
-                    fill={isSaved ? textColor : 'none'}
-                    style={styles.saveButtonContainer}
-                  />
+                        <Bookmark color={textColor} size={25} fill={isSaved ? textColor : 'none'} style={styles.saveButtonContainer} />
                       </TouchableOpacity>
                       </>
                     )}
@@ -549,37 +826,122 @@ const EventViewScreen = () => {
             </View>
           </View>
 
-          {/* Study Materials (placeholder) */}
-          <Text style={[styles.studyMaterialsTitle, { color: textColor }]}>Study Materials</Text>
-          <View style={styles.materialsContainer}>
-            <TouchableOpacity style={[styles.addMaterialCard, { borderColor: textColor }]}>
-              <Text style={[styles.addMaterialPlus, { color: textColor }]}>+</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Study Materials Section */}
+          <Text style={[styles.studyMaterialsTitle, { color: textColor }]}>
+            Study Materials ({materials.length}/10)
+          </Text>
+          
+                       <View style={styles.materialsContainer}>
+             {/* Display existing materials */}
+             {materials.map((material, index) => (
+              <TouchableOpacity 
+                key={material.id} 
+                style={[styles.materialCard, { backgroundColor: textInputColor }]}
+                                 onPress={() => {
+                   // Use the new file action handler for all file types
+                   handleFileAction(material.file_url, material.file_name, material.file_type);
+                 }}
+                activeOpacity={0.7}
+              >
+                                 <View style={styles.materialHeader}>
+                                       <View style={styles.materialTitleRow}>
+                      <Text style={[styles.fileTypeIcon, { color: textColor }]}>{getFileIcon(material.file_type)}</Text>
+                      <Text style={[styles.materialTitle, { color: textColor }]} numberOfLines={1}>
+                        {material.title}
+                      </Text>
+                    </View>
+                   <View style={styles.materialActions}>
+                     {canViewFile(material.file_type) && (
+                                               <TouchableOpacity 
+                          onPress={(e) => {
+                            e.stopPropagation(); // Prevent triggering the card's onPress
+                            handleFileAction(material.file_url, material.file_name, material.file_type);
+                          }}
+                          style={styles.viewButton}
+                        >
+                          <Eye size={16} color="#5CAEF1" />
+                        </TouchableOpacity>
+                     )}
+                                           {(material.user_id === userId || 
+                        material.user_id === userId?.toString() || 
+                        material.user_id?.toString() === userId) && (
+                        <TouchableOpacity 
+                          onPress={(e) => {
+                            e.stopPropagation(); // Prevent triggering the card's onPress
+                            console.log('Delete button clicked for material:', material.title);
+                            deleteMaterial(material.id);
+                          }}
+                          style={styles.materialDeleteButton}
+                        >
+                          <Trash2 size={18} color="#ff4444" />
+                        </TouchableOpacity>
+                      )}
+                      
+                      
+                   </View>
+                 </View>
+                                 <Text style={[styles.materialInfo, { color: placeholderTextColor }]}>
+                   {formatBytes(material.file_size)} • {material.uploader_username || material.uploader_full_name}
+                   {canViewFile(material.file_type) && (
+                     <Text style={{ color: '#5CAEF1', fontWeight: 'bold' }}> • Viewable</Text>
+                   )}
+                 </Text>
+                {material.description && (
+                  <Text style={[styles.materialDescription, { color: placeholderTextColor }]} numberOfLines={2}>
+                    {material.description}
+                  </Text>
+                )}
+              </TouchableOpacity>
+                         ))}
+             
+             {/* Add Material Button - positioned on the right */}
+             <TouchableOpacity 
+               style={[
+                 styles.addMaterialCard, 
+                 { 
+                   borderColor: materials.length >= 10 ? placeholderTextColor : textColor,
+                   opacity: materials.length >= 10 ? 0.5 : 1
+                 }
+               ]}
+               onPress={() => {
+                 if (!userId) {
+                   Alert.alert('Error', 'You must be logged in to upload materials');
+                   return;
+                 }
+                 if (materials.length >= 10) {
+                   Alert.alert('Maximum Materials Reached', 'This event already has the maximum of 10 study materials');
+                   return;
+                 }
+                 setShowUploadModal(true);
+               }}
+               disabled={materials.length >= 10}
+             >
+               <Text style={[styles.addMaterialPlus, { color: materials.length >= 10 ? placeholderTextColor : textColor }]}>+</Text>
+             </TouchableOpacity>
+             
+             {/* Show message when maximum materials reached */}
+             {materials.length >= 10 && (
+               <Text style={[styles.materialInfo, { color: 'orange', textAlign: 'center', marginTop: 10 }]}>
+                 Maximum of 10 study materials reached for this event
+               </Text>
+             )}
+           </View>
 
-          {/* Comments */}
           <View style={styles.commentsSection}>
-            <Text style={[styles.commentsTitle, { color: textColor }]}>
-              Comments ({comments.length})
-            </Text>
+            <Text style={[styles.commentsTitle, { color: textColor }]}>Comments ({comments.length})</Text>
 
             {comments.map(c => (
-              <View key={c.id} style={[styles.commentItem, { borderBottomColor: placeholderTextColor }]}>
-                <View style={styles.commentHeader}>
-                  <Image
-                    source={c.profile_picture_url ? { uri: c.profile_picture_url } : require('../../assets/images/default_profile.jpg')}
-                    style={styles.commentAvatar}
-                  />
-                  <View style={styles.commentInfo}>
-                    <View style={styles.commentAuthorRow}>
-                      <Text style={[styles.commentAuthor, { color: textColor }]}>{c.full_name || c.username}</Text>
-                      {c.is_event_owner && (
-                        <View style={styles.eventOwnerTag}>
-                          <Text style={styles.eventOwnerTagText}>Event Owner</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[styles.commentTime, { color: placeholderTextColor }]}>
+              <View key={c.id} style={[styles.commentItem, { backgroundColor: textInputColor, borderRadius: 10, padding: 10}]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <TouchableOpacity onPress={() => router.push({ pathname: '/Profile/External', params: { userId: c.user_id } })}>
+                    <Image
+                      source={c.profile_picture_url ? { uri: c.profile_picture_url } : require('../../assets/images/default_profile.jpg')}
+                      style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8 }}
+                    />
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 ,}}>
+                    <Text style={{ color: textColor, fontFamily: 'Poppins-SemiBold' }}>{c.full_name || c.username}</Text>
+                    <Text style={{ color: placeholderTextColor, fontFamily: 'Poppins-Regular', fontSize: 12 }}>
                       {new Date(c.created_at).toLocaleDateString()}
                     </Text>
                   </View>
@@ -589,12 +951,13 @@ const EventViewScreen = () => {
                     </TouchableOpacity>
                   )}
                 </View>
-                <Text style={[styles.commentContent, { color: textColor }]}>{c.content}</Text>
+                <Text style={{ color: textColor, fontFamily: 'Poppins-Regular', lineHeight: 20, marginLeft: 40 }}>
+                  {c.content}
+                </Text>
               </View>
             ))}
 
-            {/* Add Comment */}
-            <View style={styles.addCommentContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: 8 }}>
               <TextInput
                 style={[styles.commentInput, { backgroundColor: textInputColor, color: textColor }]}
                 placeholder="Add a comment..."
@@ -752,6 +1115,7 @@ const EventViewScreen = () => {
    );
  };
 
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -890,7 +1254,7 @@ const styles = StyleSheet.create({
   commentsTitle: {
     fontSize: 18,
     fontFamily: 'Poppins-SemiBold',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   addCommentContainer: {
     flexDirection: 'row',
@@ -978,7 +1342,7 @@ const styles = StyleSheet.create({
   studyMaterialsTitle: {
     fontSize: 18,
     fontFamily: 'Poppins-SemiBold',
-    marginBottom: 15,
+    marginBottom: 10,
     marginTop: 20,
   },
   materialsContainer: {
