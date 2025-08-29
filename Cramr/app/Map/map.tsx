@@ -1,4 +1,3 @@
-import { PublicStudySessionFactory } from '@/Logic/PublicStudySessionFactory';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation, useRouter } from 'expo-router';
@@ -7,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { IconButton, TextInput, useTheme } from 'react-native-paper';
+import { IconButton, TextInput } from 'react-native-paper';
 import Animated, {
   useAnimatedGestureHandler,
   useAnimatedStyle,
@@ -16,8 +15,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
-import EventList from '../listView/eventList';
-import FilterModal, { Filters } from '../listView/filter';
+import EventList from '../List/eventList';
+import FilterModal, { Filters } from '../List/filter';
 
 const { height: screenHeight } = Dimensions.get('window');
 const BOTTOM_SHEET_MIN_HEIGHT = 120; 
@@ -25,48 +24,70 @@ const HEADER_HEIGHT = 100;
 const NAVBAR_HEIGHT = 80; 
 const BOTTOM_SHEET_MAX_HEIGHT = screenHeight - HEADER_HEIGHT - NAVBAR_HEIGHT; 
 
-// Custom star marker component
-const StarMarker = ({ color, remainingCapacity }: { color: string, remainingCapacity: number }) => {
+const StarMarker = ({ userId, remainingCapacity }: { userId: string, remainingCapacity: number }) => {
+  const { isDarkMode, user: loggedInUser } = useUser();
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
+  const bannerColors = Colors.bannerColors;
+  const [color, setColor] = useState<number | null>(null);
+
+  // Fetch banner color
+  useEffect(() => {
+    const fetchBannerColor = async () => {
+      if (!userId) return;
+      try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setColor(data.banner_color || null);
+        } else {
+          setColor(null);
+        }
+      } catch (error) {
+        console.error('Error fetching banner color:', error);
+        setColor(null);
+      }
+    };
+    fetchBannerColor();
+  }, [userId]);
+
   return (
     <View style={styles.starContainer}>
-      <Image 
-        source={require('../../assets/images/Star.png')} 
-        style={[styles.starImage, { tintColor: color === 'transparent' ? 'white' : color }]}
+      <Ionicons
+        name='star'
+        size={45}
+        color={(userId === loggedInUser?.id ? 'transparent' : (color ? bannerColors[color] : 'white'))}
       />
       <View style={styles.textContainer}>
-        <Text style={styles.starText}>{remainingCapacity}</Text>
+        <Text style={[styles.starText, { color: textColor && (userId === loggedInUser?.id ? 'transparent' : textColor)}]}>{remainingCapacity}</Text>
       </View>
     </View>
   );
 };
 
 export default function MapScreen() {
-  // Colors
-  const {isDarkMode, toggleDarkMode} = useUser();
-  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background)
-  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text)
-  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
-  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
-  const bannerColors = Colors.bannerColors
+  const { isDarkMode } = useUser();
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background);
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
+  const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText);
 
-  const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState('map');
-  const [events, setEvents] = useState<any[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const translateY = useSharedValue(50);
   const mapRef = useRef<MapView>(null);
 
-  // Map Filter
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // State
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [currentPage, setCurrentPage] = useState('map');
+  const [events, setEvents] = useState<any[]>([]);
+  const [eventDistances, setEventDistances] = useState<{ [eventId: string]: number }>({});
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
   const [filters, setFilters] = useState<Filters | null>(null);
-  const handleSaveFilters = (filterData: Filters) => {
-    setFilters(filterData);
-    setShowFilter(false);
-  };
+
+  // Animation
+  const translateY = useSharedValue(50);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -85,7 +106,7 @@ export default function MapScreen() {
             onPress={() => router.push('/(tabs)')}
           >
             <Image
-              source={require('../listView/assets/images/finalCramrLogo.png')}
+              source={require('../../assets/images/biggerCramrLogo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -97,27 +118,29 @@ export default function MapScreen() {
         right: 0,
       },
     });
-  }, [navigation, backgroundColor]);
+  }, [backgroundColor, navigation, router]);
 
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
       setCurrentPage(page);
-      if (page === 'listView') {
-        router.push('/listView');
-      }
-      if (page === 'addEvent') {
-        router.push('/CreateEvent/createevent');
-      } 
-      if (page === 'bookmarks') {
-        router.push('/Saved/Saved');
-      } 
-      if (page === 'profile') {
-        router.push('/Profile/Internal');
+      const routes = {
+        listView: '/List',
+        addEvent: '/CreateEvent/createevent',
+        studyTools: '/StudyTools/StudyTools',
+        profile: '/Profile/Internal'
+      };
+      
+      if (routes[page]) {
+        router.push(routes[page]);
       }
     }
   };
 
-  // Function to center map on a specific event
+  const handleSaveFilters = (filterData: Filters) => {
+    setFilters(filterData);
+    setShowFilter(false);
+  };
+
   const centerMapOnEvent = (eventId: string) => {
     const event = events.find(e => e.id === eventId);
     if (event && event.coordinates && mapRef.current) {
@@ -127,6 +150,43 @@ export default function MapScreen() {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       }, 1000);
+    }
+  };
+
+  const calculateDistance = (userLocation: any, eventCoordinates: any, unit: 'km' | 'mi' = 'km') => {
+    if (!userLocation || !eventCoordinates?.lat || !eventCoordinates?.lng) return 0;
+    
+    const distance = haversine(
+      { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
+      { latitude: eventCoordinates.lat, longitude: eventCoordinates.lng },
+      { unit: unit }
+    );
+    
+    return Math.round(distance * 10) / 10;
+  };
+
+  const geocodeAddress = async (address: string) => {
+    try {
+      const geocoded = await Location.geocodeAsync(address);
+      
+      if (geocoded && geocoded.length > 0) {
+        const result = geocoded[0];
+        return {
+          geometry: {
+            location: {
+              lat: result.latitude,
+              lng: result.longitude
+            }
+          }
+        };
+      }
+      
+      console.log(`No results found for address: ${address}`);
+      return null;
+      
+    } catch (error) {
+      console.error(`Geocoding error for "${address}":`, error);
+      return null;
     }
   };
 
@@ -145,6 +205,7 @@ export default function MapScreen() {
       const middlePosition = 50;
       const bottomPosition = 290; 
       const currentPosition = translateY.value;
+      
       let currentState;
       if (currentPosition < topPosition / 2) {
         currentState = 'top';
@@ -179,97 +240,109 @@ export default function MapScreen() {
     };
   });
 
+  // Get user location
   useEffect(() => {
-    async function getCurrentLocation() {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if(status != 'granted'){
+    const getCurrentLocation = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
         setErrorMsg('Permission to access location was denied');
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
+      const location = await Location.getCurrentPositionAsync({});
       setLocation(location);
-    }
+    };
     
     getCurrentLocation();
   }, []);
 
-
-  // calculating distance
-  const calculateDistance = (userLocation: any, eventCoordinates: any, unit: 'km' | 'mi' = 'km') => {
-  if (!userLocation || !eventCoordinates?.lat || !eventCoordinates?.lng) return 0;
-  
-  const distance = haversine(
-    { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
-    { latitude: eventCoordinates.lat, longitude: eventCoordinates.lng },
-    { unit: unit } // 'km' or 'mile'
-  );
-  
-  return Math.round(distance * 10) / 10; // Round to 1 decimal
-};
-
-const [eventDistances, setEventDistances] = useState<{ [eventId: string]: number }>({});
-
-// Update your useEffect to build the distance dictionary:
-useEffect(() => {
-  const fetchEvents = async () => {
-    try {
-      const factory = new PublicStudySessionFactory();
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
-      if (!response.ok) throw new Error('Failed to fetch events');
-      const data = await response.json();
-
-      const eventsWithCoordinates = [];
-      const distanceMap: { [eventId: string]: number } = {};
-
-      for (const event of data) {
-        const studySession = factory.createStudySession(event.location, event.date_and_time, event.title);
-        const coords = await studySession.addressToCoordinates();
+  // Fetch and geocode events
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events`);
+        if (!response.ok) throw new Error('Failed to fetch events');
         
-        // Calculate distance
-        const distance = location ? calculateDistance(location, coords.geometry.location, 'km') : 0;
+        const data = await response.json();
+        const eventsWithCoordinates = [];
+        const newDistanceMap: Record<string, number> = {};
+
+        for (const event of data) {
+          try {
+            // Skip invalid locations
+            const locationStr = event.location?.toLowerCase().trim();
+            const invalidLocations = ['computer', 'home', 'online', 'virtual', 'zoom', 'n/a', 'tbd', 'tba'];
+            
+            if (!locationStr || locationStr.length < 3 || invalidLocations.includes(locationStr)) {
+              console.log(`Skipping event "${event.title}" with invalid location: "${event.location}"`);
+              continue;
+            }
+
+            console.log(`Geocoding: "${event.title}" at "${event.location}"`);
+            
+            const coords = await geocodeAddress(event.location);
+            if (!coords) {
+              console.log(`Failed to geocode: "${event.title}" at "${event.location}"`);
+              continue;
+            }
+
+            const { lat, lng } = coords.geometry.location;
+            
+            // Validate coordinates
+            if (typeof lat !== 'number' || typeof lng !== 'number' ||
+                lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+              console.log(`Invalid coordinates for "${event.title}": lat=${lat}, lng=${lng}`);
+              continue;
+            }
+            
+            // Calculate distance
+            const distance = location ? calculateDistance(location, coords.geometry.location, 'km') : 0;
+            newDistanceMap[event.id] = distance;
+            
+            const processedEvent = {
+              ...event,
+              coordinates: coords.geometry.location,
+              remainingCapacity: event.capacity - (event.accepted_count || 0),
+              bannerColor: event.banner_color || 'transparent'
+            };
+            
+            eventsWithCoordinates.push(processedEvent);
+            
+          } catch (eventError) {
+            console.error(`Error processing event "${event.title}":`, eventError);
+            continue;
+          }
+        }
+
+        setEvents(eventsWithCoordinates);
+        setEventDistances(newDistanceMap);
         
-        // Store in distance map
-        distanceMap[event.id] = distance;
-        
-        const processedEvent = {
-          ...event,
-          coordinates: coords.geometry.location,
-          remainingCapacity: event.capacity - (event.accepted_count || 0),
-          bannerColor: event.banner_color || 'transparent'
-        };
-        
-        eventsWithCoordinates.push(processedEvent);
+      } catch (error) {
+        console.error('Error fetching events:', error);
       }
+    };
 
-      setEvents(eventsWithCoordinates);
-      setEventDistances(distanceMap); // Set the distance dictionary
-    } catch (error) {
-      console.error('Error fetching events:', error);
+    if (location) {
+      fetchEvents();
     }
-  };
-
-  if (location) {
-    fetchEvents();
-  }
-}, [location]);
+  }, [location]);
 
   return (
     <View style={[styles.container, { backgroundColor: backgroundColor}]}>  
       {/* Full Screen Map Background */}
       <View style={styles.mapContainer}>
-                 <MapView 
-           ref={mapRef}
-           style={styles.map}
-           provider={PROVIDER_GOOGLE} 
-           showsUserLocation={true}
-           initialRegion={location ? {
-             latitude: location.coords.latitude - .025,
-             longitude: location.coords.longitude,
-             latitudeDelta: 0.0922,
-             longitudeDelta: 0.0421
-           } : undefined}
-         >
+        <MapView 
+          ref={mapRef}
+          style={styles.map}
+          provider={PROVIDER_GOOGLE} 
+          showsUserLocation={true}
+          initialRegion={location ? {
+            latitude: location.coords.latitude - .025,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421
+          } : undefined}
+        >
           {events.map((event, index) => {
             // Check if coordinates are valid
             if (!event.coordinates?.lat || !event.coordinates?.lng) {
@@ -277,7 +350,6 @@ useEffect(() => {
               return null;
             }
             
-            console.log('Rendering marker for event:', event.id, 'at', event.coordinates);
             return (
               <Marker
                 key={event.id}
@@ -288,8 +360,8 @@ useEffect(() => {
                 onPress={() => setSelectedEventId(event.id)}
                 zIndex={index + 1}
               >
-                <StarMarker 
-                  color={bannerColors[event.bannerColor] || 'transparent'}
+                <StarMarker
+                  userId={event.creator_id}
                   remainingCapacity={event.remainingCapacity}
                 />
               </Marker>
@@ -338,17 +410,14 @@ useEffect(() => {
 
           {/* Event List - Only visible when expanded */}
           <View style={styles.eventListContainer}>
-                         <EventList 
-               
+            <EventList 
               filters={filters}
-              
-               selectedEventId={selectedEventId}
+              selectedEventId={selectedEventId}
               isDistanceVisible={true}
               eventDistances={eventDistances}
-            
-               onClearSelectedEvent={() => setSelectedEventId(null)}
-               onCenterMapOnEvent={centerMapOnEvent}
-             />
+              onClearSelectedEvent={() => setSelectedEventId(null)}
+              onCenterMapOnEvent={centerMapOnEvent}
+            />
           </View>
         </Animated.View>
       </PanGestureHandler>
@@ -390,14 +459,14 @@ useEffect(() => {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navButton}
-          onPress={() => handleNavigation('bookmarks')}
+          onPress={() => handleNavigation('studyTools')}
         >
           <Feather 
-            name="bookmark" 
+            name="tool" 
             size={24} 
             color={isDarkMode ? "#ffffff" : "#000000"} 
           />
-          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+          {currentPage === 'studyTools' && <View style={styles.activeDot} />}
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navButton}
@@ -436,9 +505,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   starText: {
-    color: 'black',
-    fontSize: 7,
-    fontWeight: 'bold',
+    fontSize: 14,
+    marginTop: 5,
+    fontFamily: 'Poppins-SemiBold',
     textAlign: 'center',
   },
   map: {
@@ -553,10 +622,10 @@ const styles = StyleSheet.create({
     bottom: -5,
   },
   searchInputContent: {
-    fontFamily: 'Poppins-Regular', // This applies the font to the input text and placeholder
+    fontFamily: 'Poppins-Regular',
   },
   searchInputOutline: {
-    borderRadius: 10, // This ensures the outline respects the border radius
-    borderWidth: 0, // Remove any border if you don't want it
+    borderRadius: 10,
+    borderWidth: 0,
   },
 });

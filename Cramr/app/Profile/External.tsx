@@ -1,11 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Image, Modal, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
-import EventList from '../listView/eventList';
+import EventList from '../List/eventList';
 
 // Define user interface
 interface User {
@@ -54,6 +54,9 @@ export default function External() {
   // User
   const [user, setUser] = useState<User | null>(null);
 
+  // Pull to refresh state
+  const [refreshing, setRefreshing] = useState(false);
+
   // Form state
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   const [bannerColor, setBannerColor] = useState<number | null>(null)
@@ -76,49 +79,70 @@ export default function External() {
   const [followersIds, setFollowersIds] = useState<string[] | null>(null);
   const [followingIds, setFollowingIds] = useState<string[] | null>(null);
 
+  // Extract user data fetching into a separate function
+  const fetchUserData = useCallback(async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
+      
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        
+        // Populate form fields with database data
+        setProfilePicture(userData.profile_picture_url || null);
+        setBannerColor(Number(userData.banner_color) || null);
+        setName(userData.full_name);
+        setUsername(userData.username);
+        setSchool(userData.school || null);
+        setMajor(userData.major || null);
+        setClassLevel(userData.year || null);
+        setPronouns(userData.pronouns || null);
+        setIsTransfer(userData.transfer || false);
+        setBio(userData.bio || null);
+        setPrompt1(userData.prompt_1 || null);
+        setPrompt1Answer(userData.prompt_1_answer || null);
+        setPrompt2(userData.prompt_2 || null);
+        setPrompt2Answer(userData.prompt_2_answer || null);
+        setPrompt3(userData.prompt_3 || null);
+        setPrompt3Answer(userData.prompt_3_answer || null);
+        setFollowers(userData.followers);
+        setFollowing(userData.following);
+      } else {
+        console.error('Failed to fetch user data. Status:', response.status);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  }, [profileId]);
+
   // Pull user data from database
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${profileId}/profile`);
-        
-        console.log('Response status:', response.status);
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          
-          // Populate form fields with database data
-          setProfilePicture(userData.profile_picture_url || null);
-          setBannerColor(Number(userData.banner_color) || null);
-          setName(userData.full_name);
-          setUsername(userData.username);
-          setSchool(userData.school || null);
-          setMajor(userData.major || null);
-          setClassLevel(userData.year || null);
-          setPronouns(userData.pronouns || null);
-          setIsTransfer(userData.transfer || false);
-          setBio(userData.bio || null);
-          setPrompt1(userData.prompt_1 || null);
-          setPrompt1Answer(userData.prompt_1_answer || null);
-          setPrompt2(userData.prompt_2 || null);
-          setPrompt2Answer(userData.prompt_2_answer || null);
-          setPrompt3(userData.prompt_3 || null);
-          setPrompt3Answer(userData.prompt_3_answer || null);
-          setFollowers(userData.followers);
-          setFollowing(userData.following);
-        } else {
-          console.error('Failed to fetch user data. Status:', response.status);
-          const errorText = await response.text();
-          console.error('Error response:', errorText);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
     fetchUserData();
-  }, [profileId, userId]);
+  }, [fetchUserData, userId]);
+
+  // Add a refresh key state to force child components to refresh
+    const [refreshKey, setRefreshKey] = useState(0);
+  
+    // Update the onRefresh function
+    const onRefresh = React.useCallback(async () => {
+      setRefreshing(true);
+      try {
+        // Refresh user data first
+        await fetchUserData();
+
+        // Force child components to refresh by incrementing the key
+        setRefreshKey(prev => prev + 1);
+        
+      } catch (error) {
+        console.error('Error during refresh:', error);
+      } finally {
+        setRefreshing(false);
+      }
+    }, [loggedInUser?.id,]);
 
   // More Modal
   const [isMoreModalVisible, setIsMoreModalVisible] = useState(false);
@@ -344,9 +368,20 @@ export default function External() {
   }
 
   return (
-    <SafeAreaView style={{backgroundColor: backgroundColor, height: 1000}}>
-      <ScrollView>
-        <View style={[styles.container, {backgroundColor: backgroundColor}]}>
+    <SafeAreaView style={{backgroundColor: backgroundColor}}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        showsHorizontalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={'#5CAEF1'}
+            colors={['#5CAEF1']}
+          />
+        }
+      >
+        <View style={[styles.container, {backgroundColor: backgroundColor, height: 'auto'}]}>
           <View style={styles.topButtonsContainer}>
             <ArrowLeft 
               size={24} 
@@ -473,6 +508,7 @@ export default function External() {
           <Text style={[styles.subheaderBoldText, {color: textColor, marginTop: 10}]}>{name}'s Events</Text>
 
           <EventList
+            key={refreshKey}
             creatorUserId={profileId}
             />
             
@@ -493,8 +529,6 @@ export default function External() {
                       {isBlocked ? 'Unblock' : 'Block'}
                     </Text>
                   </TouchableOpacity>
-                  
-
                   
                   <TouchableOpacity
                     style={[styles.modalButton, styles.cancelButton]}

@@ -2,7 +2,7 @@ import Slider from '@/components/Slider';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Image, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { IconButton, TextInput, useTheme } from 'react-native-paper';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
@@ -17,14 +17,11 @@ export default function HomeScreen() {
   const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput)
   const placeholderTextColor = (!isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText)
   const bannerColors = Colors.bannerColors
-  const buttonColor = Colors.button
   const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
 
   const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
-  const scheme = useColorScheme();
-  const lightMode = scheme !== 'dark';
 
   const [currentPage, setCurrentPage] = useState('listView');
   const [showFilter, setShowFilter] = useState(false);
@@ -47,13 +44,23 @@ export default function HomeScreen() {
       headerLeft: () => (
         <View style={[styles.fullWidthHeader]}>
           <Image
-            source={require('./assets/images/finalCramrLogo.png')}
+            source={require('../../assets/images/cramr_logo.png')}
             style={[styles.logo]}
             resizeMode="contain"
           />
         </View>
       ),
-      headerRight: () => (<></>),
+      headerRight: () => (
+        <TouchableOpacity onPress={() => router.push('../List/Messages/messages')} style={styles.addButton}>
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={28}
+            marginRight={10}
+            marginTop={10}
+            color={textColor}
+          />
+        </TouchableOpacity>
+      ),
       headerTitle: '', // Hide "index"
       headerShadowVisible: false, // Optional: removes shadow/border under header
     });
@@ -70,10 +77,10 @@ export default function HomeScreen() {
   const handleNavigation = (page: string) => {
     if (currentPage !== page) {
       setCurrentPage(page);
-      if (page === 'listView') router.push('/listView');
+      if (page === 'listView') router.push('/List');
       if (page === 'map') router.push('/Map/map');
       if (page === 'addEvent') router.push('/CreateEvent/createevent');
-      if (page === 'bookmarks') router.push('/Saved/Saved');
+      if (page === 'studyTools') router.push('/StudyTools/StudyTools');
       if (page === 'profile') router.push('/Profile/Internal');
     }
   };
@@ -195,6 +202,29 @@ export default function HomeScreen() {
     }
   };
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Add this refresh function:
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Refresh following data
+      await loadFollowing();
+      
+      // Refresh current user data (following/followers counts)
+      await refreshCurrentUserData();
+      
+      // If we're in people mode and have a search query, refresh the search results
+      if (searchMode === 'people' && searchQuery.length >= 2) {
+        await searchPeople(searchQuery);
+      }
+    } catch (error) {
+      console.error('Error during refresh:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const isFollowing = (userId: string) => following.some(user => user.id === userId);
   const navigateToProfile = (userId: string) => router.push(`/Profile/External?userId=${userId}`);
 
@@ -211,7 +241,7 @@ export default function HomeScreen() {
         onChangeSlider={(value) => !value ? setSearchMode('events') : setSearchMode('people')}
         lightMode={!isDarkMode}
         value={sliderValue}
-        style={{marginBottom: 5, marginTop: -10, alignSelf: 'center'}}
+        style={{marginBottom: 5, alignSelf: 'center'}}
       />
 
       {/* Search Bar + Filter (filter only shows on Events) */}
@@ -256,66 +286,100 @@ export default function HomeScreen() {
 
       {/* People Results */}
       {searchMode === 'people' && (
-        <View style={styles.peopleContainer}>
-          {searchLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#5CAEF1" />
-              <Text style={styles.loadingText}>Searching people...</Text>
-            </View>
-          ) : peopleResults.length > 0 ? (
-            <ScrollView style={styles.peopleList}>
-              {peopleResults.map((person: any) => {
-                const following = isFollowing(person.id);
-                return (
-                    <TouchableOpacity
-                      key={person.id}
-                      style={[styles.personCard, {backgroundColor: textInputColor}]}
-                      onPress={() => navigateToProfile(person.id)}
-                    >
-                      <View style={styles.personInfo}>
-                        <Image 
-                          source={
-                            person.profile_picture_url
-                              ? { uri: person.profile_picture_url }
-                              : require('../../assets/images/default_profile.jpg')
-                          }
-                          style={styles.personAvatar} 
-                        />
-                        <View style={styles.personDetails}>
-                          <Text style={[styles.personName, {color:textColor, fontFamily: 'Poppins-Regular'}]}>{person.full_name || 'Unknown'}</Text>
-                          <Text style={[styles.personUsername, {color:textColor, fontFamily: 'Poppins-Regular'}]}>@{person.username}</Text>
-                          <Text style={[styles.personStats, {color: textColor, fontFamily: 'Poppins-Regular'}]}>
-                            {person.following || 0} following • {person.followers || 0} followers
-                          </Text>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        style={[styles.followButton, (following && [styles.followingButton, {backgroundColor: cancelButtonColor}])]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          if (following) unfollowUser(person.id);
-                          else followUser(person.id);
-                        }}
-                      >
-                        <Text style={[styles.followButtonText, {color: textColor}, (following && [styles.followingButtonText, {color: textColor}])]}>
-                          {following ? 'Following' : 'Follow'}
-                        </Text>
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  );
-                })}
-            </ScrollView>
-          ) : searchQuery.length >= 2 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, {color: textColor}]}>No people found</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, {color: textColor}]}>Type at least 2 characters to search people</Text>
-            </View>
-          )}
-        </View>
-      )}
+      <View style={styles.peopleContainer}>
+        {searchLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#5CAEF1" />
+            <Text style={styles.loadingText}>Searching people...</Text>
+          </View>
+        ) : peopleResults.length > 0 ? (
+          <ScrollView 
+            style={styles.peopleList}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={isDarkMode ? ['#5CAEF1', '#7CC8FF'] : ['#5CAEF1', '#4A9EE0']}
+                tintColor={isDarkMode ? '#5CAEF1' : '#4A9EE0'}
+                progressBackgroundColor={isDarkMode ? '#2D2D2D' : '#FFFFFF'}
+              />
+            }
+          >
+            {peopleResults.map((person: any) => {
+              const following = isFollowing(person.id);
+              return (
+                <TouchableOpacity
+                  key={person.id}
+                  style={[styles.personCard, {backgroundColor: bannerColors[person.banner_color] || textInputColor}]}
+                  onPress={() => navigateToProfile(person.id)}
+                >
+                  <View style={styles.personInfo}>
+                    <Image 
+                      source={
+                        person.profile_picture_url
+                          ? { uri: person.profile_picture_url }
+                          : require('../../assets/images/default_profile.jpg')
+                      }
+                      style={styles.personAvatar} 
+                    />
+                    <View style={styles.personDetails}>
+                      <Text style={[styles.personName, {color:textColor, fontFamily: 'Poppins-Regular'}]}>{person.full_name || 'Unknown'}</Text>
+                      <Text style={[styles.personUsername, {color:textColor, fontFamily: 'Poppins-Regular'}]}>@{person.username}</Text>
+                      <Text style={[styles.personStats, {color: textColor, fontFamily: 'Poppins-Regular'}]}>
+                        {person.following || 0} following • {person.followers || 0} followers
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.followButton, (following && [styles.followingButton, {backgroundColor: cancelButtonColor}])]}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      if (following) unfollowUser(person.id);
+                      else followUser(person.id);
+                    }}
+                  >
+                    <Text style={[styles.followButtonText, {color: textColor}, (following && [styles.followingButtonText, {color: textColor}])]}>
+                      {following ? 'Following' : 'Follow'}
+                    </Text>
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : searchQuery.length >= 2 ? (
+          <ScrollView
+            contentContainerStyle={styles.emptyContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={isDarkMode ? ['#5CAEF1', '#7CC8FF'] : ['#5CAEF1', '#4A9EE0']}
+                tintColor={isDarkMode ? '#5CAEF1' : '#4A9EE0'}
+                progressBackgroundColor={isDarkMode ? '#2D2D2D' : '#FFFFFF'}
+              />
+            }
+          >
+            <Text style={[styles.emptyText, {color: textColor}]}>No people found</Text>
+          </ScrollView>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.emptyContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={isDarkMode ? ['#5CAEF1', '#7CC8FF'] : ['#5CAEF1', '#4A9EE0']}
+                tintColor={isDarkMode ? '#5CAEF1' : '#4A9EE0'}
+                progressBackgroundColor={isDarkMode ? '#2D2D2D' : '#FFFFFF'}
+              />
+            }
+          >
+            <Text style={[styles.emptyText, {color: textColor}]}>Type at least 2 characters to search people</Text>
+          </ScrollView>
+        )}
+      </View>
+    )}
+
 
       {/* Bottom Navigation */}
       <View
@@ -343,9 +407,9 @@ export default function HomeScreen() {
           <Feather name="plus-square" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
           {currentPage === 'addEvent' && <View style={styles.activeDot} />}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => handleNavigation('bookmarks')}>
-          <Feather name="bookmark" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-          {currentPage === 'bookmarks' && <View style={styles.activeDot} />}
+        <TouchableOpacity style={styles.navButton} onPress={() => handleNavigation('studyTools')}>
+          <Feather name="tool" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
+          {currentPage === 'tool' && <View style={styles.activeDot} />}
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton} onPress={() => handleNavigation('profile')}>
           <Ionicons
@@ -487,8 +551,8 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 16, color: '#666', marginTop: 10 },
   peopleList: { flex: 1 },
   personCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
-    padding: 15, borderRadius: 12, marginBottom: 10,
+    flexDirection: 'row', alignItems: 'center',
+    padding: 10, borderRadius: 20, marginBottom: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
   },
   personInfo: { flex: 1, flexDirection: 'row', alignItems: 'center' },
@@ -498,10 +562,10 @@ const styles = StyleSheet.create({
   },
   personDetails: { flex: 1 },
   personName: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 2 },
-  personUsername: { fontSize: 14, color: '#666', marginBottom: 2 },
-  personStats: { fontSize: 12, color: '#888' },
+  personUsername: { fontSize: 14, marginBottom: 2 },
+  personStats: { fontSize: 12},
   followButton: { backgroundColor: '#5CAEF1', padding: 10, borderRadius: 10 },
-  followButtonText: { color: '#fff', fontSize: 14, fontFamily: 'Poppins-Regular',},
+  followButtonText: {fontSize: 14, fontFamily: 'Poppins-Regular',},
   followingButton: { backgroundColor: '#e0e0e0' },
   followingButtonText: { color: '#666' },
 

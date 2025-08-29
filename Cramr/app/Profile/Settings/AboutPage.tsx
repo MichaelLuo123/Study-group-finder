@@ -8,8 +8,8 @@ import {
   Text,
   View
 } from 'react-native';
-import { Colors } from '../../constants/Colors';
-import { useUser } from '../../contexts/UserContext';
+import { Colors } from '../../../constants/Colors';
+import { useUser } from '../../../contexts/UserContext';
 
 
 const AboutPage = () => {

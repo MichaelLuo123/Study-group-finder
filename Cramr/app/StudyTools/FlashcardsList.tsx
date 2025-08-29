@@ -2,11 +2,11 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
 import {
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useUser } from '../../contexts/UserContext';
@@ -33,6 +33,14 @@ export default function FlashcardsList() {
         </TouchableOpacity>
 
         <Text style={[styles.heading, { color: textColor }]}>Flashcards</Text>
+
+        <TouchableOpacity 
+          style={{backgroundColor: textInputColor, padding: 10, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,}}
+          onPress={() => router.push('/StudyTools/Flashcards')}
+        >
+          <Text style={{fontFamily:'Poppins-Regular', fontSize: 16, color: textColor}}> [Name of flashcard set 1] </Text>
+          <Text style={{fontSize: 16, color: '#E36062', marginRight: 5}}>✕</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -48,6 +56,7 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 18,
     alignSelf: 'center',
+    marginTop: -40,
     marginBottom: 20,
     fontFamily: 'Poppins-Bold',
   },

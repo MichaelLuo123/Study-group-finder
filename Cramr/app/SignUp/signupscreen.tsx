@@ -114,7 +114,7 @@ const SignUpScreen = () => {
                 if (response.ok && result.success) {
                     console.log('User registered successfully');
                     setUser(result.user);
-                    router.push('../Settings/ProfilePage');
+                    router.push('/SignIn/Loginscreen');
                 } else {
                     // Handle different error cases
                     if (response.status === 409) {
@@ -213,7 +213,7 @@ const SignUpScreen = () => {
                             <View style={[styles.inputContainer, errors.userUsername ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="at-outline" 
-                                    size={16} 
+                                    size={20} 
                                     color={textColor}
                                     style={styles.inputIcon} 
                                 />
@@ -237,7 +237,7 @@ const SignUpScreen = () => {
                             <View style={[styles.inputContainer, errors.email ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="mail-outline" 
-                                    size={16} 
+                                    size={20} 
                                     color={textColor}
                                     style={styles.inputIcon} 
                                 />
@@ -262,7 +262,7 @@ const SignUpScreen = () => {
                             <View style={[styles.inputContainer, errors.password ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="lock-closed-outline" 
-                                    size={16} 
+                                    size={20} 
                                     color={textColor}
                                     style={styles.inputIcon} 
                                 />
@@ -283,7 +283,7 @@ const SignUpScreen = () => {
                                 >
                                     <Ionicons 
                                         name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                                        size={16} 
+                                        size={20} 
                                         color={textColor}
                                     />
                                 </TouchableOpacity>
@@ -296,7 +296,7 @@ const SignUpScreen = () => {
                             <View style={[styles.inputContainer, errors.confirmPassword ? styles.inputError : null, {backgroundColor: textInputColor}]}>
                                 <Ionicons 
                                     name="lock-closed-outline" 
-                                    size={16} 
+                                    size={20} 
                                     color={textColor}
                                     style={styles.inputIcon} 
                                 />
@@ -317,7 +317,7 @@ const SignUpScreen = () => {
                                 >
                                     <Ionicons 
                                         name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
-                                        size={16} 
+                                        size={20} 
                                         color={textColor}
                                     />
                                 </TouchableOpacity>
@@ -445,7 +445,7 @@ const getStyles = (isDarkMode: boolean, backgroundColor: string, textColor: stri
     signInText: {
         fontSize: 14,
         color: primaryColor,
-        fontFamily: 'Poppins-Bold',
+        fontFamily: 'Poppins-SemiBold',
         marginBottom: 1,
     },
     inputError: {

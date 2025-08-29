@@ -9,7 +9,7 @@ interface DropdownOption {
 
 interface DropdownProps {
     options: DropdownOption[];
-    onSelect: (value: string) => void;
+    onSelect?: (value: string) => void;
     style?: object;
     option1: string | null;
     onChangeOption1: (value: string) => void;
@@ -52,22 +52,21 @@ const Dropdown: React.FC<DropdownProps> = ({
 
     // Get available options (exclude already selected ones)
     const getAvailableOptions = () => {
-        const selectedValues = [option1, option2, option3].filter(Boolean);
-        return options.filter(option => !selectedValues.includes(option.value));
+        const selectedLabels = [option1, option2, option3].filter(Boolean);
+        return options.filter(option => !selectedLabels.includes(option.label));
     };
 
     const handleSelect = (option: DropdownOption): void => {
         // Find the first empty slot and assign the selected option
         if (!option1) {
-            onChangeOption1(option.value);
+            onChangeOption1(option.label);  // Save the actual prompt text
         } else if (!option2) {
-            onChangeOption2(option.value);
+            onChangeOption2(option.label);  // Save the actual prompt text
         } else if (!option3) {
-            onChangeOption3(option.value);
+            onChangeOption3(option.label);  // Save the actual prompt text
         }
         
         setIsOpen(false);
-        onSelect(option.value);
     };
 
     const handleDelete = (optionNumber: 1 | 2 | 3): void => {
@@ -87,9 +86,9 @@ const Dropdown: React.FC<DropdownProps> = ({
         }
     };
 
-    const getOptionLabel = (value: string) => {
-        const option = options.find(opt => opt.value === value);
-        return option ? option.label : value;
+    const getOptionLabel = (label: string) => {
+        // Since we're now storing labels directly, just return the label
+        return label;
     };
 
     const availableOptions = getAvailableOptions();

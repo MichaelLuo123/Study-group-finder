@@ -12,7 +12,8 @@
       "config": {
         "googleMapsApiKey": "process.env.EXPO_PUBLIC_GOOGLE_API_KEY"
       },
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tylervo02.Cramr"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +25,13 @@
           "apiKey": "AIzaSyBxoV_Ap9575C4SuJY2TaIftwlgSSSF6gw"
         }
       },
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "INTERNET"],
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
       "edgeToEdgeEnabled": true,
       "package": "com.tylervo02.Cramr"
     },
