@@ -1,16 +1,25 @@
 import { useUser } from '@/contexts/UserContext';
 import * as DocumentPicker from 'expo-document-picker';
-import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as WebBrowser from 'expo-web-browser';
-import { 
-  ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Eye, Info, MapPin, 
-  Send, Trash2, Upload, Users, X 
+import {
+  ArrowLeft, Bookmark, BookOpen, Calendar, Clock, Eye, Info, MapPin,
+  Send, Trash2, Upload, Users, X
 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { 
-  ActivityIndicator, Alert, Dimensions, Image, Modal, SafeAreaView, StyleSheet, Text, View, TouchableOpacity 
+import {
+  ActivityIndicator, Alert,
+  Dimensions,
+  Image, Modal, SafeAreaView, StyleSheet, Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Colors } from '../../constants/Colors';
+
+const { width } = Dimensions.get('window');
 
 interface Event {
   id: string;
@@ -57,22 +66,18 @@ const EventViewScreen = () => {
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const router = useRouter();
 
-<<<<<<< Cramr/app/ViewEvent/viewevent.tsx
-  const userId = user?.id; // Use logged-in user's ID
-  
-  // Debug logging
-  console.log('UserContext user:', user);
-  console.log('UserContext userId:', userId);
-=======
-  // Colors
-  const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
-  const textColor = !isDarkMode ? Colors.light.text : Colors.dark.text;
-  const textInputColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
-  const bannerColors = Colors.bannerColors;
-  const placeholderTextColor = !isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText;
+// Colors
+const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
+const textColor = !isDarkMode ? Colors.light.text : Colors.dark.text;
+const textInputColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
+const bannerColors = Colors.bannerColors;
+const placeholderTextColor = !isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText;
 
-  const userId = user?.id;
->>>>>>> Cramr/app/ViewEvent/viewevent.tsx
+const userId = user?.id; // Use logged-in user's ID
+
+// Debug logging
+console.log('UserContext user:', user);
+console.log('UserContext userId:', userId);
   const [comment, setComment] = useState('');
   const [isRSVPed, setIsRSVPed] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -137,7 +142,6 @@ const EventViewScreen = () => {
     } catch {}
   };
 
-<<<<<<< Cramr/app/ViewEvent/viewevent.tsx
   const fetchMaterials = async (retryCount = 0) => {
     try {
       const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/events/${eventId}/materials`);
@@ -418,9 +422,7 @@ const EventViewScreen = () => {
     );
   };
 
-=======
   // -------- Comment Handling --------
->>>>>>> Cramr/app/ViewEvent/viewevent.tsx
   const addComment = async () => {
     if (!comment.trim() || !userId) return;
     try {
@@ -451,7 +453,6 @@ const EventViewScreen = () => {
     } catch {}
   };
 
-<<<<<<< Cramr/app/ViewEvent/viewevent.tsx
   useEffect(() => {
     fetchEvent();
     fetchRSVPs();
@@ -487,9 +488,7 @@ const EventViewScreen = () => {
     }
   }, [eventId, userId]);
 
-=======
   // -------- RSVP / Save --------
->>>>>>> Cramr/app/ViewEvent/viewevent.tsx
   const toggleRSVP = async () => {
     if (busy || !eventId || !userId) return;
     setBusy(true);
@@ -575,7 +574,6 @@ const EventViewScreen = () => {
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} enableOnAndroid keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
-<<<<<<< Cramr/app/ViewEvent/viewevent.tsx
           <View style={styles.headerRow}>
             <ArrowLeft 
               size={24} 
@@ -590,10 +588,6 @@ const EventViewScreen = () => {
             )}
           </View>
           {/* Event Card */}
-=======
-          <ArrowLeft size={24} color={textColor} onPress={() => router.back()} style={{ marginBottom: 15 }} />
-
->>>>>>> Cramr/app/ViewEvent/viewevent.tsx
           <View style={[styles.eventCard, { backgroundColor: textInputColor }]}>
             <View style={[styles.eventHeader, { backgroundColor: bannerColors[event.bannerColor || 1] }]}>
               <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
@@ -668,7 +662,6 @@ const EventViewScreen = () => {
             </View>
           </View>
 
-<<<<<<< Cramr/app/ViewEvent/viewevent.tsx
           {/* Study Materials Section */}
           <Text style={[styles.studyMaterialsTitle, { color: textColor }]}>
             Study Materials ({materials.length}/10)
@@ -769,14 +762,6 @@ const EventViewScreen = () => {
                </Text>
              )}
            </View>
-=======
-          <Text style={[styles.studyMaterialsTitle, { color: textColor }]}>Study Materials</Text>
-          <View style={styles.materialsContainer}>
-            <TouchableOpacity style={[styles.addMaterialCard, { borderColor: textColor }]}>
-              <Text style={[styles.addMaterialPlus, { color: textColor }]}>+</Text>
-            </TouchableOpacity>
-          </View>
->>>>>>> Cramr/app/ViewEvent/viewevent.tsx
 
           <View style={styles.commentsSection}>
             <Text style={[styles.commentsTitle, { color: textColor }]}>Comments ({comments.length})</Text>
@@ -964,7 +949,6 @@ const EventViewScreen = () => {
    );
  };
 
-export default EventViewScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -982,7 +966,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-<<<<<<< Cramr/app/ViewEvent/viewevent.tsx
   eventHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1413,30 +1396,3 @@ const styles = StyleSheet.create({
  });
  
 export default EventViewScreen;
-=======
-  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  eventTitle: { fontSize: 18, fontFamily: 'Poppins-SemiBold', flex: 1 },
-  ownerAvatar: { width: 32, height: 32, borderRadius: 16 },
-  eventContent: { padding: 16 },
-  tagsRow: { flexDirection: 'row', marginBottom: 16 },
-  tag: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, marginRight: 8 },
-  tagText: { fontSize: 14, fontFamily: 'Poppins-Regular' },
-  detailsContainer: { marginBottom: 16 },
-  detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  detailText: { fontSize: 14, fontFamily: 'Poppins-Regular', marginLeft: 8, flex: 1 },
-  avatarsContainer: { flexDirection: 'row', marginLeft: 30 },
-  rsvpAvatar: { marginRight: 5 },
-  avatarImage: { width: 25, height: 25, borderRadius: 12 },
-  infoSection: { marginBottom: 20 },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  infoText: { fontSize: 14, fontFamily: 'Poppins-Regular', marginLeft: 8, flex: 1, lineHeight: 20 },
-  rsvpButton: { paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 10, marginRight: 15, flex: 1 },
-  rsvpButtonText: { fontSize: 16, fontFamily: 'Poppins-Regular' },
-  saveButtonContainer: { top: 10 },
-  studyMaterialsTitle: { fontSize: 18, fontFamily: 'Poppins-SemiBold', marginBottom: 15, marginTop: 20 },
-  materialsContainer: { flexDirection: 'row', marginBottom: 20 },
-  addMaterialCard: { width: 60, height: 60, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
-  commentInput: { flex: 1, borderRadius: 10, paddingHorizontal: 15, paddingVertical: 10, marginRight: -40, maxHeight: 100, fontSize: 14, fontFamily: 'Poppins-Regular' },
-  commentItem: { marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1 },
-});
->>>>>>> Cramr/app/ViewEvent/viewevent.tsx
