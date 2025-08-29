@@ -266,16 +266,6 @@ export default function EventList({
       const count = event.accepted_count ?? event.rsvped_count ?? 0;
       if (count < filters.attendees) return false;
     }
-    if (filters.noise) {
-      const wanted = (filters.noise || '').toLowerCase();
-      const hasTag = Array.isArray(event.tags) && event.tags.some((t: string) => (t || '').toLowerCase() === wanted);
-      if (!hasTag) return false;
-    }
-    if (filters.location) {
-      const wanted = (filters.location || '').toLowerCase();
-      const hasTag = Array.isArray(event.tags) && event.tags.some((t: string) => (t || '').toLowerCase() === wanted);
-      if (!hasTag) return false;
-    }
     return true;
   });
 
