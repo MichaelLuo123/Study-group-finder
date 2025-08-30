@@ -3,17 +3,19 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+import FollowersDropdown from '../../../components/FollowersDropdown';
 import { Colors } from '../../../constants/Colors';
 
 const NewMessageScreen = () => {
-  const { isDarkMode } = useUser();
+  const { isDarkMode, user: loggedInUser } = useUser();
   const router = useRouter();
 
   // Consistent color scheme using Colors.ts
@@ -29,14 +31,63 @@ const NewMessageScreen = () => {
   const sendButtonColor = '#5CAEF1'; // Keep brand color for send button
   const sendButtonTextColor = '#FFFFFF'; // White text on blue button
 
-  const [recipient, setRecipient] = useState('');
+  const [selectedRecipient, setSelectedRecipient] = useState<string[]>([]);
   const [messageText, setMessageText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSendMessage = () => {
-    if (recipient.trim() && messageText.trim()) {
-      // Placeholder for sending message
-      console.log('Sending message to:', recipient, 'Message:', messageText);
-      router.back();
+  // Theme object using consistent Colors.ts values
+  const theme = {
+    backgroundColor: backgroundColor,
+    textColor: textColor,
+    inputBackground: textInputColor,
+    placeholderColor: placeholderColor,
+    rsvpBackground: '#5CAEF1',
+    rsvpText: '#ffffff',
+    cardBackground: isDarkMode ? '#2d2d2d' : '#ffffff',
+    navBackground: isDarkMode ? '#2d2d2d' : '#ffffff',
+    navBorder: isDarkMode ? '#4a5568' : '#e0e0e0',
+  };
+
+  const handleSendMessage = async () => {
+    if (selectedRecipient.length === 0 || !messageText.trim()) {
+      Alert.alert('Error', 'Please select a recipient and enter a message');
+      return;
+    }
+
+    if (!loggedInUser?.id) {
+      Alert.alert('Error', 'You must be logged in to send a message');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Send the message to the selected recipient
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender_id: loggedInUser.id,
+          recipient_id: selectedRecipient[0], // Only send to first selected recipient
+          content: messageText.trim()
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Success', 'Message sent successfully!');
+        router.back();
+      } else {
+        Alert.alert('Error', data.error || 'Failed to send message');
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -55,13 +106,15 @@ const NewMessageScreen = () => {
               styles.sendButton, 
               { 
                 backgroundColor: sendButtonColor,
-                opacity: recipient.trim() && messageText.trim() ? 1 : 0.5 
+                opacity: selectedRecipient.length > 0 && messageText.trim() && !isSubmitting ? 1 : 0.5 
               }
             ]}
             onPress={handleSendMessage}
-            disabled={!recipient.trim() || !messageText.trim()}
+            disabled={selectedRecipient.length === 0 || !messageText.trim() || isSubmitting}
           >
-            <Text style={[styles.sendButtonText, { color: sendButtonTextColor }]}>Send</Text>
+            <Text style={[styles.sendButtonText, { color: sendButtonTextColor }]}>
+              {isSubmitting ? 'Sending...' : 'Send'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -70,16 +123,11 @@ const NewMessageScreen = () => {
           {/* To Field */}
           <View style={styles.inputContainer}>
             <Text style={[styles.label, { color: textColor }]}>To:</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: textInputColor, 
-                color: textColor,
-                borderColor: borderColor
-              }]}
-              placeholder="Enter username or email"
-              placeholderTextColor={placeholderColor}
-              value={recipient}
-              onChangeText={setRecipient}
+            <FollowersDropdown
+              selectedFriends={selectedRecipient}
+              onFriendsChange={setSelectedRecipient}
+              theme={theme}
+              isDarkMode={isDarkMode}
             />
           </View>
 
@@ -98,6 +146,7 @@ const NewMessageScreen = () => {
               onChangeText={setMessageText}
               multiline
               textAlignVertical="top"
+              editable={!isSubmitting}
             />
           </View>
         </View>

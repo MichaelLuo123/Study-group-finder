@@ -1,31 +1,43 @@
 import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    RefreshControl,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 
 interface Message {
   id: string;
-  text: string;
-  isFromMe: boolean;
-  timestamp: string;
+  content: string;
+  sender_id: string;
+  recipient_id: string;
+  is_read: boolean;
+  created_at: string;
+  sender_username?: string;
+  sender_full_name?: string;
+  sender_profile_picture?: string;
 }
 
 const ChatScreen = () => {
-  const { isDarkMode } = useUser();
+  const { isDarkMode, user: loggedInUser } = useUser();
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const flatListRef = useRef<FlatList>(null);
+
+  const recipientId = params.recipientId as string;
+  const recipientName = params.recipientName as string;
 
   // Consistent color scheme using Colors.ts
   const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
@@ -42,54 +54,138 @@ const ChatScreen = () => {
   const theirMessageTextColor = textColor; // Theme text color for received messages
 
   const [messageText, setMessageText] = useState('');
-  const [messages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Hi there! How are you doing?',
-      isFromMe: false,
-      timestamp: '1 day ago'
-    },
-    {
-      id: '2',
-      text: 'Hey! I\'m doing great, thanks for asking. How about you?',
-      isFromMe: true,
-      timestamp: '1 day ago'
-    },
-    {
-      id: '3',
-      text: 'That\'s wonderful to hear! I\'m doing well too.',
-      isFromMe: false,
-      timestamp: '1 day ago'
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleSendMessage = () => {
-    if (messageText.trim()) {
-      console.log('Sending message:', messageText);
-      setMessageText('');
+  const fetchMessages = async (isRefresh = false) => {
+    if (!loggedInUser?.id || !recipientId) {
+      setIsLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/messages/conversation/${loggedInUser.id}/${recipientId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setMessages(data.messages);
+          
+          // Scroll to bottom after fetching messages (only if not refreshing)
+          if (!isRefresh && data.messages.length > 0) {
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }, 100);
+          }
+        }
+      } else {
+        console.error('Failed to fetch messages');
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const renderMessage = ({ item }: { item: Message }) => (
-    <View style={[
-      styles.messageContainer,
-      item.isFromMe ? styles.myMessageContainer : styles.theirMessageContainer
-    ]}>
+  useEffect(() => {
+    fetchMessages();
+  }, [loggedInUser?.id, recipientId]);
+
+  // Auto-refresh messages every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isSending && !refreshing) {
+        fetchMessages(true);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isSending, refreshing]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchMessages(true);
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !loggedInUser?.id || !recipientId) {
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender_id: loggedInUser.id,
+          recipient_id: recipientId,
+          content: messageText.trim()
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Add the new message to the list
+        setMessages(prev => [...prev, data.message]);
+        setMessageText('');
+        
+        // Scroll to bottom immediately after sending
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 50);
+      } else {
+        Alert.alert('Error', data.error || 'Failed to send message');
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const renderMessage = ({ item }: { item: Message }) => {
+    const isFromMe = item.sender_id === loggedInUser?.id;
+    
+    return (
       <View style={[
-        styles.messageBubble,
-        item.isFromMe 
-          ? [styles.myMessageBubble, { backgroundColor: myMessageBubbleColor }]
-          : [styles.theirMessageBubble, { backgroundColor: theirMessageBubbleColor }]
+        styles.messageContainer,
+        isFromMe ? styles.myMessageContainer : styles.theirMessageContainer
       ]}>
-        <Text style={[
-          styles.messageText,
-          { color: item.isFromMe ? myMessageTextColor : theirMessageTextColor }
+        <View style={[
+          styles.messageBubble,
+          isFromMe 
+            ? [styles.myMessageBubble, { backgroundColor: myMessageBubbleColor }]
+            : [styles.theirMessageBubble, { backgroundColor: theirMessageBubbleColor }]
         ]}>
-          {item.text}
-        </Text>
+          <Text style={[
+            styles.messageText,
+            { color: isFromMe ? myMessageTextColor : theirMessageTextColor }
+          ]}>
+            {item.content}
+          </Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -107,10 +203,10 @@ const ChatScreen = () => {
             />
             <View style={styles.chatHeaderInfo}>
               <Text style={[styles.chatName, { color: textColor }]}>
-                Jessica Stacy
+                {recipientName || 'Chat'}
               </Text>
               <Text style={[styles.chatUsername, { color: placeholderColor }]}>
-                @Jessica_Stacy
+                @{recipientName?.toLowerCase().replace(/\s+/g, '_') || 'user'}
               </Text>
             </View>
           </View>
@@ -118,12 +214,32 @@ const ChatScreen = () => {
 
         {/* Messages */}
         <FlatList
+          ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           style={[styles.messagesList, { backgroundColor }]}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={textColor}
+            />
+          }
+          onContentSizeChange={() => {
+            // Scroll to bottom when content size changes (new messages added)
+            if (messages.length > 0) {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
+          onLayout={() => {
+            // Scroll to bottom when layout changes
+            if (messages.length > 0) {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
         />
 
         {/* Message Input */}
@@ -137,11 +253,13 @@ const ChatScreen = () => {
               onChangeText={setMessageText}
               multiline
               maxLength={500}
+              editable={!isSending}
             />
             
             <TouchableOpacity 
-              style={styles.messageSendButton}
+              style={[styles.messageSendButton, { opacity: isSending ? 0.5 : 1 }]}
               onPress={handleSendMessage}
+              disabled={isSending}
             >
               <Ionicons name="send" size={20} color={myMessageBubbleColor} />
             </TouchableOpacity>
