@@ -2,30 +2,37 @@ import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  FlatList,
-  Image,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    FlatList,
+    Image,
+    RefreshControl,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { Colors } from '../../../constants/Colors';
-// import NewMessageLogo from '../../assets/images/NewMessage.png';
 
-interface MessagePreview {
-  id: string;
-  full_name: string;
-  username: string;
-  avatar?: string;
-  lastMessage: string;
-  timeAgo: string;
+interface Conversation {
+  conversation_id: string;
+  other_user: {
+    id: string;
+    username: string;
+    full_name: string;
+    profile_picture_url?: string;
+  };
+  last_message: {
+    id: string;
+    content: string;
+    is_from_me: boolean;
+    created_at: string;
+  };
 }
 
 const Messages = () => {
-  const { isDarkMode } = useUser();
+  const { isDarkMode, user: loggedInUser } = useUser();
   const router = useRouter();
 
   const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
@@ -33,43 +40,98 @@ const Messages = () => {
   const cardBackgroundColor = !isDarkMode ? '#fff' : '#2d2d2d';
   const borderColor = !isDarkMode ? '#e0e0e0' : '#4a5568';
 
-  // Example static data for now
-  const [messages, setMessages] = useState<MessagePreview[]>([
-    {
-      id: '1',
-      full_name: 'Jessica Stacy',
-      username: 'Jessica_Stacy',
-      lastMessage: 'Hi',
-      timeAgo: '1 day ago',
-    },
-    {
-      id: '2',
-      full_name: 'Jessica Williams',
-      username: 'Jessica_W',
-      lastMessage: 'Hey',
-      timeAgo: '1 day ago',
-    },
-  ]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const removeMessage = (id: string) => {
-    setMessages(prev => prev.filter(m => m.id !== id));
+  const fetchConversations = async () => {
+    if (!loggedInUser?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${loggedInUser.id}/conversations`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setConversations(data.conversations);
+        }
+      } else {
+        console.error('Failed to fetch conversations');
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  const renderMessageItem = ({ item }: { item: MessagePreview }) => (
+  useEffect(() => {
+    fetchConversations();
+  }, [loggedInUser?.id]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchConversations();
+  };
+
+  const removeConversation = (conversationId: string) => {
+    setConversations(prev => prev.filter(c => c.conversation_id !== conversationId));
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else {
+      const diffInDays = diffInHours / 24;
+      return `${Math.floor(diffInDays)}d ago`;
+    }
+  };
+
+  const renderConversationItem = ({ item }: { item: Conversation }) => (
     <TouchableOpacity
       style={[styles.messageContainer, { backgroundColor: cardBackgroundColor, borderColor }]}
-      onPress={() => router.push('List/Messages/chat' as any)}
+      onPress={() => router.push({
+        pathname: 'List/Messages/chat' as any,
+        params: { 
+          recipientId: item.other_user.id,
+          recipientName: item.other_user.full_name
+        }
+      })}
     >
       <Image 
-        source={require('../../../assets/images/avatar_1.png')} 
+        source={
+          item.other_user.profile_picture_url 
+            ? { uri: item.other_user.profile_picture_url }
+            : require('../../../assets/images/avatar_1.png')
+        } 
         style={styles.avatar}
       />
       <View style={styles.messageInfo}>
-        <Text style={[styles.name, { color: textColor }]}>{item.full_name}</Text>
-        <Text style={[styles.timeAgo, { color: textColor }]}>{item.timeAgo}</Text>
+        <Text style={[styles.name, { color: textColor }]}>{item.other_user.full_name}</Text>
+        <Text style={[styles.lastMessage, { color: textColor }]}>
+          {item.last_message.is_from_me ? 'You: ' : ''}{item.last_message.content}
+        </Text>
+        <Text style={[styles.timeAgo, { color: textColor }]}>
+          {formatTimeAgo(item.last_message.created_at)}
+        </Text>
       </View>
       <TouchableOpacity
-        onPress={() => removeMessage(item.id)}
+        onPress={() => removeConversation(item.conversation_id)}
         style={styles.removeButton}
       >
         <Ionicons name="close" size={22} color="#E36062" />
@@ -97,14 +159,21 @@ const Messages = () => {
 
       {/* Message List */}
       <FlatList
-        data={messages}
-        renderItem={renderMessageItem}
-        keyExtractor={(item) => item.id}
+        data={conversations}
+        renderItem={renderConversationItem}
+        keyExtractor={(item) => item.conversation_id}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={textColor}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: textColor }]}>
-              No messages yet
+              {isLoading ? 'Loading conversations...' : 'No conversations yet'}
             </Text>
           </View>
         }
@@ -164,6 +233,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontFamily: 'Poppins-Regular',
+  },
+  lastMessage: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    marginTop: 2,
   },
   timeAgo: {
     fontSize: 14,

@@ -3286,6 +3286,293 @@ app.get('/events/:eventId/materials/:materialId', async (req, res) => {
   }
 });
 
+// Message endpoints
+// Create a new message
+app.post('/messages', async (req, res) => {
+  const { sender_id, recipient_id, content } = req.body;
+  
+  if (!sender_id || !recipient_id || !content) {
+    return res.status(400).json({ error: 'sender_id, recipient_id, and content are required' });
+  }
+  
+  if (content.trim().length === 0) {
+    return res.status(400).json({ error: 'Message cannot be empty' });
+  }
+  
+  try {
+    // Check if sender exists
+    const senderResult = await client.query('SELECT id FROM users WHERE id = $1', [sender_id]);
+    if (senderResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Sender not found' });
+    }
+    
+    // Check if recipient exists
+    const recipientResult = await client.query('SELECT id FROM users WHERE id = $1', [recipient_id]);
+    if (recipientResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Recipient not found' });
+    }
+    
+    // Create messages table if it doesn't exist
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        recipient_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Create indexes if they don't exist
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_messages_recipient_id ON messages(recipient_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)
+    `);
+    
+    // Insert message
+    const result = await client.query(`
+      INSERT INTO messages (sender_id, recipient_id, content)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [sender_id, recipient_id, content.trim()]);
+    
+    // Get the message with sender info
+    const messageWithSender = await client.query(`
+      SELECT 
+        m.*,
+        u.username as sender_username,
+        u.full_name as sender_full_name,
+        u.profile_picture_url as sender_profile_picture
+      FROM messages m
+      LEFT JOIN users u ON m.sender_id = u.id
+      WHERE m.id = $1
+    `, [result.rows[0].id]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Message sent successfully',
+      message: messageWithSender.rows[0]
+    });
+  } catch (err) {
+    console.error('Send message error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get conversation between two users
+app.get('/messages/conversation/:userId1/:userId2', async (req, res) => {
+  const { userId1, userId2 } = req.params;
+  const { limit = 50, offset = 0 } = req.query;
+  
+  try {
+    const result = await client.query(`
+      SELECT 
+        m.*,
+        u.username as sender_username,
+        u.full_name as sender_full_name,
+        u.profile_picture_url as sender_profile_picture
+      FROM messages m
+      LEFT JOIN users u ON m.sender_id = u.id
+      WHERE (m.sender_id = $1 AND m.recipient_id = $2) 
+         OR (m.sender_id = $2 AND m.recipient_id = $1)
+      ORDER BY m.created_at ASC
+      LIMIT $3 OFFSET $4
+    `, [userId1, userId2, parseInt(limit), parseInt(offset)]);
+    
+    res.json({
+      success: true,
+      messages: result.rows
+    });
+  } catch (err) {
+    console.error('Get conversation error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get all conversations for a user
+app.get('/users/:userId/conversations', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    // Get the latest message from each conversation
+    const result = await client.query(`
+      WITH latest_messages AS (
+        SELECT 
+          m.*,
+          u.username as other_username,
+          u.full_name as other_full_name,
+          u.profile_picture_url as other_profile_picture,
+          ROW_NUMBER() OVER (
+            PARTITION BY 
+              CASE 
+                WHEN m.sender_id = $1 THEN m.recipient_id 
+                ELSE m.sender_id 
+              END
+            ORDER BY m.created_at DESC
+          ) as rn
+        FROM messages m
+        LEFT JOIN users u ON (
+          CASE 
+            WHEN m.sender_id = $1 THEN m.recipient_id 
+            ELSE m.sender_id 
+          END = u.id
+        )
+        WHERE m.sender_id = $1 OR m.recipient_id = $1
+      )
+      SELECT * FROM latest_messages WHERE rn = 1
+      ORDER BY created_at DESC
+    `, [userId]);
+    
+    // Format the conversations
+    const conversations = result.rows.map(row => ({
+      conversation_id: row.sender_id === userId ? row.recipient_id : row.sender_id,
+      other_user: {
+        id: row.sender_id === userId ? row.recipient_id : row.sender_id,
+        username: row.other_username,
+        full_name: row.other_full_name,
+        profile_picture_url: row.other_profile_picture
+      },
+      last_message: {
+        id: row.id,
+        content: row.content,
+        is_from_me: row.sender_id === userId,
+        created_at: row.created_at
+      }
+    }));
+    
+    res.json({
+      success: true,
+      conversations: conversations
+    });
+  } catch (err) {
+    console.error('Get conversations error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Mark messages as read
+app.put('/messages/read', async (req, res) => {
+  const { user_id, other_user_id } = req.body;
+  
+  if (!user_id || !other_user_id) {
+    return res.status(400).json({ error: 'user_id and other_user_id are required' });
+  }
+  
+  try {
+    const result = await client.query(`
+      UPDATE messages 
+      SET is_read = true 
+      WHERE recipient_id = $1 AND sender_id = $2 AND is_read = false
+      RETURNING COUNT(*) as updated_count
+    `, [user_id, other_user_id]);
+    
+    res.json({
+      success: true,
+      message: 'Messages marked as read',
+      updated_count: parseInt(result.rows[0].updated_count)
+    });
+  } catch (err) {
+    console.error('Mark messages read error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Get unread message count for a user
+app.get('/users/:userId/messages/unread-count', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const result = await client.query(`
+      SELECT COUNT(*) as unread_count
+      FROM messages 
+      WHERE recipient_id = $1 AND is_read = false
+    `, [userId]);
+    
+    res.json({
+      success: true,
+      unread_count: parseInt(result.rows[0].unread_count)
+    });
+  } catch (err) {
+    console.error('Get unread count error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Delete a message
+app.delete('/messages/:messageId', async (req, res) => {
+  const { messageId } = req.params;
+  const { user_id } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  try {
+    // Check if message exists and belongs to user
+    const messageResult = await client.query(`
+      SELECT * FROM messages 
+      WHERE id = $1 AND sender_id = $2
+    `, [messageId, user_id]);
+    
+    if (messageResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Message not found or not authorized' });
+    }
+    
+    // Delete message
+    await client.query('DELETE FROM messages WHERE id = $1', [messageId]);
+    
+    res.json({
+      success: true,
+      message: 'Message deleted successfully'
+    });
+  } catch (err) {
+    console.error('Delete message error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
+// Search users by username or email
+app.get('/users/search', async (req, res) => {
+  const { q } = req.query;
+  
+  if (!q || q.trim().length === 0) {
+    return res.status(400).json({ error: 'Search query is required' });
+  }
+  
+  try {
+    const searchTerm = `%${q.trim()}%`;
+    
+    const result = await client.query(`
+      SELECT id, username, email, full_name, profile_picture_url
+      FROM users 
+      WHERE username ILIKE $1 OR email ILIKE $1 OR full_name ILIKE $1
+      ORDER BY 
+        CASE 
+          WHEN username ILIKE $1 THEN 1
+          WHEN full_name ILIKE $1 THEN 2
+          WHEN email ILIKE $1 THEN 3
+          ELSE 4
+        END,
+        username ASC
+      LIMIT 10
+    `, [searchTerm]);
+    
+    res.json({
+      success: true,
+      users: result.rows
+    });
+  } catch (err) {
+    console.error('User search error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 const PORT = 8080;
 
 // Only start the server if not in test mode
