@@ -71,14 +71,6 @@ export default function StudyTools() {
           <Text style={[styles.itemText, { color: textColor }]}>Flashcards</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-        style={[styles.item, { backgroundColor: textInputColor, flexDirection: 'row' }]}
-        onPress={() => router.push('/StudyTools/NotesList')}
-        >
-          <Ionicons name="pencil-outline" size={20} color={textColor} style={{ marginRight: 10 }} />
-          <Text style={[styles.itemText, { color: textColor }]}>Notes</Text>
-        </TouchableOpacity>
-
       </ScrollView>
 
       {/* Bottom Navigation - Moved outside ScrollView */}

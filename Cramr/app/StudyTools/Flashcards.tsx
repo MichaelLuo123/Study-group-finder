@@ -4,12 +4,18 @@ import { ArrowLeft, Edit3, Plus, Save } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Dimensions,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
@@ -38,12 +44,16 @@ export default function FlashcardSet() {
   const { isDarkMode, user: loggedInUser } = useUser();
   const params = useLocalSearchParams();
   const setId = params.setId ? String(params.setId) : null;
+  
+  // Get screen dimensions for better keyboard handling
+  const { height: screenHeight } = Dimensions.get('window');
 
   // Colors
   const backgroundColor = !isDarkMode ? Colors.light.background : Colors.dark.background;
   const textColor = !isDarkMode ? Colors.light.text : Colors.dark.text;
   const textInputColor = !isDarkMode ? Colors.light.textInput : Colors.dark.textInput;
   const placeholderColor = !isDarkMode ? Colors.light.placeholderText : Colors.dark.placeholderText;
+  const cancelButtonColor = !isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton;
   const cardBackgroundColor = textInputColor;
 
   // State
@@ -52,10 +62,37 @@ export default function FlashcardSet() {
   const [loading, setLoading] = useState(false);
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [editingSet, setEditingSet] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  
+  // Modal state
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [cardToDelete, setCardToDelete] = useState<{id: string, front: string} | null>(null);
   
   // Separate state for editing set details
   const [editSetName, setEditSetName] = useState('');
   const [editSetDescription, setEditSetDescription] = useState('');
+
+  // Keyboard event listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
+  // Function to dismiss keyboard
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
 
   // GET - Fetch flashcard set details
   const fetchFlashcardSet = async () => {
@@ -139,8 +176,10 @@ export default function FlashcardSet() {
       const data = await response.json();
 
       if (response.ok) {
-        setFlashcards([...flashcards, data.data]);
-        Alert.alert('Success', 'New flashcard added!');
+        const newCard = data.data;
+        setFlashcards([newCard, ...flashcards]);
+        // Automatically start editing the new card
+        setEditingCard(newCard.id);
       } else {
         Alert.alert('Error', data.error || 'Failed to create flashcard');
       }
@@ -210,6 +249,7 @@ export default function FlashcardSet() {
         const data = await response.json();
         setFlashcardSet(data.data);
         setEditingSet(false);
+        dismissKeyboard();
       } else {
         const data = await response.json();
         Alert.alert('Error', data.error || 'Failed to update flashcard set');
@@ -224,41 +264,43 @@ export default function FlashcardSet() {
     setEditSetName(flashcardSet?.name || '');
     setEditSetDescription(flashcardSet?.description || '');
     setEditingSet(false);
+    dismissKeyboard();
   };
 
-  // DELETE - Delete flashcard
-  const deleteFlashcard = async (id: string) => {
-    Alert.alert(
-      'Delete Flashcard',
-      'Are you sure you want to delete this flashcard? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await fetch(
-                `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcards/${id}?user_id=${loggedInUser?.id}`,
-                {
-                  method: 'DELETE',
-                }
-              );
+  // DELETE - Delete flashcard (now using modal)
+  const deleteFlashcard = async () => {
+    if (!cardToDelete) return;
 
-              if (response.ok) {
-                setFlashcards(flashcards.filter(card => card.id !== id));
-                Alert.alert('Success', 'Flashcard deleted!');
-              } else {
-                const data = await response.json();
-                Alert.alert('Error', data.error || 'Failed to delete flashcard');
-              }
-            } catch (error: any) {
-              Alert.alert('Error', 'Network error: ' + error.message);
-            }
-          },
-        },
-      ]
-    );
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcards/${cardToDelete.id}?user_id=${loggedInUser?.id}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (response.ok) {
+        setFlashcards(flashcards.filter(card => card.id !== cardToDelete.id));
+      } else {
+        const data = await response.json();
+        Alert.alert('Error', data.error || 'Failed to delete flashcard');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Network error: ' + error.message);
+    } finally {
+      setDeleteModalVisible(false);
+      setCardToDelete(null);
+    }
+  };
+
+  const showDeleteModal = (cardId: string, cardFront: string) => {
+    setCardToDelete({ id: cardId, front: cardFront });
+    setDeleteModalVisible(true);
+  };
+
+  const hideDeleteModal = () => {
+    setDeleteModalVisible(false);
+    setCardToDelete(null);
   };
 
   const flipCard = (cardId: string) => {
@@ -299,8 +341,16 @@ export default function FlashcardSet() {
       });
       if (success) {
         setEditingCard(null);
+        dismissKeyboard();
       }
     }
+  };
+
+  const cancelCardEdits = (cardId: string) => {
+    setEditingCard(null);
+    dismissKeyboard();
+    // Optionally refresh the card data from server or keep local changes
+    fetchFlashcards();
   };
 
   const renderFlashcard = (card: Flashcard) => {
@@ -319,7 +369,7 @@ export default function FlashcardSet() {
               card.is_checked && { backgroundColor: '#369942' }
             ]}>
               {card.is_checked && (
-                <Ionicons name="checkmark" size={12} color="white" />
+                <Ionicons name="checkmark" size={12} color={textColor} />
               )}
             </View>
           </TouchableOpacity>
@@ -343,7 +393,7 @@ export default function FlashcardSet() {
 
             <TouchableOpacity 
               style={styles.deleteButton}
-              onPress={() => deleteFlashcard(card.id)}
+              onPress={() => showDeleteModal(card.id, card.front)}
             >
               <Text style={styles.deleteButtonText}>✕</Text>
             </TouchableOpacity>
@@ -353,6 +403,7 @@ export default function FlashcardSet() {
         <TouchableOpacity
           onPress={() => !isEditing && flipCard(card.id)}
           disabled={isEditing}
+          activeOpacity={isEditing ? 1 : 0.7}
         >
           <View style={styles.flashcardSide}>
             {isEditing ? (
@@ -368,6 +419,8 @@ export default function FlashcardSet() {
                   placeholder="Enter front text..."
                   placeholderTextColor={placeholderColor}
                   multiline
+                  returnKeyType="next"
+                  blurOnSubmit={false}
                 />
                 
                 <Text style={[styles.flashcardLabel, { color: textColor, marginTop: 10 }]}>BACK</Text>
@@ -381,6 +434,8 @@ export default function FlashcardSet() {
                   placeholder="Enter back text..."
                   placeholderTextColor={placeholderColor}
                   multiline
+                  returnKeyType="done"
+                  onSubmitEditing={() => saveCardEdits(card.id)}
                 />
               </View>
             ) : (
@@ -428,96 +483,172 @@ export default function FlashcardSet() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={24} color={textColor} />
-          </TouchableOpacity>
+    <>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <SafeAreaView style={styles.container}>
+        <TouchableWithoutFeedback onPress={dismissKeyboard}>
+          <ScrollView 
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: Math.max(100, keyboardHeight + 50) }
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            automaticallyAdjustKeyboardInsets={false}
+            keyboardDismissMode="interactive"
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <ArrowLeft size={24} color={textColor} />
+              </TouchableOpacity>
 
-          <View style={styles.headerActions}>
-            
-            <TouchableOpacity onPress={createFlashcard} style={styles.addButton}>
-              <Plus size={24} color={textColor} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Set Title and Description */}
-        <View style={styles.headerContent}>
-          {editingSet ? (
-            <View>
-              <TextInput
-                style={[styles.headingInput, { 
-                  color: textColor,
-                  borderColor: placeholderColor 
-                }]}
-                value={editSetName}
-                onChangeText={setEditSetName}
-                placeholder="Set Title"
-                placeholderTextColor={placeholderColor}
-              />
-              <TextInput
-                style={[styles.descriptionInput, { 
-                  color: textColor,
-                  borderColor: placeholderColor 
-                }]}
-                value={editSetDescription}
-                onChangeText={setEditSetDescription}
-                placeholder="Set Description"
-                placeholderTextColor={placeholderColor}
-                multiline
-              />
-              <View style={styles.editActions}>
-                <TouchableOpacity 
-                  style={[styles.button, styles.cancelButton]}
-                  onPress={cancelEditingSet}
-                >
-                  <Text style={[styles.cancelButtonText, {color: textColor}]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.button, styles.saveButton]}
-                  onPress={saveFlashcardSet}
-                >
-                  <Text style={[styles.saveButtonText, {color: textColor}]}>Save</Text>
+              <View style={styles.headerActions}>
+                <TouchableOpacity onPress={createFlashcard} style={styles.addButton}>
+                  <Plus size={24} color={textColor} />
                 </TouchableOpacity>
               </View>
             </View>
-          ) : (
-            <TouchableOpacity onPress={() => setEditingSet(true)}>
-              <Text style={[styles.heading, { color: textColor }]}>
-                {flashcardSet?.name || 'Flashcard Set'}
-              </Text>
-              {flashcardSet?.description && (
-                <Text style={[styles.description, { color: textColor }]}>
-                  {flashcardSet.description}
-                </Text>
-              )}
-              <Text style={[styles.editHint, { color: textColor, opacity: 0.6 }]}>
-                Tap to edit
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
 
-        {/* Flashcards List */}
-        <View style={styles.flashcardsContainer}>
-          {loading ? (
-            <Text style={[styles.loadingText, { color: textColor }]}>Loading flashcards...</Text>
-          ) : flashcards.length > 0 ? (
-            flashcards.map(renderFlashcard)
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, { color: textColor }]}>No flashcards yet</Text>
-              <Text style={[styles.emptySubtext, { color: textColor, opacity: 0.7 }]}>
-                Tap the + button to add your first flashcard
-              </Text>
+            {/* Set Title and Description */}
+            <View style={styles.headerContent}>
+              {editingSet ? (
+                <View>
+                  <TextInput
+                    style={[styles.headingInput, { 
+                      color: textColor,
+                      borderColor: placeholderColor 
+                    }]}
+                    value={editSetName}
+                    onChangeText={setEditSetName}
+                    placeholder="Set Title"
+                    placeholderTextColor={placeholderColor}
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                  />
+                  <TextInput
+                    style={[styles.descriptionInput, { 
+                      color: textColor,
+                      borderColor: placeholderColor 
+                    }]}
+                    value={editSetDescription}
+                    onChangeText={setEditSetDescription}
+                    placeholder="Set Description"
+                    placeholderTextColor={placeholderColor}
+                    multiline
+                    returnKeyType="done"
+                    onSubmitEditing={saveFlashcardSet}
+                  />
+                  <View style={styles.editActions}>
+                    <TouchableOpacity 
+                      style={[styles.button, styles.cancelButton]}
+                      onPress={cancelEditingSet}
+                    >
+                      <Text style={[styles.cancelButtonText, {color: textColor}]}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.button, styles.saveButton]}
+                      onPress={saveFlashcardSet}
+                    >
+                      <Text style={[styles.saveButtonText, {color: textColor}]}>Save</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => setEditingSet(true)}>
+                  <Text style={[styles.heading, { color: textColor }]}>
+                    {flashcardSet?.name || 'Flashcard Set'}
+                  </Text>
+                  {flashcardSet?.description && (
+                    <Text style={[styles.description, { color: textColor }]}>
+                      {flashcardSet.description}
+                    </Text>
+                  )}
+                  <Text style={[styles.editHint, { color: textColor, opacity: 0.6 }]}>
+                    Tap to edit
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+            {/* Flashcards List */}
+            <View style={styles.flashcardsContainer}>
+              {loading ? (
+                <Text style={[styles.loadingText, { color: textColor }]}>Loading flashcards...</Text>
+              ) : flashcards.length > 0 ? (
+                flashcards.map(renderFlashcard)
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={[styles.emptyText, { color: textColor }]}>No flashcards yet</Text>
+                  <Text style={[styles.emptySubtext, { color: textColor, opacity: 0.7 }]}>
+                    Tap the + button to add your first flashcard
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={hideDeleteModal}
+      >
+        <TouchableWithoutFeedback onPress={hideDeleteModal}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>
+                  Delete Flashcard
+                </Text>
+                
+                <Text style={[styles.modalMessage, { color: textColor }]}>
+                  Are you sure you want to delete this flashcard?
+                </Text>
+                
+                {cardToDelete && (
+                  <View style={[styles.cardPreview, { backgroundColor: backgroundColor }]}>
+                    <Text style={[styles.cardPreviewText, { color: textColor }]} numberOfLines={2}>
+                      "{cardToDelete.front}"
+                    </Text>
+                  </View>
+                )}
+                
+                <Text style={[styles.modalWarning, { color: textColor, opacity: 0.7 }]}>
+                  This action cannot be undone.
+                </Text>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.modalCancelButton, { backgroundColor: cancelButtonColor}]}
+                    onPress={hideDeleteModal}
+                  >
+                    <Text style={[styles.modalButtonText, { color: textColor }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.modalDeleteButton]}
+                    onPress={deleteFlashcard}
+                  >
+                    <Text style={[styles.modalButtonText, { color: textColor }]}>
+                      Delete
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+      </>
   );
 }
 
@@ -718,5 +849,79 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
     textAlign: 'center',
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Poppins-Bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  cardPreview: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  cardPreviewText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  modalWarning: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    borderWidth: 1,
+  },
+  modalDeleteButton: {
+    backgroundColor: '#E36062',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
   },
 });
