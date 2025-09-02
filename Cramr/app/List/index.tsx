@@ -55,7 +55,7 @@ export default function HomeScreen() {
           <Ionicons
             name="chatbubble-ellipses-outline"
             size={28}
-            marginRight={10}
+            marginRight={-5}
             marginTop={10}
             color={textColor}
           />
