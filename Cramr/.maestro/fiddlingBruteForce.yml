@@ -1,7 +1,7 @@
 appId: com.tylervo02.Cramr
 ---
 - launchApp
-- assertVisible: 'Signin'
+- assertVisible: 'Sign in'
 - tapOn: "Email address or username"
 - inputRandomEmail
 - tapOn: "Password"

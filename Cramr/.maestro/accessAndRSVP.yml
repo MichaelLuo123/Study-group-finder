@@ -1,18 +1,17 @@
 appId: com.tylervo02.Cramr
 ---
+#launch and login
 - launchApp
-- assertVisible: 'Sign in'
-- assertVisible: "Email address or username"
+- assertVisible: 'Signin'
 - tapOn: "Email address or username"
-- waitForAnimationToEnd
 - inputText: "kevinyang@ucsd.edu"
-- assertVisible: "Password"
 - tapOn: "Password"
 - inputText: "LOLXD@1234"
 - tapOn: "Sign In"
-# Temporary code because it would be difficult to simulate grabbing the code from the email as of right now.
 - assertVisible: "Two-Factor Authentication"
 - inputText: "111111"
 - tapOn: "Enter"
 
-
+# At this point, you should be in list view
+- assertVisible: "Events"
+- tapOn: "RSVP"
