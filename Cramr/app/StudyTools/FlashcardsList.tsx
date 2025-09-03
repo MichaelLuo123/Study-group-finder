@@ -3,6 +3,7 @@ import { ArrowLeft, Plus } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Modal,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -23,6 +24,68 @@ interface FlashcardSet {
   updated_at: string;
 }
 
+interface DeleteModalProps {
+  visible: boolean;
+  setName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDarkMode: boolean;
+}
+
+const DeleteModal: React.FC<DeleteModalProps> = ({ 
+  visible, 
+  setName, 
+  onConfirm, 
+  onCancel, 
+  isDarkMode 
+}) => {
+  const backgroundColor = (!isDarkMode ? Colors.light.background : Colors.dark.background);
+  const textColor = (!isDarkMode ? Colors.light.text : Colors.dark.text);
+  const textInputColor = (!isDarkMode ? Colors.light.textInput : Colors.dark.textInput);
+  const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContainer, { backgroundColor: textInputColor }]}>
+          <Text style={[styles.modalTitle, { color: textColor }]}>
+            Delete Flashcard Set
+          </Text>
+          
+          <Text style={[styles.modalMessage, { color: textColor }]}>
+            Are you sure you want to delete "{setName}"? This action cannot be undone.
+          </Text>
+          
+          <View style={styles.modalButtons}>
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.cancelButton, {backgroundColor: cancelButtonColor}]} 
+              onPress={onCancel}
+            >
+              <Text style={[styles.cancelButtonText, { color: textColor }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.deleteButton1]} 
+              onPress={onConfirm}
+            >
+              <Text style={styles.deleteButtonTextModal}>
+                Delete
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export default function FlashcardsList() {
   const router = useRouter();
   const { user: loggedInUser, updateUserData } = useUser();
@@ -35,6 +98,10 @@ export default function FlashcardsList() {
 
   const [flashcardSets, setFlashcardSets] = useState<FlashcardSet[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Modal state
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [setToDelete, setSetToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // GET - Fetch flashcard sets for the logged in user
   const fetchFlashcardSets = async () => {
@@ -62,7 +129,6 @@ export default function FlashcardsList() {
       setLoading(false);
     }
   };
-
 
   // POST - Create new flashcard set
   const createFlashcardSet = async () => {
@@ -101,41 +167,38 @@ export default function FlashcardsList() {
     }
   };
 
-  // DELETE - Delete flashcard set
-  const deleteFlashcardSet = async (setId: string, setName: string) => {
-    Alert.alert(
-      'Delete Flashcard Set',
-      `Are you sure you want to delete "${setName}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await fetch(
-                `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcard_sets/${setId}/?user_id=${loggedInUser?.id}`,
-                {
-                  method: 'DELETE',
-                }
-              );
-
-              if (response.ok) {
-                // Remove from local state
-                setFlashcardSets(flashcardSets.filter(set => set.id !== setId));
-              } else {
-                const data = await response.json();
-                Alert.alert('Error', data.error || 'Failed to delete flashcard set');
-              }
-            } catch (error: any) {
-              Alert.alert('Error', '3. Network error: ' + error.message);
-            }
-          },
-        },
-      ]
-    );
+  // Show delete confirmation modal
+  const showDeleteConfirmation = (setId: string, setName: string) => {
+    setSetToDelete({ id: setId, name: setName });
+    setDeleteModalVisible(true);
   };
 
+  // DELETE - Delete flashcard set
+  const deleteFlashcardSet = async () => {
+    if (!setToDelete) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/flashcard_sets/${setToDelete.id}/?user_id=${loggedInUser?.id}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (response.ok) {
+        // Remove from local state
+        setFlashcardSets(flashcardSets.filter(set => set.id !== setToDelete.id));
+      } else {
+        const data = await response.json();
+        Alert.alert('Error', data.error || 'Failed to delete flashcard set');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', '3. Network error: ' + error.message);
+    } finally {
+      setDeleteModalVisible(false);
+      setSetToDelete(null);
+    }
+  };
 
   // Navigate to individual flashcard set
   const navigateToFlashcardSet = (setId: string, setName: string) => {
@@ -208,7 +271,7 @@ export default function FlashcardsList() {
               
               <TouchableOpacity 
                 style={styles.deleteButton}
-                onPress={() => deleteFlashcardSet(set.id, set.name)}
+                onPress={() => showDeleteConfirmation(set.id, set.name)}
               >
                 <Text style={styles.deleteButtonText}>✕</Text>
               </TouchableOpacity>
@@ -216,6 +279,18 @@ export default function FlashcardsList() {
           ))
         )}
       </ScrollView>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        visible={deleteModalVisible}
+        setName={setToDelete?.name || ''}
+        onConfirm={deleteFlashcardSet}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSetToDelete(null);
+        }}
+        isDarkMode={isDarkMode}
+      />
     </SafeAreaView>
   );
 }
@@ -292,5 +367,67 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
     textAlign: 'center',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 350,
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  modalMessage: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
+    marginBottom: 25,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    borderColor: '#ccc',
+  },
+  deleteButton1: {
+    backgroundColor: '#E36062',
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+  },
+  deleteButtonTextModal: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#fff',
   },
 });
