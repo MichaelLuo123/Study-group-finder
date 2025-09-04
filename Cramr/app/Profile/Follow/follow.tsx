@@ -6,14 +6,15 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Image,
   Modal,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
   useColorScheme,
+  View,
 } from 'react-native';
 import Slider from '../../../components/Slider'; // ✅ import your custom Slider
 import { Colors } from '../../../constants/Colors';
@@ -22,6 +23,8 @@ interface Friend {
   id: string;
   username: string;
   full_name: string;
+  profile_picture_url: string;
+  banner_color: number;
   email: string;
   avatar?: string;
   status?: string;
@@ -37,7 +40,7 @@ const FollowList = () => {
   const cancelButtonColor = (!isDarkMode ? Colors.light.cancelButton : Colors.dark.cancelButton)
   const cardBackgroundColor = (!isDarkMode ? '#fff' : '#2d2d2d')
   const borderColor = (!isDarkMode ? '#e0e0e0' : '#4a5568')
-  const bannerColors = ['#AACC96', '#F4BEAE', '#52A5CE', '#FF7BAC', '#D3B6D3']
+  const bannerColors = Colors.bannerColors;
 
   const router = useRouter();
   const scheme = useColorScheme();
@@ -140,14 +143,17 @@ const FollowList = () => {
 
   const renderFollowingItem = ({ item }: { item: Friend }) => (
     <TouchableOpacity 
-      style={[styles.userContainer, { backgroundColor: cardBackgroundColor, borderColor: borderColor }]}
+      style={[styles.userContainer, { backgroundColor: bannerColors[item.banner_color] || bannerColors[0], borderColor: borderColor }]}
       onPress={() => router.push(`/Profile/External?userId=${item.id}`)}
     >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>
-          {item.full_name?.charAt(0) || item.username?.charAt(0) || '?'}
-        </Text>
-      </View>
+      <Image 
+          source={
+            item.profile_picture_url
+            ? { uri: item.profile_picture_url }
+            : require('../../../assets/images/default_profile.jpg')
+            }
+          style={styles.avatar}
+        />
       <View style={styles.userInfo}>
         <Text style={[styles.userName, { color: textColor }]}>{item.full_name || 'Unknown'}</Text>
         <Text style={[styles.userUsername, { color: textColor }]}>@{item.username}</Text>
@@ -298,7 +304,7 @@ const styles = StyleSheet.create({
   followsList: { flex: 1, paddingHorizontal: 16 },
   userContainer: {
     flexDirection: 'row', alignItems: 'center',
-    padding: 15, borderRadius: 10, marginBottom: 10,
+    padding: 15, borderRadius: 15, marginBottom: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2,
     marginTop: 10
   },

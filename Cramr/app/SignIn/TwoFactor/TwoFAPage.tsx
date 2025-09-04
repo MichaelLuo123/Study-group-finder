@@ -124,7 +124,7 @@ const TwoFAPage = () => {
 
             <Text style={[styles.title, { color: textColor }]}>Two-Factor Authentication</Text>
             <Text style={[styles.subtitle, { color: placeholderColor }]}>
-                Enter 6-digit code sent to email{"\n"}Name@ucsd.edu
+                Enter 6-digit code sent to email.
             </Text>
 
             <View style={styles.inputRow}>
