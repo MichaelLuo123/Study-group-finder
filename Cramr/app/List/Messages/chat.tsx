@@ -207,7 +207,11 @@ const ChatScreen = () => {
           
           <View style={[styles.chatHeaderBubble, { backgroundColor: headerBackgroundColor }]}>
             <Image 
-              source={require('../../../assets/images/avatar_1.png')} 
+              source={
+                params.profilePictureUrl 
+                  ? { uri: params.profilePictureUrl }
+                  : require('../../../assets/images/avatar_1.png')
+              } 
               style={styles.chatProfilePicture}
             />
             <View style={styles.chatHeaderInfo}>
