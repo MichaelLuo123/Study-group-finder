@@ -73,16 +73,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     const saveUserData = async () => {
       if (user) {
         try {
-          console.log('UserContext: Saving user to AsyncStorage:', user);
+          // console.log('UserContext: Saving user to AsyncStorage:', user);
           await AsyncStorage.setItem('user', JSON.stringify(user));
         } catch (error) {
-          console.error('Error saving user data to AsyncStorage:', error);
+          // console.error('Error saving user data to AsyncStorage:', error);
         }
       } else {
         try {
           await AsyncStorage.removeItem('user');
         } catch (error) {
-          console.error('Error removing user data from AsyncStorage:', error);
+          // console.error('Error removing user data from AsyncStorage:', error);
         }
       }
     };
