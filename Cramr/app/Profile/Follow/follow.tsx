@@ -194,7 +194,7 @@ const FollowList = () => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Follows</Text>
+        <Text style={[styles.headerTitle, { color: textColor }]}>Friends</Text>
         <View style={styles.headerSpacer} />
       </View>
 

@@ -45,7 +45,7 @@ const FollowersDropdown: React.FC<FollowersDropdownProps> = ({
   // Load friends when component starts
   useEffect(() => {
     loadFriends();
-  }, []);
+  }, [currentUserId]);
 
   const loadFriends = async () => {
     setLoading(true);
@@ -175,7 +175,7 @@ const FollowersDropdown: React.FC<FollowersDropdownProps> = ({
       
       {!loading && searchQuery && filteredFriends.length === 0 && friends.length > 0 && (
         <Text style={[styles.message, { color: theme.placeholderColor }]}>
-          No friends match "{searchQuery}"
+          No friends match &ldquo;{searchQuery}&rdquo;
         </Text>
       )}
       
@@ -234,7 +234,8 @@ const styles = StyleSheet.create({
   
   // Search results
   resultsList: {
-    maxHeight: 200,
+    height: 200,
+    flexGrow: 0,
   },
   friendItem: {
     flexDirection: 'row',
