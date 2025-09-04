@@ -381,7 +381,7 @@ export default function External() {
           />
         }
       >
-        <View style={[styles.container, {backgroundColor: backgroundColor, height: 'auto'}]}>
+        <View style={[styles.container, {backgroundColor: backgroundColor, height: 1000}]}>
           <View style={styles.topButtonsContainer}>
             <ArrowLeft 
               size={24} 
