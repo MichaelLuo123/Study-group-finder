@@ -7,6 +7,6 @@ appId: com.tylervo02.Cramr
 - tapOn: "Password"
 - inputRandomText
 - repeat:
-  times: 10
-  commands:
-  - tapOn: "Enter"
+    times: 10
+    commands:
+      - tapOn: "Sign In"
