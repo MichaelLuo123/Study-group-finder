@@ -51,7 +51,7 @@ export default function HomeScreen() {
         </View>
       ),
       headerRight: () => (
-        <TouchableOpacity onPress={() => router.push('../List/Messages/messages')} style={styles.addButton}>
+        <TouchableOpacity onPress={() => router.push('/List/Messages/messages')} style={styles.addButton}>
           <Ionicons
             name="chatbubble-ellipses-outline"
             size={28}
