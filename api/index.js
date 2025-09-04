@@ -958,7 +958,7 @@ app.get('/users/:id/following', async (req, res) => {
   try {
     const result = await client.query(`
       SELECT 
-        u.id, u.username, u.full_name, u.email,
+        u.id, u.username, u.full_name, u.email, u.profile_picture_url, u.banner_color,
         f.created_at as follow_date
       FROM users u
       INNER JOIN follows f ON f.following_id = u.id
@@ -983,7 +983,7 @@ app.get('/users/:id/followers', async (req, res) => {
   try {
     const result = await client.query(`
       SELECT 
-        u.id, u.username, u.full_name, u.email,
+        u.id, u.username, u.full_name, u.email, u.profile_picture_url, u.banner_color,
         f.created_at as follow_date
       FROM users u
       INNER JOIN follows f ON f.follower_id = u.id
