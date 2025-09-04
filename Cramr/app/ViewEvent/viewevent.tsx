@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert,
   Dimensions,
-  Image, Modal,
+  Image, Linking, Modal,
   RefreshControl,
   SafeAreaView, StyleSheet, Text,
   TextInput,
@@ -677,6 +677,9 @@ console.log('UserContext userId:', userId);
         contentContainerStyle={styles.scrollContent} 
         enableOnAndroid 
         keyboardShouldPersistTaps="handled"
+        extraScrollHeight={300}
+        enableAutomaticScroll={true}
+        keyboardDismissMode="interactive"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -727,12 +730,11 @@ console.log('UserContext userId:', userId);
                 </View>
 
                 {/* Updated location handling to match EventCollapsible */}
-                {event.event_format === 'In Person' && (
+                {(event.event_format === 'In-Person' || event.event_format === 'In Person') && (
                   <View style={styles.detailRow}>
                     <MapPin size={20} color={textColor} />
                     <Text style={[styles.detailText, { color: textColor }]}>
-                      {event.location}
-                      {event.study_room && event.study_room}
+                      {event.location}{event.study_room ? ` - ${event.study_room}` : ''}
                     </Text>
                   </View>
                 )}

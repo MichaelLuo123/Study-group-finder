@@ -202,7 +202,7 @@ const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
       title: title.trim(),
       tags: selectedTags,
       class: classField.trim(),
-      event_format: isOnline ? 'Online' : 'In Person',
+      event_format: isOnline ? 'Online' : 'In-Person',
       location: location.trim(),
       study_room: !isOnline && studyRoom.trim() ? studyRoom.trim() : null,
       virtual_room_link: isOnline ? virtualRoomLink.trim() : null,

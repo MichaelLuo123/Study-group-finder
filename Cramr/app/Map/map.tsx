@@ -198,6 +198,16 @@ export default function MapScreen() {
       const newTranslateY = context.startY + event.translationY;
       const maxUpward = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50); 
       const maxDownward = 400; 
+      
+      
+      const topPosition = -(BOTTOM_SHEET_MAX_HEIGHT - BOTTOM_SHEET_MIN_HEIGHT - HEADER_HEIGHT - 50) + 100;
+      const isAtTop = translateY.value <= topPosition + 10; 
+      const isDraggingUp = event.translationY < 0;
+      
+      if (isAtTop && isDraggingUp) {
+        return;
+      }
+      
       translateY.value = Math.max(maxUpward, Math.min(maxDownward, newTranslateY));
     },
     onEnd: (event) => {

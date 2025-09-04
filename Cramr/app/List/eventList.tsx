@@ -50,7 +50,7 @@ export default function EventList({
 
   const [refreshing, setRefreshing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const userId = user?.id;
 
@@ -60,6 +60,7 @@ export default function EventList({
   const [collapsedEvents, setCollapsedEvents] = useState<Set<string>>(new Set());
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const itemPositionsRef = useRef<Map<string, number>>(new Map());
 
   const [busyEventId, setBusyEventId] = useState<string | null>(null);
   const { scheduleEventReminder } = usePushNotifications();
@@ -295,26 +296,26 @@ export default function EventList({
     }
   }, [selectedEventId, events]);
 
-  useEffect(() => {
-    if (selectedEventId && searchedEvents.length > 0) {
-      const eventIndex = searchedEvents.findIndex(e => e.id === selectedEventId);
-      if (eventIndex !== -1) {
-        setTimeout(() => {
-          let y = 0;
-          for (let i = 0; i < eventIndex; i++) {
-            const e = searchedEvents[i];
-            let h = 60;
-            if (!collapsedEvents.has(e.id)) {
-              h += 120;
-              if (e.tags?.length) h += 30;
-            }
-            y += h;
-          }
-          scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 60), animated: true });
-        }, 100);
-      }
+  const scrollToSelectedIfReady = useCallback(() => {
+    if (!selectedEventId) return;
+    const y = itemPositionsRef.current.get(selectedEventId);
+    if (typeof y === 'number') {
+      const topPadding = 5;
+      scrollViewRef.current?.scrollTo({ y: Math.max(0, y - topPadding), animated: true });
+      return true;
     }
-  }, [selectedEventId, searchedEvents, collapsedEvents]);
+    return false;
+  }, [selectedEventId, onMap]);
+
+  useEffect(() => {
+    if (!selectedEventId) return;
+    if (!scrollToSelectedIfReady()) {
+      const t = setTimeout(() => {
+        scrollToSelectedIfReady();
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [selectedEventId, searchedEvents, collapsedEvents, scrollToSelectedIfReady]);
 
   // -------- render ----------
   if (loading && events.length === 0) {
@@ -364,7 +365,14 @@ export default function EventList({
         if (onMap && event.event_format === 'Online') return null;
 
         return (
-          <EventCollapsible
+          <View
+            key={event.id}
+            onLayout={(e) => {
+              const y = e.nativeEvent.layout.y;
+              itemPositionsRef.current.set(event.id, y);
+            }}
+          >
+            <EventCollapsible
             key={event.id}
             eventId={event.id}
             ownerId={event.creator_id}
@@ -397,6 +405,7 @@ export default function EventList({
             // 🔑 navigate on click (visuals unchanged)
             onOpen={() => openEvent(event.id)}
           />
+          </View>
         );
       })}
       <View style={[styles.extraSpace, { height: Math.max(searchedEvents.length * 75 + 160, 300) }]} />
