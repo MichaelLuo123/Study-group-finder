@@ -677,6 +677,9 @@ console.log('UserContext userId:', userId);
         contentContainerStyle={styles.scrollContent} 
         enableOnAndroid 
         keyboardShouldPersistTaps="handled"
+        extraScrollHeight={300}
+        enableAutomaticScroll={true}
+        keyboardDismissMode="interactive"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
