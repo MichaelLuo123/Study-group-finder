@@ -1,20 +1,21 @@
 import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    RefreshControl,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 
@@ -196,6 +197,14 @@ const ChatScreen = () => {
       >
         {/* Header */}
         <View style={[styles.chatHeader, { backgroundColor }]}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={styles.backButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <ArrowLeft size={24} color={textColor} />
+          </TouchableOpacity>
+          
           <View style={[styles.chatHeaderBubble, { backgroundColor: headerBackgroundColor }]}>
             <Image 
               source={require('../../../assets/images/avatar_1.png')} 
@@ -282,6 +291,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  
+  backButton: {
+    position: 'absolute',
+    left: 15,
+    zIndex: 1,
   },
   
   chatHeaderBubble: {
@@ -290,7 +306,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 10,
-    width: '100%',
+    width: '90%',
+    marginLeft: '10%',
     justifyContent: 'flex-start',
   },
   

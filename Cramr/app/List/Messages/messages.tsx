@@ -1,17 +1,18 @@
 import { useUser } from '@/contexts/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 
 import React, { useEffect, useState } from 'react';
 import {
-    FlatList,
-    Image,
-    RefreshControl,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  FlatList,
+  Image,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 
@@ -130,12 +131,12 @@ const Messages = () => {
           {formatTimeAgo(item.last_message.created_at)}
         </Text>
       </View>
-      <TouchableOpacity
+      {/* <TouchableOpacity
         onPress={() => removeConversation(item.conversation_id)}
         style={styles.removeButton}
       >
         <Ionicons name="close" size={22} color="#E36062" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </TouchableOpacity>
   );
 
@@ -143,6 +144,14 @@ const Messages = () => {
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <ArrowLeft size={24} color={textColor} />
+        </TouchableOpacity>
+        
         <View style={styles.headerTitleWrapper}>
           <Text style={[styles.headerTitle, {color: textColor}]}>Messages</Text>
         </View>
@@ -193,6 +202,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative', // needed for absolute positioning of the button
+  },
+  
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    marginTop: -5,
   },
   
   headerTitleWrapper: {
