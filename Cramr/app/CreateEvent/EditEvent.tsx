@@ -43,7 +43,7 @@ const EditEventScreen = () => {
 
   // Other state variables
   const [isOnline, setIsOnline] = useState(false);
-  const [eventFormat, setEventFormat] = useState('In Person');
+  const [eventFormat, setEventFormat] = useState('In-Person');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
