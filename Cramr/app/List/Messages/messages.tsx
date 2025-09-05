@@ -5,14 +5,14 @@ import { ArrowLeft } from 'lucide-react-native';
 
 import React, { useEffect, useState } from 'react';
 import {
-  FlatList,
-  Image,
-  RefreshControl,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    FlatList,
+    Image,
+    RefreshControl,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 
@@ -110,7 +110,8 @@ const Messages = () => {
         pathname: 'List/Messages/chat' as any,
         params: { 
           recipientId: item.other_user.id,
-          recipientName: item.other_user.full_name
+          recipientName: item.other_user.full_name,
+          profilePictureUrl: item.other_user.profile_picture_url
         }
       })}
     >
