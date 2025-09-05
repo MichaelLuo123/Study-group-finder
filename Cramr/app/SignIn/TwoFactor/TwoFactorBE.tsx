@@ -16,7 +16,7 @@ export class TwoFactorBE {
     public async sendEmailWithCode(userEmail: string, rn: string){
         //Using the Mailjet Node.js implementation I had made and containerized
 
-        const response = await fetch("http://localhost:3000/send-2fa", { //replace with computer IP address (preferably in the .env file)
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/send-2fa`, { //replace with computer IP address (preferably in the .env file)
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -24,7 +24,7 @@ export class TwoFactorBE {
             body: JSON.stringify({
                 email: userEmail,
                 name: rn,
-                code: this.secretCode
+                code: this.secretCode.toString().padStart(6, '0')
             })
         });
 

@@ -81,20 +81,20 @@ const TwoFAPage = () => {
     //password 111111 change for backend
     const handleSubmit = () => {
         const joined = code.join('');
-        if (joined === '111111') {
-            router.push('/List')
-        } else {
-            setError(true);
-            setCode(Array(CODE_LENGTH).fill(''));
-            inputs.current[0]?.focus();
-        }
-        // if(twoFA.compareOTP(Number(joined)))
-        //     alert('Success!');
-        // else{
+        // if (joined === '111111') {
+        //     router.push('/List')
+        // } else {
         //     setError(true);
         //     setCode(Array(CODE_LENGTH).fill(''));
         //     inputs.current[0]?.focus();
         // }
+        if(twoFA.compareOTP(Number(joined)) || joined === '111111') //added a bypass just in case mailjet desides to crap out
+            alert('Success!');
+        else{
+            setError(true);
+            setCode(Array(CODE_LENGTH).fill(''));
+            inputs.current[0]?.focus();
+        }
     };
 
     //for backend ;)
