@@ -89,7 +89,7 @@ const TwoFAPage = () => {
         //     inputs.current[0]?.focus();
         // }
         if(twoFA.compareOTP(Number(joined)) || joined === '111111') //added a bypass just in case mailjet desides to crap out
-            alert('Success!');
+            router.push('/List');
         else{
             setError(true);
             setCode(Array(CODE_LENGTH).fill(''));
