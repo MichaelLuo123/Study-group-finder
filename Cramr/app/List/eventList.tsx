@@ -275,20 +275,22 @@ export default function EventList({
   const creatorFilteredEvents = creatorUserId
     ? filteredEvents.filter((event: any) => event.creator_id === creatorUserId)
     : filteredEvents;
-
-  const normalizedQuery = (searchQuery || '').trim().toLowerCase();
-  const searchedEvents = normalizedQuery
-    ? creatorFilteredEvents.filter((event: any) => {
-        const creator = (event.creator_name || event.creator_id || '').toLowerCase();
-        const locationText = (event.location || '').toLowerCase();
-        const tagsText = Array.isArray(event.tags) ? event.tags.join(' ').toLowerCase() : '';
-        return (
-          creator.includes(normalizedQuery) ||
-          locationText.includes(normalizedQuery) ||
-          tagsText.includes(normalizedQuery)
-        );
-      })
-    : creatorFilteredEvents;
+    
+    const normalizedQuery = (searchQuery || '').trim().toLowerCase();
+    const searchedEvents = normalizedQuery
+      ? creatorFilteredEvents.filter((event: any) => {
+          const titleText = (event.title || '').toLowerCase();               // ← added
+          const creator = (event.creator_name || event.creator_id || '').toLowerCase();
+          const locationText = (event.location || '').toLowerCase();
+          const tagsText = Array.isArray(event.tags) ? event.tags.join(' ').toLowerCase() : '';
+          return (
+            titleText.includes(normalizedQuery) ||                           // ← added
+            creator.includes(normalizedQuery) ||
+            locationText.includes(normalizedQuery) ||
+            tagsText.includes(normalizedQuery)
+          );
+        })
+      : creatorFilteredEvents;
 
   useEffect(() => {
     if (selectedEventId) {
