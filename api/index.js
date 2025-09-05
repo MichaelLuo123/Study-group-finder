@@ -756,6 +756,41 @@ app.get('/users/search', async (req, res) => {
   }
 });
 
+app.post('/send-2fa', async (req, res) => {
+    const {email, name, code} = req.body;
+
+    // how do I import the code from the Cramr frontend to the backend server
+    
+    const request = {
+        Messages: [
+            {
+                From: {
+                    Email: "tylervo.2002@gmail.com", //replace with our own created domain or something other than my email account if we have one.
+                    Name: "Cramr Team" 
+                },
+                To: [
+                    {
+                        Email: email,
+                        Name: name
+                    },
+                ],
+                Subject: "Your One Time Passcode",
+                TextPart: `Hello ${name},\n\nYou have tried to log in and your One Time Passcode is ${code}. If you did not request a One Time Password, please change your password as soon as possible.\n\nThank you,\nThe Cramr Team`
+            }
+        ]
+    }
+
+    try {
+        const result = await mailjet.post('send', {version: 'v3.1'}).request(request);
+        console.log("Email sent", result.body);
+        return res.status(200).json({success: true, code});
+    }
+    catch (err) {
+        console.error("Error sending email", err);
+        return res.status(500).json({success: false, message: "Failed to send email."})
+    }
+});
+
 // Get user by ID
 app.get('/users/:id', async (req, res) => {
   const { id } = req.params;
